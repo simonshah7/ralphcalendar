@@ -136,8 +136,9 @@ export function ActivityModal({
     try {
       await onSubmit(formData);
       onClose();
-    } catch {
-      setErrors({ form: 'Failed to save activity' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save activity';
+      setErrors({ form: message });
     } finally {
       setIsSubmitting(false);
     }

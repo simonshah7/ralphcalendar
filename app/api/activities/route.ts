@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
-import { db, activities } from '@/db';
+import { db, activities, statuses, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
+
+// Type-safe includes check for readonly arrays
+function isValidCurrency(value: string): boolean {
+  return (CURRENCIES as readonly string[]).includes(value);
+}
+
+function isValidRegion(value: string): boolean {
+  return (REGIONS as readonly string[]).includes(value);
+}
 
 export async function GET(request: Request) {
   try {
@@ -65,14 +74,26 @@ export async function POST(request: Request) {
     if (new Date(endDate) < new Date(startDate)) {
       return NextResponse.json({ error: 'End date must be after or equal to start date' }, { status: 400 });
     }
-    if (currency && !CURRENCIES.includes(currency)) {
+    if (currency && !isValidCurrency(currency)) {
       return NextResponse.json({ error: 'Invalid currency' }, { status: 400 });
     }
-    if (region && !REGIONS.includes(region)) {
+    if (region && !isValidRegion(region)) {
       return NextResponse.json({ error: 'Invalid region' }, { status: 400 });
     }
     if (cost !== undefined && cost < 0) {
       return NextResponse.json({ error: 'Cost must be >= 0' }, { status: 400 });
+    }
+
+    // Verify swimlane exists
+    const [swimlane] = await db.select().from(swimlanes).where(eq(swimlanes.id, swimlaneId));
+    if (!swimlane) {
+      return NextResponse.json({ error: 'Swimlane not found' }, { status: 400 });
+    }
+
+    // Verify status exists
+    const [status] = await db.select().from(statuses).where(eq(statuses.id, statusId));
+    if (!status) {
+      return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
     const [newActivity] = await db
@@ -97,6 +118,7 @@ export async function POST(request: Request) {
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
     console.error('Error creating activity:', error);
-    return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to create activity: ${errorMessage}` }, { status: 500 });
   }
 }
