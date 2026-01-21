@@ -123,8 +123,8 @@ export async function POST(request: Request) {
         ${endDate}::date,
         ${descriptionValue},
         ${cost?.toString() || '0'}::decimal,
-        ${currency || 'USD'},
-        ${region || 'US'},
+        ${(currency || 'USD').toLowerCase()},
+        ${(region || 'US').toLowerCase()},
         ${tagsValue},
         ${colorValue}
       )
