@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
 
 // Type-safe includes check for readonly arrays
@@ -102,38 +102,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
-    // Build values object, only including optional fields if they have values
-    // This prevents drizzle from sending empty strings for null fields
-    const values: Record<string, unknown> = {
-      calendarId,
-      swimlaneId,
-      statusId,
-      title: title.trim(),
-      startDate,
-      endDate,
-      cost: cost?.toString() || '0',
-      currency: currency || 'USD',
-      region: region || 'US',
+    // Helper to get value or SQL NULL for optional fields
+    const nullableString = (value: unknown) => {
+      if (value && typeof value === 'string' && value.trim()) {
+        return value;
+      }
+      return sql`null`;
     };
-
-    // Only add optional fields if they have non-empty values
-    if (campaignId && typeof campaignId === 'string' && campaignId.trim()) {
-      values.campaignId = campaignId;
-    }
-    if (description && typeof description === 'string' && description.trim()) {
-      values.description = description;
-    }
-    if (tags && typeof tags === 'string' && tags.trim()) {
-      values.tags = tags;
-    }
-    if (color && typeof color === 'string' && color.trim()) {
-      values.color = color;
-    }
 
     const [newActivity] = await db
       .insert(activities)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .values(values as any)
+      .values({
+        calendarId,
+        swimlaneId,
+        statusId,
+        campaignId: nullableString(campaignId),
+        title: title.trim(),
+        startDate,
+        endDate,
+        description: nullableString(description),
+        cost: cost?.toString() || '0',
+        currency: currency || 'USD',
+        region: region || 'US',
+        tags: nullableString(tags),
+        color: nullableString(color),
+      })
       .returning();
 
     return NextResponse.json(newActivity, { status: 201 });
