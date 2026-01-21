@@ -102,26 +102,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
-    // Use raw SQL to insert with proper NULL handling
+    // Use raw SQL with NULLIF to convert empty strings to NULL at DB level
+    // This works around the neon driver converting JS null to empty strings
+    const campaignIdValue = (campaignId && typeof campaignId === 'string') ? campaignId.trim() : '';
+    const descriptionValue = (description && typeof description === 'string') ? description.trim() : '';
+    const tagsValue = (tags && typeof tags === 'string') ? tags.trim() : '';
+    const colorValue = (color && typeof color === 'string') ? color.trim() : '';
+
     const result = await db.execute(sql`
       INSERT INTO activities (
         calendar_id, swimlane_id, status_id, campaign_id,
         title, start_date, end_date, description,
         cost, currency, region, tags, color
       ) VALUES (
-        ${calendarId},
-        ${swimlaneId},
-        ${statusId},
-        ${campaignId && typeof campaignId === 'string' && campaignId.trim() ? campaignId : null},
+        ${calendarId}::uuid,
+        ${swimlaneId}::uuid,
+        ${statusId}::uuid,
+        NULLIF(${campaignIdValue}, '')::uuid,
         ${title.trim()},
-        ${startDate},
-        ${endDate},
-        ${description && typeof description === 'string' && description.trim() ? description : null},
-        ${cost?.toString() || '0'},
+        ${startDate}::date,
+        ${endDate}::date,
+        NULLIF(${descriptionValue}, ''),
+        ${cost?.toString() || '0'}::decimal,
         ${currency || 'USD'},
         ${region || 'US'},
-        ${tags && typeof tags === 'string' && tags.trim() ? tags : null},
-        ${color && typeof color === 'string' && color.trim() ? color : null}
+        NULLIF(${tagsValue}, ''),
+        NULLIF(${colorValue}, '')
       )
       RETURNING *
     `);
