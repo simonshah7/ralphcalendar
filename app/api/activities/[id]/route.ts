@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
-import { db, activities } from '@/db';
+import { db, activities, statuses, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
+
+// Type-safe includes check for readonly arrays
+function isValidCurrency(value: string): boolean {
+  return (CURRENCIES as readonly string[]).includes(value);
+}
+
+function isValidRegion(value: string): boolean {
+  return (REGIONS as readonly string[]).includes(value);
+}
 
 export async function PUT(
   request: Request,
@@ -27,8 +36,22 @@ export async function PUT(
 
     const updates: Record<string, unknown> = {};
 
-    if (swimlaneId !== undefined) updates.swimlaneId = swimlaneId;
-    if (statusId !== undefined) updates.statusId = statusId;
+    if (swimlaneId !== undefined) {
+      // Verify swimlane exists
+      const [swimlane] = await db.select().from(swimlanes).where(eq(swimlanes.id, swimlaneId));
+      if (!swimlane) {
+        return NextResponse.json({ error: 'Swimlane not found' }, { status: 400 });
+      }
+      updates.swimlaneId = swimlaneId;
+    }
+    if (statusId !== undefined) {
+      // Verify status exists
+      const [status] = await db.select().from(statuses).where(eq(statuses.id, statusId));
+      if (!status) {
+        return NextResponse.json({ error: 'Status not found' }, { status: 400 });
+      }
+      updates.statusId = statusId;
+    }
     if (campaignId !== undefined) updates.campaignId = campaignId || null;
 
     if (title !== undefined) {
@@ -58,17 +81,17 @@ export async function PUT(
     }
 
     if (currency !== undefined) {
-      if (!CURRENCIES.includes(currency)) {
+      if (currency && !isValidCurrency(currency)) {
         return NextResponse.json({ error: 'Invalid currency' }, { status: 400 });
       }
-      updates.currency = currency;
+      updates.currency = currency || 'USD';
     }
 
     if (region !== undefined) {
-      if (!REGIONS.includes(region)) {
+      if (region && !isValidRegion(region)) {
         return NextResponse.json({ error: 'Invalid region' }, { status: 400 });
       }
-      updates.region = region;
+      updates.region = region || 'US';
     }
 
     if (tags !== undefined) updates.tags = tags || null;
@@ -91,7 +114,8 @@ export async function PUT(
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating activity:', error);
-    return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to update activity: ${errorMessage}` }, { status: 500 });
   }
 }
 

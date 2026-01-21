@@ -183,7 +183,8 @@ export default function Home() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save activity');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to save activity');
     }
 
     fetchCalendarData(currentCalendar.id);
