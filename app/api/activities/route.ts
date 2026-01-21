@@ -12,6 +12,12 @@ function isValidRegion(value: string): boolean {
   return (REGIONS as readonly string[]).includes(value);
 }
 
+// Helper to convert empty strings to null (important for UUID fields)
+function emptyToNull<T>(value: T): T | null {
+  if (value === '' || value === undefined) return null;
+  return value;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -102,16 +108,16 @@ export async function POST(request: Request) {
         calendarId,
         swimlaneId,
         statusId,
-        campaignId: campaignId || null,
+        campaignId: emptyToNull(campaignId),
         title: title.trim(),
         startDate,
         endDate,
-        description: description || null,
+        description: emptyToNull(description),
         cost: cost?.toString() || '0',
         currency: currency || 'USD',
         region: region || 'US',
-        tags: tags || null,
-        color: color || null,
+        tags: emptyToNull(tags),
+        color: emptyToNull(color),
       })
       .returning();
 

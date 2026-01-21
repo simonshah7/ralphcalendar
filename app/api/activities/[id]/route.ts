@@ -12,6 +12,12 @@ function isValidRegion(value: string): boolean {
   return (REGIONS as readonly string[]).includes(value);
 }
 
+// Helper to convert empty strings to null (important for UUID fields)
+function emptyToNull<T>(value: T): T | null {
+  if (value === '' || value === undefined) return null;
+  return value;
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -52,7 +58,7 @@ export async function PUT(
       }
       updates.statusId = statusId;
     }
-    if (campaignId !== undefined) updates.campaignId = campaignId || null;
+    if (campaignId !== undefined) updates.campaignId = emptyToNull(campaignId);
 
     if (title !== undefined) {
       if (title.trim().length === 0) {
@@ -71,7 +77,7 @@ export async function PUT(
       return NextResponse.json({ error: 'End date must be after or equal to start date' }, { status: 400 });
     }
 
-    if (description !== undefined) updates.description = description || null;
+    if (description !== undefined) updates.description = emptyToNull(description);
 
     if (cost !== undefined) {
       if (cost < 0) {
@@ -94,8 +100,8 @@ export async function PUT(
       updates.region = region || 'US';
     }
 
-    if (tags !== undefined) updates.tags = tags || null;
-    if (color !== undefined) updates.color = color || null;
+    if (tags !== undefined) updates.tags = emptyToNull(tags);
+    if (color !== undefined) updates.color = emptyToNull(color);
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
