@@ -109,6 +109,62 @@ export default function Home() {
     }
   };
 
+  const handleEditSwimlane = async (id: string, name: string) => {
+    const response = await fetch(`/api/swimlanes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+
+    if (response.ok && currentCalendar) {
+      fetchCalendarData(currentCalendar.id);
+    }
+  };
+
+  const handleDeleteSwimlane = async (id: string) => {
+    const response = await fetch(`/api/swimlanes/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok && currentCalendar) {
+      fetchCalendarData(currentCalendar.id);
+    }
+  };
+
+  const handleReorderSwimlanes = async (swimlaneId: string, newIndex: number) => {
+    if (!currentCalendar) return;
+
+    // Optimistically reorder locally
+    const swimlanes = [...currentCalendar.swimlanes];
+    const currentIndex = swimlanes.findIndex(s => s.id === swimlaneId);
+    if (currentIndex === -1) return;
+
+    const [movedSwimlane] = swimlanes.splice(currentIndex, 1);
+    swimlanes.splice(newIndex, 0, movedSwimlane);
+
+    // Update sortOrder for all swimlanes
+    const updates = swimlanes.map((s, idx) => ({
+      id: s.id,
+      sortOrder: idx,
+    }));
+
+    // Update each swimlane's sortOrder
+    try {
+      await Promise.all(
+        updates.map((update) =>
+          fetch(`/api/swimlanes/${update.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sortOrder: update.sortOrder }),
+          })
+        )
+      );
+      fetchCalendarData(currentCalendar.id);
+    } catch (error) {
+      console.error('Failed to reorder swimlanes:', error);
+    }
+  };
+
   const handleActivitySubmit = async (data: ActivityFormData) => {
     if (!currentCalendar) return;
 
@@ -345,6 +401,10 @@ export default function Home() {
                 onActivityClick={handleActivityClick}
                 onActivityCreate={handleActivityCreate}
                 onActivityUpdate={handleActivityUpdate}
+                onAddSwimlane={handleCreateSwimlane}
+                onEditSwimlane={handleEditSwimlane}
+                onDeleteSwimlane={handleDeleteSwimlane}
+                onReorderSwimlanes={handleReorderSwimlanes}
               />
             )}
 

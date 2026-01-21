@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Activity, Swimlane, Status } from '@/db/schema';
 import { addDays, getDaysBetween } from '@/lib/utils';
+import { SwimlaneSidebar } from './SwimlaneSidebar';
 
 interface TimelineViewProps {
   activities: Activity[];
@@ -11,6 +12,10 @@ interface TimelineViewProps {
   onActivityClick: (activity: Activity) => void;
   onActivityCreate: (swimlaneId: string, startDate: string, endDate: string) => void;
   onActivityUpdate: (id: string, updates: Partial<Activity>) => Promise<void>;
+  onAddSwimlane: (name: string) => void;
+  onEditSwimlane: (id: string, name: string) => void;
+  onDeleteSwimlane: (id: string) => void;
+  onReorderSwimlanes: (swimlaneId: string, newIndex: number) => void;
 }
 
 type ZoomLevel = 'year' | 'quarter' | 'month';
@@ -22,7 +27,9 @@ const ZOOM_CONFIG: Record<ZoomLevel, { daysVisible: number; dayWidth: number }> 
 };
 
 const ROW_HEIGHT = 60;
-const SIDEBAR_WIDTH = 200;
+const DEFAULT_SIDEBAR_WIDTH = 200;
+const MIN_SIDEBAR_WIDTH = 150;
+const MAX_SIDEBAR_WIDTH = 400;
 const HEADER_HEIGHT = 60;
 
 export function TimelineView({
@@ -32,6 +39,10 @@ export function TimelineView({
   onActivityClick,
   onActivityCreate,
   onActivityUpdate,
+  onAddSwimlane,
+  onEditSwimlane,
+  onDeleteSwimlane,
+  onReorderSwimlanes,
 }: TimelineViewProps) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('quarter');
   const [startDate, setStartDate] = useState(() => {
@@ -43,8 +54,13 @@ export function TimelineView({
   const [dragCurrent, setDragCurrent] = useState<number | null>(null);
   const [resizing, setResizing] = useState<{ activityId: string; edge: 'start' | 'end'; initialDate: string } | null>(null);
   const [moving, setMoving] = useState<{ activityId: string; initialX: number; initialStartDate: string } | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  const handleSidebarWidthChange = useCallback((width: number) => {
+    setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width)));
+  }, []);
 
   const config = ZOOM_CONFIG[zoomLevel];
   const totalWidth = config.daysVisible * config.dayWidth;
@@ -375,48 +391,48 @@ export function TimelineView({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-          {(['year', 'quarter', 'month'] as ZoomLevel[]).map((level) => (
-            <button
-              key={level}
-              onClick={() => setZoomLevel(level)}
-              className={`px-3 py-1 text-sm rounded ${
-                zoomLevel === level
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              {level.charAt(0).toUpperCase() + level.slice(1)}
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          {/* Activity Creation Hint */}
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Drag on timeline to create activity</span>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            {(['year', 'quarter', 'month'] as ZoomLevel[]).map((level) => (
+              <button
+                key={level}
+                onClick={() => setZoomLevel(level)}
+                className={`px-3 py-1 text-sm rounded ${
+                  zoomLevel === level
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {level.charAt(0).toUpperCase() + level.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Timeline Content */}
       <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Swimlane Sidebar */}
-        <div
-          className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
-          style={{ width: `${SIDEBAR_WIDTH}px` }}
-        >
-          <div
-            className="border-b border-gray-200 dark:border-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
-            style={{ height: `${HEADER_HEIGHT}px` }}
-          >
-            Swimlanes
-          </div>
-          {swimlanes.map((swimlane) => (
-            <div
-              key={swimlane.id}
-              className="px-3 border-b border-gray-100 dark:border-gray-800 flex items-center"
-              style={{ height: `${ROW_HEIGHT}px` }}
-            >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                {swimlane.name}
-              </span>
-            </div>
-          ))}
-        </div>
+        {/* Swimlane Sidebar with Management */}
+        <SwimlaneSidebar
+          swimlanes={swimlanes}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={HEADER_HEIGHT}
+          sidebarWidth={sidebarWidth}
+          onSidebarWidthChange={handleSidebarWidthChange}
+          onAddSwimlane={onAddSwimlane}
+          onEditSwimlane={onEditSwimlane}
+          onDeleteSwimlane={onDeleteSwimlane}
+          onReorderSwimlanes={onReorderSwimlanes}
+        />
 
         {/* Timeline Area */}
         <div
@@ -436,29 +452,40 @@ export function TimelineView({
             {renderTodayLine()}
             {renderDragSelection()}
 
-            {swimlanes.map((swimlane, index) => (
-              <div
-                key={swimlane.id}
-                className={`relative border-b border-gray-100 dark:border-gray-800 ${
-                  index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'
-                }`}
-                style={{ height: `${ROW_HEIGHT}px` }}
-                onMouseDown={(e) => handleMouseDown(e, swimlane.id)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const activityId = e.dataTransfer.getData('activityId');
-                  if (activityId) {
-                    handleSwimlaneChange(activityId, swimlane.id);
-                  }
-                }}
-              >
-                {activities
-                  .filter((a) => a.swimlaneId === swimlane.id)
-                  .map((activity) => {
+            {swimlanes.map((swimlane, index) => {
+              const swimlaneActivities = activities.filter((a) => a.swimlaneId === swimlane.id);
+              const isEmpty = swimlaneActivities.length === 0;
+
+              return (
+                <div
+                  key={swimlane.id}
+                  className={`relative border-b border-gray-100 dark:border-gray-800 ${
+                    index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'
+                  } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}
+                  style={{ height: `${ROW_HEIGHT}px` }}
+                  onMouseDown={(e) => handleMouseDown(e, swimlane.id)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const activityId = e.dataTransfer.getData('activityId');
+                    if (activityId) {
+                      handleSwimlaneChange(activityId, swimlane.id);
+                    }
+                  }}
+                >
+                  {/* Empty state hint */}
+                  {isEmpty && !isDragging && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 opacity-50">
+                        Click and drag to create an activity
+                      </span>
+                    </div>
+                  )}
+
+                  {swimlaneActivities.map((activity) => {
                     const style = getActivityStyle(activity);
                     return (
                       <div
@@ -484,8 +511,9 @@ export function TimelineView({
                       </div>
                     );
                   })}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
