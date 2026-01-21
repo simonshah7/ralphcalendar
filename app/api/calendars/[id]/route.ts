@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, calendars, statuses, swimlanes, campaigns, activities } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
+import { DEFAULT_STATUSES } from '@/lib/utils';
 
 export async function GET(
   request: Request,
@@ -15,8 +16,28 @@ export async function GET(
       return NextResponse.json({ error: 'Calendar not found' }, { status: 404 });
     }
 
-    const calendarStatuses = await db.select().from(statuses).where(eq(statuses.calendarId, id));
-    const calendarSwimlanes = await db.select().from(swimlanes).where(eq(swimlanes.calendarId, id));
+    let calendarStatuses = await db
+      .select()
+      .from(statuses)
+      .where(eq(statuses.calendarId, id))
+      .orderBy(asc(statuses.sortOrder));
+
+    // If no statuses exist, create default ones
+    if (calendarStatuses.length === 0) {
+      const statusValues = DEFAULT_STATUSES.map((status, index) => ({
+        calendarId: id,
+        name: status.name,
+        color: status.color,
+        sortOrder: index,
+      }));
+      calendarStatuses = await db.insert(statuses).values(statusValues).returning();
+    }
+
+    const calendarSwimlanes = await db
+      .select()
+      .from(swimlanes)
+      .where(eq(swimlanes.calendarId, id))
+      .orderBy(asc(swimlanes.sortOrder));
     const calendarCampaigns = await db.select().from(campaigns).where(eq(campaigns.calendarId, id));
     const calendarActivities = await db.select().from(activities).where(eq(activities.calendarId, id));
 
