@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db, activities, statuses, swimlanes } from '@/db';
-import { eq, sql } from 'drizzle-orm';
+import { db, activities, statuses, swimlanes, neonSql } from '@/db';
+import { eq } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
 
 // Type-safe includes check for readonly arrays
@@ -102,14 +102,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
-    // Use raw SQL with NULLIF to convert empty strings to NULL at DB level
-    // This works around the neon driver converting JS null to empty strings
-    const campaignIdValue = (campaignId && typeof campaignId === 'string') ? campaignId.trim() : '';
-    const descriptionValue = (description && typeof description === 'string') ? description.trim() : '';
-    const tagsValue = (tags && typeof tags === 'string') ? tags.trim() : '';
-    const colorValue = (color && typeof color === 'string') ? color.trim() : '';
+    // Use neon client directly with tagged template for proper NULL handling
+    const campaignIdValue = (campaignId && typeof campaignId === 'string' && campaignId.trim()) ? campaignId.trim() : null;
+    const descriptionValue = (description && typeof description === 'string' && description.trim()) ? description.trim() : null;
+    const tagsValue = (tags && typeof tags === 'string' && tags.trim()) ? tags.trim() : null;
+    const colorValue = (color && typeof color === 'string' && color.trim()) ? color.trim() : null;
 
-    const result = await db.execute(sql`
+    const result = await neonSql`
       INSERT INTO activities (
         calendar_id, swimlane_id, status_id, campaign_id,
         title, start_date, end_date, description,
@@ -118,21 +117,21 @@ export async function POST(request: Request) {
         ${calendarId}::uuid,
         ${swimlaneId}::uuid,
         ${statusId}::uuid,
-        NULLIF(${campaignIdValue}, '')::uuid,
+        ${campaignIdValue}::uuid,
         ${title.trim()},
         ${startDate}::date,
         ${endDate}::date,
-        NULLIF(${descriptionValue}, ''),
+        ${descriptionValue},
         ${cost?.toString() || '0'}::decimal,
         ${currency || 'USD'},
         ${region || 'US'},
-        NULLIF(${tagsValue}, ''),
-        NULLIF(${colorValue}, '')
+        ${tagsValue},
+        ${colorValue}
       )
       RETURNING *
-    `);
+    `;
 
-    const newActivity = result.rows[0];
+    const newActivity = result[0];
 
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
