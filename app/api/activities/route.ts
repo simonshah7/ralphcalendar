@@ -102,32 +102,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
-    // Helper to get value or SQL NULL for optional fields
-    const nullableString = (value: unknown) => {
-      if (value && typeof value === 'string' && value.trim()) {
-        return value;
-      }
-      return sql`null`;
-    };
+    // Use raw SQL to insert with proper NULL handling
+    const result = await db.execute(sql`
+      INSERT INTO activities (
+        calendar_id, swimlane_id, status_id, campaign_id,
+        title, start_date, end_date, description,
+        cost, currency, region, tags, color
+      ) VALUES (
+        ${calendarId},
+        ${swimlaneId},
+        ${statusId},
+        ${campaignId && typeof campaignId === 'string' && campaignId.trim() ? campaignId : null},
+        ${title.trim()},
+        ${startDate},
+        ${endDate},
+        ${description && typeof description === 'string' && description.trim() ? description : null},
+        ${cost?.toString() || '0'},
+        ${currency || 'USD'},
+        ${region || 'US'},
+        ${tags && typeof tags === 'string' && tags.trim() ? tags : null},
+        ${color && typeof color === 'string' && color.trim() ? color : null}
+      )
+      RETURNING *
+    `);
 
-    const [newActivity] = await db
-      .insert(activities)
-      .values({
-        calendarId,
-        swimlaneId,
-        statusId,
-        campaignId: nullableString(campaignId),
-        title: title.trim(),
-        startDate,
-        endDate,
-        description: nullableString(description),
-        cost: cost?.toString() || '0',
-        currency: currency || 'USD',
-        region: region || 'US',
-        tags: nullableString(tags),
-        color: nullableString(color),
-      })
-      .returning();
+    const newActivity = result.rows[0];
 
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
