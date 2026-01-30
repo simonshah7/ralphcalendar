@@ -67,8 +67,8 @@ export function TableView({
         bValue = campaigns.find((c) => c.id === b.campaignId)?.name || '';
         break;
       case 'cost':
-        aValue = parseFloat(a.cost || '0');
-        bValue = parseFloat(b.cost || '0');
+        aValue = a.cost || 0;
+        bValue = b.cost || 0;
         break;
     }
 
@@ -121,7 +121,7 @@ export function TableView({
         }
         break;
       case 'cost':
-        updates.cost = value || '0';
+        updates.cost = parseFloat(value || '0');
         break;
       case 'currency':
         updates.currency = value || 'USD';
@@ -138,14 +138,14 @@ export function TableView({
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-white dark:bg-gray-800">
+    <div className="flex-1 overflow-auto bg-card">
       <table className="w-full min-w-[1200px]">
-        <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">
-          <tr className="border-b border-gray-200 dark:border-gray-700">
+        <thead className="sticky top-0 bg-background z-10">
+          <tr className="border-b border-card-border">
             <th className="text-left px-4 py-3">
               <button
                 onClick={() => handleSort('title')}
-                className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
               >
                 Title <SortIcon field="title" />
               </button>
@@ -198,10 +198,10 @@ export function TableView({
                 Cost <SortIcon field="cost" />
               </button>
             </th>
-            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+            <th className="text-left px-4 py-3 text-sm font-medium text-foreground">
               Currency
             </th>
-            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+            <th className="text-left px-4 py-3 text-sm font-medium text-foreground">
               Region
             </th>
           </tr>
@@ -215,9 +215,8 @@ export function TableView({
             return (
               <tr
                 key={activity.id}
-                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer ${
-                  index % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/50'
-                }`}
+                className={`border-b border-card-border/50 hover:bg-muted cursor-pointer ${index % 2 === 0 ? '' : 'bg-background/30'
+                  }`}
                 onClick={() => onActivityClick(activity)}
               >
                 {/* Title */}
@@ -227,7 +226,7 @@ export function TableView({
                       type="text"
                       defaultValue={activity.title}
                       autoFocus
-                      className="w-full px-2 py-1 border border-blue-500 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-2 py-1 border border-accent-purple rounded bg-card text-foreground"
                       onClick={(e) => e.stopPropagation()}
                       onBlur={(e) => handleInlineEdit(activity.id, 'title', e.target.value)}
                       onKeyDown={(e) => {

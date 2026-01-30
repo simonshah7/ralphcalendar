@@ -77,9 +77,9 @@ export function CalendarView({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-card overflow-hidden">
       {/* Calendar Controls */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
         <div className="flex items-center gap-2">
           <button
             onClick={navigatePrev}
@@ -103,7 +103,7 @@ export function CalendarView({
         </div>
         <button
           onClick={navigateToday}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          className="px-3 py-1.5 text-sm font-medium text-foreground bg-muted rounded hover:opacity-80 transition-opacity"
         >
           Today
         </button>
@@ -112,7 +112,7 @@ export function CalendarView({
       {/* Calendar Grid */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Day Headers */}
-        <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-7 border-b border-card-border">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
             <div
               key={day}
@@ -126,7 +126,7 @@ export function CalendarView({
         {/* Calendar Days */}
         <div className="flex-1 grid grid-rows-[repeat(auto-fill,minmax(0,1fr))] overflow-auto">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-800">
+            <div key={weekIndex} className="grid grid-cols-7 border-b border-card-border/50">
               {week.map((date, dayIndex) => {
                 const dayActivities = getActivitiesForDay(date);
                 const dateStr = date.toISOString().split('T')[0];
@@ -134,19 +134,17 @@ export function CalendarView({
                 return (
                   <div
                     key={dayIndex}
-                    className={`min-h-[100px] border-r border-gray-100 dark:border-gray-800 p-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                      !isCurrentMonth(date) ? 'bg-gray-50 dark:bg-gray-900/50' : ''
-                    }`}
+                    className={`min-h-[100px] border-r border-card-border/50 p-1 cursor-pointer hover:bg-muted/50 ${!isCurrentMonth(date) ? 'bg-background' : ''
+                      }`}
                     onClick={() => onDateClick(dateStr)}
                   >
                     <div
-                      className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
-                        isToday(date)
-                          ? 'bg-blue-600 text-white'
+                      className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${isToday(date)
+                          ? 'bg-accent-purple text-white'
                           : isCurrentMonth(date)
-                          ? 'text-gray-900 dark:text-white'
-                          : 'text-gray-400 dark:text-gray-500'
-                      }`}
+                            ? 'text-gray-900 dark:text-white'
+                            : 'text-gray-400 dark:text-gray-500'
+                        }`}
                     >
                       {date.getDate()}
                     </div>

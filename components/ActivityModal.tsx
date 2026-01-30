@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { CampaignDropdown } from './CampaignDropdown';
 
 interface ActivityModalProps {
   isOpen: boolean;
@@ -13,9 +14,11 @@ interface ActivityModalProps {
   defaultStartDate?: string;
   defaultEndDate?: string;
   defaultSwimlaneId?: string;
+  defaults?: Partial<ActivityFormData>;
   onClose: () => void;
   onSubmit: (data: ActivityFormData) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  onCampaignsChange?: () => void;
 }
 
 export interface ActivityFormData {
@@ -42,9 +45,11 @@ export function ActivityModal({
   defaultStartDate,
   defaultEndDate,
   defaultSwimlaneId,
+  defaults,
   onClose,
   onSubmit,
   onDelete,
+  onCampaignsChange,
 }: ActivityModalProps) {
   const [formData, setFormData] = useState<ActivityFormData>({
     title: '',
@@ -74,7 +79,7 @@ export function ActivityModal({
         swimlaneId: activity.swimlaneId,
         campaignId: activity.campaignId,
         description: activity.description || '',
-        cost: parseFloat(activity.cost || '0'),
+        cost: activity.cost || 0,
         currency: activity.currency || 'USD',
         region: activity.region || 'US',
         tags: activity.tags || '',
@@ -82,23 +87,23 @@ export function ActivityModal({
       });
     } else {
       setFormData({
-        title: '',
-        startDate: defaultStartDate || new Date().toISOString().split('T')[0],
-        endDate: defaultEndDate || new Date().toISOString().split('T')[0],
-        statusId: statuses[0]?.id || '',
-        swimlaneId: defaultSwimlaneId || swimlanes[0]?.id || '',
-        campaignId: null,
-        description: '',
-        cost: 0,
-        currency: 'USD',
-        region: 'US',
-        tags: '',
-        color: '',
+        title: defaults?.title || '',
+        startDate: defaults?.startDate || defaultStartDate || new Date().toISOString().split('T')[0],
+        endDate: defaults?.endDate || defaultEndDate || new Date().toISOString().split('T')[0],
+        statusId: defaults?.statusId || statuses[0]?.id || '',
+        swimlaneId: defaults?.swimlaneId || defaultSwimlaneId || swimlanes[0]?.id || '',
+        campaignId: defaults?.campaignId ?? null,
+        description: defaults?.description || '',
+        cost: defaults?.cost || 0,
+        currency: defaults?.currency || 'USD',
+        region: defaults?.region || 'US',
+        tags: defaults?.tags || '',
+        color: defaults?.color || '',
       });
     }
     setErrors({});
     setShowDeleteConfirm(false);
-  }, [activity, isOpen, statuses, swimlanes, defaultStartDate, defaultEndDate, defaultSwimlaneId]);
+  }, [activity, isOpen, statuses, swimlanes, defaultStartDate, defaultEndDate, defaultSwimlaneId, defaults]);
 
   if (!isOpen) return null;
 
@@ -160,138 +165,122 @@ export function ActivityModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <div className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto border border-card-border">
+        <div className="sticky top-0 bg-card border-b border-card-border px-6 py-3 flex items-center justify-between z-10">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {activity ? 'Edit Activity' : 'Create Activity'}
           </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {errors.form && (
             <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm">
               {errors.form}
             </div>
           )}
 
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Title *
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-          </div>
+          <div className="grid grid-cols-12 gap-4">
+            {/* Title */}
+            <div className="col-span-8">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Title *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+              {errors.title && <p className="mt-0.5 text-xs text-red-600">{errors.title}</p>}
+            </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            {/* Campaign */}
+            <div className="col-span-4">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Campaign
+              </label>
+              <CampaignDropdown
+                campaigns={campaigns}
+                selectedCampaignId={formData.campaignId}
+                calendarId={activity?.calendarId || swimlanes[0]?.calendarId || ''}
+                onSelect={(id) => setFormData({ ...formData, campaignId: id })}
+                onCampaignsChange={onCampaignsChange || (() => { })}
+              />
+            </div>
+
+            {/* Dates, Status, Swimlane */}
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Start Date *
               </label>
               <input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {errors.startDate && <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>}
+              {errors.startDate && <p className="mt-0.5 text-xs text-red-600">{errors.startDate}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 End Date *
               </label>
               <input
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {errors.endDate && <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>}
+              {errors.endDate && <p className="mt-0.5 text-xs text-red-600">{errors.endDate}</p>}
             </div>
-          </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Status *
-            </label>
-            <select
-              value={formData.statusId}
-              onChange={(e) => setFormData({ ...formData, statusId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select status</option>
-              {statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.name}
-                </option>
-              ))}
-            </select>
-            {errors.statusId && <p className="mt-1 text-sm text-red-600">{errors.statusId}</p>}
-          </div>
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Status *
+              </label>
+              <select
+                value={formData.statusId}
+                onChange={(e) => setFormData({ ...formData, statusId: e.target.value })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              >
+                <option value="">Select status</option>
+                {statuses.map((status) => (
+                  <option key={status.id} value={status.id}>
+                    {status.name}
+                  </option>
+                ))}
+              </select>
+              {errors.statusId && <p className="mt-0.5 text-xs text-red-600">{errors.statusId}</p>}
+            </div>
 
-          {/* Swimlane */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Swimlane *
-            </label>
-            <select
-              value={formData.swimlaneId}
-              onChange={(e) => setFormData({ ...formData, swimlaneId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select swimlane</option>
-              {swimlanes.map((swimlane) => (
-                <option key={swimlane.id} value={swimlane.id}>
-                  {swimlane.name}
-                </option>
-              ))}
-            </select>
-            {errors.swimlaneId && <p className="mt-1 text-sm text-red-600">{errors.swimlaneId}</p>}
-          </div>
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Swimlane *
+              </label>
+              <select
+                value={formData.swimlaneId}
+                onChange={(e) => setFormData({ ...formData, swimlaneId: e.target.value })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              >
+                <option value="">Select</option>
+                {swimlanes.map((swimlane) => (
+                  <option key={swimlane.id} value={swimlane.id}>
+                    {swimlane.name}
+                  </option>
+                ))}
+              </select>
+              {errors.swimlaneId && <p className="mt-0.5 text-xs text-red-600">{errors.swimlaneId}</p>}
+            </div>
 
-          {/* Campaign */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Campaign
-            </label>
-            <select
-              value={formData.campaignId || ''}
-              onChange={(e) => setFormData({ ...formData, campaignId: e.target.value || null })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">None</option>
-              {campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id}>
-                  {campaign.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Cost & Currency */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            {/* Cost, Currency, Region, Tags */}
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Cost
               </label>
               <input
@@ -300,17 +289,18 @@ export function ActivityModal({
                 step="0.01"
                 value={formData.cost}
                 onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Currency
               </label>
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
@@ -319,121 +309,131 @@ export function ActivityModal({
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Region */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Region
-            </label>
-            <select
-              value={formData.region}
-              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {REGIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Region
+              </label>
+              <select
+                value={formData.region}
+                onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              >
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Tags */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Tags (comma-separated)
-            </label>
-            <input
-              type="text"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              placeholder="social, paid, q1"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Color Override */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Color Override
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={formData.color || '#3B82F6'}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                className="w-10 h-10 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
-              />
+            <div className="col-span-5">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Tags (comma-separated)
+              </label>
               <input
                 type="text"
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                placeholder="#3B82F6"
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                placeholder="social, paid..."
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {formData.color && (
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, color: '' })}
-                  className="px-2 py-2 text-gray-500 hover:text-gray-700"
-                >
-                  Clear
-                </button>
-              )}
+            </div>
+
+            {/* Description & Color */}
+            <div className="col-span-8">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm resize-none"
+              />
+            </div>
+
+            <div className="col-span-4">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Color Override
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={formData.color || '#3B82F6'}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  placeholder="#Hex"
+                  className="flex-1 px-2 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-xs"
+                />
+                {formData.color && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: '' })}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between pt-3 border-t border-card-border">
             <div>
               {activity && onDelete && (
                 <>
                   {showDeleteConfirm ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">Delete?</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-300">Delete permanently?</span>
                       <button
                         type="button"
                         onClick={handleDelete}
                         disabled={isSubmitting}
-                        className="px-3 py-1 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+                        className="px-2 py-1 text-xs text-white bg-red-600 rounded hover:bg-red-700 font-bold"
                       >
-                        Yes
+                        YES
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
-                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                        className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 font-bold"
                       >
-                        No
+                        NO
                       </button>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
+                      className="px-3 py-1.5 text-xs font-bold text-red-600 hover:text-red-700 uppercase tracking-tight"
                     >
-                      Delete
+                      Delete Activity
                     </button>
-                  )}
+                  )
+                  }
                 </>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="px-4 py-1.5 text-xs font-bold text-foreground bg-muted rounded hover:opacity-80 transition-opacity uppercase tracking-tight"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-6 py-1.5 text-xs font-bold text-white bg-accent-purple rounded hover:opacity-90 transition-opacity disabled:opacity-50 uppercase tracking-tight"
               >
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Saving...' : 'Save Activity'}
               </button>
             </div>
           </div>

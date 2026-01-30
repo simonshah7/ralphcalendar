@@ -4,21 +4,51 @@ import { useEffect, useState } from 'react';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    // Check localStorage first, then system preference
     const stored = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const dark = stored === 'dark' || (!stored && prefersDark);
-    setIsDark(dark);
-    document.documentElement.classList.toggle('dark', dark);
+    const shouldBeDark = stored === 'dark' || (!stored && prefersDark);
+    
+    setIsDark(shouldBeDark);
+    
+    // Apply the theme to the document
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   const toggleTheme = () => {
     const newDark = !isDark;
     setIsDark(newDark);
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark', newDark);
+    
+    // Toggle the dark class on the html element
+    if (newDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <button
+        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        aria-label="Toggle theme"
+      >
+        <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <button

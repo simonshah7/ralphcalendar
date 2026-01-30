@@ -1,11 +1,8 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import * as schema from './schema';
 
-const sqlClient = neon(process.env.DATABASE_URL!);
-export const db = drizzle(sqlClient, { schema });
-
-// Export the raw neon client for direct SQL queries
-export const neonSql = sqlClient;
+const sqlite = new Database('./local.db');
+export const db = drizzle(sqlite, { schema });
 
 export * from './schema';

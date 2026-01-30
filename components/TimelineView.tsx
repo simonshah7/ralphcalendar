@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Activity, Swimlane, Status } from '@/db/schema';
+import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
 import { addDays, getDaysBetween } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
 
@@ -9,8 +9,9 @@ interface TimelineViewProps {
   activities: Activity[];
   swimlanes: Swimlane[];
   statuses: Status[];
+  campaigns: Campaign[];
   onActivityClick: (activity: Activity) => void;
-  onActivityCreate: (swimlaneId: string, startDate: string, endDate: string) => void;
+  onActivityCreate: (swimlaneId: string, startDate: string, endDate: string, defaults?: Partial<Activity>, silent?: boolean) => void;
   onActivityUpdate: (id: string, updates: Partial<Activity>) => Promise<void>;
   onAddSwimlane: (name: string) => void;
   onEditSwimlane: (id: string, name: string) => void;
@@ -22,11 +23,27 @@ type ZoomLevel = 'year' | 'quarter' | 'month';
 
 const ZOOM_CONFIG: Record<ZoomLevel, { daysVisible: number; dayWidth: number }> = {
   year: { daysVisible: 365, dayWidth: 4 },
-  quarter: { daysVisible: 90, dayWidth: 10 },
+  quarter: { daysVisible: 90, dayWidth: 24 },
   month: { daysVisible: 30, dayWidth: 30 },
 };
 
-const ROW_HEIGHT = 60;
+type CardStyle = 'small' | 'medium' | 'large';
+
+const STYLE_CONFIG: Record<CardStyle, { rowHeight: number; fontSize: string; padding: string }> = {
+  small: { rowHeight: 40, fontSize: 'text-[10px]', padding: 'py-0.5' },
+  medium: { rowHeight: 60, fontSize: 'text-xs', padding: 'py-1' },
+  large: { rowHeight: 100, fontSize: 'text-sm', padding: 'py-2' },
+};
+
+const AVAILABLE_FIELDS = [
+  { id: 'status', label: 'Status' },
+  { id: 'campaign', label: 'Campaign' },
+  { id: 'cost', label: 'Cost/Budget' },
+  { id: 'region', label: 'Region' },
+  { id: 'tags', label: 'Tags' },
+  { id: 'description', label: 'Description' },
+];
+
 const DEFAULT_SIDEBAR_WIDTH = 200;
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
@@ -36,6 +53,7 @@ export function TimelineView({
   activities,
   swimlanes,
   statuses,
+  campaigns,
   onActivityClick,
   onActivityCreate,
   onActivityUpdate,
@@ -53,10 +71,50 @@ export function TimelineView({
   const [dragStart, setDragStart] = useState<{ x: number; swimlaneId: string } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<number | null>(null);
   const [resizing, setResizing] = useState<{ activityId: string; edge: 'start' | 'end'; initialDate: string } | null>(null);
-  const [moving, setMoving] = useState<{ activityId: string; initialX: number; initialStartDate: string } | null>(null);
+  const [moving, setMoving] = useState<{ activityId: string; initialX: number; initialStartDate: string; initialSwimlaneId: string } | null>(null);
+  const [tempActivity, setTempActivity] = useState<{ id: string; startDate: string; endDate: string; swimlaneId: string } | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+
+  // View Settings
+  const [cardStyle, setCardStyle] = useState<CardStyle>('medium');
+  const [visibleFields, setVisibleFields] = useState<string[]>(['status', 'campaign']);
+  const [showSettings, setShowSettings] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('timeline_view_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.cardStyle) setCardStyle(parsed.cardStyle);
+        if (parsed.visibleFields) setVisibleFields(parsed.visibleFields);
+      } catch (e) {
+        console.error('Failed to parse timeline settings', e);
+      }
+    }
+  }, []);
+
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('timeline_view_settings', JSON.stringify({ cardStyle, visibleFields }));
+  }, [cardStyle, visibleFields]);
+
+  // Close settings when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const rowHeight = STYLE_CONFIG[cardStyle].rowHeight;
 
   const handleSidebarWidthChange = useCallback((width: number) => {
     setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width)));
@@ -76,17 +134,119 @@ export function TimelineView({
     return daysDiff * config.dayWidth;
   }, [config.dayWidth, startDate]);
 
-  const getActivityStyle = (activity: Activity) => {
-    const start = getXFromDate(activity.startDate);
-    const end = getXFromDate(activity.endDate);
+  // Activity Stacking Logic
+  const getSwimlaneActivitiesWithLevels = (swimlaneId: string) => {
+    const rawActivities = activities.filter((a) => {
+      const isTemp = tempActivity && tempActivity.id === a.id;
+      const currentSwimlaneId = isTemp ? tempActivity.swimlaneId : a.swimlaneId;
+      return currentSwimlaneId === swimlaneId;
+    });
+
+    // If current temp activity is for a new creation (not move/resize), add it
+    if (isDragging && dragStart && dragStart.swimlaneId === swimlaneId && dragCurrent !== null) {
+      const minX = Math.min(dragStart.x, dragCurrent);
+      const maxX = Math.max(dragStart.x, dragCurrent);
+      const start = getDateFromX(minX).toISOString().split('T')[0];
+      const end = getDateFromX(maxX).toISOString().split('T')[0];
+
+      // If it exists in rawActivities (e.g. update), it's already handled
+      // But for new drag creation, we add a mock activity
+      if (!rawActivities.find(a => a.id === 'temp-new')) {
+        rawActivities.push({
+          id: 'temp-new',
+          title: 'New Activity',
+          startDate: start,
+          endDate: end,
+          swimlaneId: swimlaneId,
+          statusId: '',
+          campaignId: '',
+          color: null,
+          cost: null,
+          currency: 'USD',
+          region: null,
+          tags: null,
+          description: null,
+          calendarId: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Activity);
+      }
+    }
+
+    // Sort by start date, then by duration (longer first)
+    const sorted = [...rawActivities].sort((a, b) => {
+      const aStart = new Date(tempActivity?.id === a.id ? tempActivity.startDate : a.startDate).getTime();
+      const bStart = new Date(tempActivity?.id === b.id ? tempActivity.startDate : b.startDate).getTime();
+      if (aStart !== bStart) return aStart - bStart;
+
+      const aEnd = new Date(tempActivity?.id === a.id ? tempActivity.endDate : a.endDate).getTime();
+      const bEnd = new Date(tempActivity?.id === b.id ? tempActivity.endDate : b.endDate).getTime();
+      return (bEnd - bStart) - (aEnd - aStart);
+    });
+
+    const activitiesWithLevels: (Activity & { level: number })[] = [];
+    const levels: { end: number }[][] = [];
+
+    sorted.forEach(activity => {
+      const isTemp = tempActivity && tempActivity.id === activity.id;
+      const start = new Date(isTemp ? tempActivity.startDate : activity.startDate).getTime();
+      const end = new Date(isTemp ? tempActivity.endDate : activity.endDate).getTime();
+
+      let levelFound = -1;
+      for (let i = 0; i < levels.length; i++) {
+        // Check if any activity in this level overlaps
+        const hasOverlap = levels[i].some(l => {
+          // Add a small buffer (1ms) to prevent edge-to-edge overlap issues if desired, 
+          // or keep it strict if same day end/start is okay.
+          // In this calendar, end date is inclusive, so we need to check if start <= levelEnd
+          return start <= l.end;
+        });
+
+        if (!hasOverlap) {
+          levelFound = i;
+          break;
+        }
+      }
+
+      if (levelFound === -1) {
+        levelFound = levels.length;
+        levels.push([{ end }]);
+      } else {
+        levels[levelFound].push({ end });
+      }
+
+      activitiesWithLevels.push({ ...activity, level: levelFound });
+    });
+
+    return {
+      activities: activitiesWithLevels,
+      maxLevel: levels.length > 0 ? levels.length - 1 : 0,
+      totalHeight: Math.max(1, levels.length) * rowHeight
+    };
+  };
+
+  const swimlaneData = swimlanes.reduce((acc, s) => {
+    acc[s.id] = getSwimlaneActivitiesWithLevels(s.id);
+    return acc;
+  }, {} as Record<string, { activities: (Activity & { level: number })[], maxLevel: number, totalHeight: number }>);
+
+  const getActivityStyle = (activity: Activity & { level?: number }) => {
+    const isTemp = tempActivity && tempActivity.id === activity.id;
+    const start = getXFromDate(isTemp ? tempActivity.startDate : activity.startDate);
+    const end = getXFromDate(isTemp ? tempActivity.endDate : activity.endDate);
     const width = end - start + config.dayWidth;
     const status = statuses.find((s) => s.id === activity.statusId);
     const color = activity.color || status?.color || '#3B82F6';
+    const level = activity.level ?? 0;
 
     return {
       left: `${start}px`,
       width: `${Math.max(width, config.dayWidth)}px`,
+      top: `${(level * rowHeight) + 8}px`,
+      height: `${rowHeight - 16}px`,
       backgroundColor: color,
+      opacity: isTemp ? 0.7 : 1,
+      zIndex: isTemp ? 20 : 1,
     };
   };
 
@@ -120,11 +280,21 @@ export function TimelineView({
 
       if (resizing.edge === 'end') {
         if (newDate >= activity.startDate) {
-          onActivityUpdate(activity.id, { endDate: newDate });
+          setTempActivity({
+            id: activity.id,
+            startDate: activity.startDate,
+            endDate: newDate,
+            swimlaneId: activity.swimlaneId
+          });
         }
       } else {
         if (newDate <= activity.endDate) {
-          onActivityUpdate(activity.id, { startDate: newDate });
+          setTempActivity({
+            id: activity.id,
+            startDate: newDate,
+            endDate: activity.endDate,
+            swimlaneId: activity.swimlaneId
+          });
         }
       }
     }
@@ -140,9 +310,16 @@ export function TimelineView({
       const duration = getDaysBetween(activity.startDate, activity.endDate);
       const newEnd = addDays(newStart, duration - 1);
 
-      onActivityUpdate(activity.id, {
+      // Calculate current swimlane based on Y position
+      const y = e.clientY - rect.top + (timelineRef.current?.scrollTop || 0) - HEADER_HEIGHT;
+      const swimlaneIndex = Math.max(0, Math.min(swimlanes.length - 1, Math.floor(y / rowHeight)));
+      const currentSwimlaneId = swimlanes[swimlaneIndex].id;
+
+      setTempActivity({
+        id: activity.id,
         startDate: newStart.toISOString().split('T')[0],
         endDate: newEnd.toISOString().split('T')[0],
+        swimlaneId: currentSwimlaneId
       });
     }
   };
@@ -155,8 +332,16 @@ export function TimelineView({
       if (maxX - minX > 10) {
         const startDateStr = getDateFromX(minX).toISOString().split('T')[0];
         const endDateStr = getDateFromX(maxX).toISOString().split('T')[0];
-        onActivityCreate(dragStart.swimlaneId, startDateStr, endDateStr);
+        onActivityCreate(dragStart.swimlaneId, startDateStr, endDateStr, {}, true);
       }
+    }
+
+    if (tempActivity) {
+      onActivityUpdate(tempActivity.id, {
+        startDate: tempActivity.startDate,
+        endDate: tempActivity.endDate,
+        swimlaneId: tempActivity.swimlaneId
+      });
     }
 
     setIsDragging(false);
@@ -164,12 +349,13 @@ export function TimelineView({
     setDragCurrent(null);
     setResizing(null);
     setMoving(null);
+    setTempActivity(null);
   };
 
   const handleActivityMouseDown = (e: React.MouseEvent, activity: Activity) => {
     e.stopPropagation();
 
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const relativeX = e.clientX - rect.left;
     const width = rect.width;
 
@@ -181,9 +367,20 @@ export function TimelineView({
       const timelineRect = timelineRef.current?.getBoundingClientRect();
       if (timelineRect) {
         const x = e.clientX - timelineRect.left + (timelineRef.current?.scrollLeft || 0);
-        setMoving({ activityId: activity.id, initialX: x, initialStartDate: activity.startDate });
+        setMoving({
+          activityId: activity.id,
+          initialX: x,
+          initialStartDate: activity.startDate,
+          initialSwimlaneId: activity.swimlaneId
+        });
       }
     }
+  };
+
+  const handleCloneActivity = (e: React.MouseEvent, activity: Activity) => {
+    e.stopPropagation();
+    const { id, calendarId, ...rest } = activity;
+    onActivityCreate(activity.swimlaneId, activity.startDate, activity.endDate, rest);
   };
 
   const handleSwimlaneChange = async (activityId: string, newSwimlaneId: string) => {
@@ -204,7 +401,7 @@ export function TimelineView({
         headers.push(
           <div
             key={`month-${i}`}
-            className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 text-center text-sm font-medium text-gray-700 dark:text-gray-200 py-2"
+            className="flex-shrink-0 border-r border-card-border text-center text-sm font-medium text-foreground py-2"
             style={{ width: `${width}px` }}
           >
             {monthStart.toLocaleDateString('en-US', { month: 'short' })}
@@ -220,7 +417,7 @@ export function TimelineView({
         headers.push(
           <div
             key={`month-${i}`}
-            className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 text-center text-sm font-medium text-gray-700 dark:text-gray-200 py-2"
+            className="flex-shrink-0 border-r border-card-border text-center text-sm font-medium text-foreground py-2"
             style={{ width: `${width}px` }}
           >
             {monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -233,9 +430,8 @@ export function TimelineView({
           subHeaders.push(
             <div
               key={`day-${i}-${d}`}
-              className={`flex-shrink-0 border-r border-gray-100 dark:border-gray-800 text-center text-xs py-1 ${
-                isWeekend ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'text-gray-500 dark:text-gray-400'
-              }`}
+              className={`flex-shrink-0 border-r border-card-border/50 text-center text-xs py-1 ${isWeekend ? 'bg-muted text-muted-foreground' : 'text-muted-foreground'
+                }`}
               style={{ width: `${config.dayWidth}px` }}
             >
               {d}
@@ -249,7 +445,7 @@ export function TimelineView({
       headers.push(
         <div
           key="month"
-          className="flex-shrink-0 text-center text-sm font-medium text-gray-700 dark:text-gray-200 py-2"
+          className="flex-shrink-0 text-center text-sm font-medium text-foreground py-2"
           style={{ width: `${totalWidth}px` }}
         >
           {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -263,9 +459,8 @@ export function TimelineView({
         subHeaders.push(
           <div
             key={`day-${d}`}
-            className={`flex-shrink-0 border-r border-gray-100 dark:border-gray-800 text-center text-xs py-1 ${
-              isWeekend ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`flex-shrink-0 border-r border-gray-100 dark:border-gray-800 text-center text-xs py-1 ${isWeekend ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'text-gray-500 dark:text-gray-400'
+              }`}
             style={{ width: `${config.dayWidth}px` }}
           >
             <div>{dayName}</div>
@@ -276,7 +471,7 @@ export function TimelineView({
     }
 
     return (
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-card-border">
         <div className="flex">{headers}</div>
         {subHeaders.length > 0 && <div className="flex">{subHeaders}</div>}
       </div>
@@ -307,14 +502,18 @@ export function TimelineView({
     const minX = Math.min(dragStart.x, dragCurrent);
     const maxX = Math.max(dragStart.x, dragCurrent);
 
+    const data = swimlaneData[dragStart.swimlaneId];
+    if (!data) return null;
+
     return (
       <div
         className="absolute bg-blue-200/50 dark:bg-blue-600/30 border-2 border-blue-400 dark:border-blue-500 rounded pointer-events-none"
         style={{
           left: `${minX}px`,
-          top: `${swimlaneIndex * ROW_HEIGHT + 4}px`,
+          top: `${swimlanes.slice(0, swimlaneIndex).reduce((sum, s) => sum + swimlaneData[s.id].totalHeight, 0) + (data.maxLevel * rowHeight) + 4}px`,
           width: `${maxX - minX}px`,
-          height: `${ROW_HEIGHT - 8}px`,
+          height: `${rowHeight - 8}px`,
+          zIndex: 30,
         }}
       />
     );
@@ -351,7 +550,7 @@ export function TimelineView({
 
   if (swimlanes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-gray-500 dark:text-gray-400 mb-2">No swimlanes yet</p>
           <p className="text-sm text-gray-400 dark:text-gray-500">
@@ -363,9 +562,9 @@ export function TimelineView({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-card overflow-hidden">
       {/* Timeline Controls */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-background">
         <div className="flex items-center gap-2">
           <button
             onClick={navigatePrev}
@@ -377,7 +576,7 @@ export function TimelineView({
           </button>
           <button
             onClick={navigateToday}
-            className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-3 py-1 text-sm font-medium text-foreground bg-muted rounded hover:opacity-80 transition-opacity"
           >
             Today
           </button>
@@ -401,30 +600,83 @@ export function TimelineView({
           </div>
 
           {/* Zoom Controls */}
-          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            {(['year', 'quarter', 'month'] as ZoomLevel[]).map((level) => (
-              <button
-                key={level}
-                onClick={() => setZoomLevel(level)}
-                className={`px-3 py-1 text-sm rounded ${
-                  zoomLevel === level
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </button>
-            ))}
-          </div>
+        </div>
+
+        <div className="flex items-center gap-2 relative" ref={settingsRef}>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showSettings
+              ? 'bg-accent-purple text-white'
+              : 'bg-muted text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>View Settings</span>
+          </button>
+
+          {showSettings && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-card-border rounded-lg shadow-xl z-50 p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    Card Style
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 bg-muted p-1 rounded-md">
+                    {(['small', 'medium', 'large'] as CardStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setCardStyle(style)}
+                        className={`px-2 py-1 text-xs rounded capitalize ${cardStyle === style
+                          ? 'bg-card text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    Visible Fields
+                  </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground opacity-50 cursor-not-allowed">
+                      <input type="checkbox" checked readOnly className="rounded" />
+                      <span>Title (Always shown)</span>
+                    </div>
+                    {AVAILABLE_FIELDS.map((field) => (
+                      <label key={field.id} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-muted rounded cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={visibleFields.includes(field.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setVisibleFields([...visibleFields, field.id]);
+                            } else {
+                              setVisibleFields(visibleFields.filter(f => f !== field.id));
+                            }
+                          }}
+                          className="rounded text-accent-purple focus:ring-accent-purple"
+                        />
+                        <span className="text-foreground">{field.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
       {/* Timeline Content */}
       <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Swimlane Sidebar with Management */}
         <SwimlaneSidebar
           swimlanes={swimlanes}
-          rowHeight={ROW_HEIGHT}
+          rowHeights={swimlanes.map(s => swimlaneData[s.id].totalHeight)}
           headerHeight={HEADER_HEIGHT}
           sidebarWidth={sidebarWidth}
           onSidebarWidthChange={handleSidebarWidthChange}
@@ -434,7 +686,6 @@ export function TimelineView({
           onReorderSwimlanes={onReorderSwimlanes}
         />
 
-        {/* Timeline Area */}
         <div
           ref={timelineRef}
           className="flex-1 overflow-auto"
@@ -442,27 +693,24 @@ export function TimelineView({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {/* Time Header */}
           <div style={{ width: `${totalWidth}px`, height: `${HEADER_HEIGHT}px` }}>
             {renderTimeHeader()}
           </div>
 
-          {/* Swimlane Rows */}
           <div className="relative" style={{ width: `${totalWidth}px` }}>
             {renderTodayLine()}
             {renderDragSelection()}
 
             {swimlanes.map((swimlane, index) => {
-              const swimlaneActivities = activities.filter((a) => a.swimlaneId === swimlane.id);
-              const isEmpty = swimlaneActivities.length === 0;
+              const { activities: swimlaneActivities, totalHeight } = swimlaneData[swimlane.id];
+              const isEmpty = swimlaneActivities.length === 0 && (!isDragging || dragStart?.swimlaneId !== swimlane.id);
 
               return (
                 <div
                   key={swimlane.id}
-                  className={`relative border-b border-gray-100 dark:border-gray-800 ${
-                    index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'
-                  } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}
-                  style={{ height: `${ROW_HEIGHT}px` }}
+                  className={`relative border-b border-card-border/50 ${index % 2 === 0 ? 'bg-card' : 'bg-background/50'
+                    } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-accent-purple/10' : ''}`}
+                  style={{ height: `${totalHeight}px` }}
                   onMouseDown={(e) => handleMouseDown(e, swimlane.id)}
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -476,7 +724,6 @@ export function TimelineView({
                     }
                   }}
                 >
-                  {/* Empty state hint */}
                   {isEmpty && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <span className="text-xs text-gray-400 dark:text-gray-500 opacity-50">
@@ -487,27 +734,98 @@ export function TimelineView({
 
                   {swimlaneActivities.map((activity) => {
                     const style = getActivityStyle(activity);
+                    const status = statuses.find(s => s.id === activity.statusId);
+                    const campaign = campaigns.find(c => c.id === activity.campaignId);
+                    const config = STYLE_CONFIG[cardStyle];
+
                     return (
                       <div
                         key={activity.id}
-                        className="activity-bar absolute top-2 bottom-2 rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center px-2 overflow-hidden group"
+                        className={`activity-bar absolute rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden group border border-black/10`}
                         style={style}
-                        onClick={() => onActivityClick(activity)}
+                        onDoubleClick={() => onActivityClick(activity)}
                         onMouseDown={(e) => handleActivityMouseDown(e, activity)}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('activityId', activity.id);
-                          e.dataTransfer.effectAllowed = 'move';
-                        }}
                         title={`${activity.title}\n${activity.startDate} - ${activity.endDate}`}
                       >
                         {/* Resize handles */}
-                        <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20" />
-                        <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/30 hover:bg-white/50 transition-colors z-10" />
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/30 hover:bg-white/50 transition-colors z-10" />
 
-                        <span className="text-xs text-white font-medium truncate">
-                          {activity.title}
-                        </span>
+                        {/* Actions group */}
+                        <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all z-20">
+                          <button
+                            className="p-1 rounded bg-black/20 hover:bg-black/40 text-white"
+                            onClick={(e) => handleCloneActivity(e, activity)}
+                            title="Clone"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                            </svg>
+                          </button>
+                          <button
+                            className="p-1 rounded bg-black/20 hover:bg-black/40 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onActivityClick(activity);
+                            }}
+                            title="Edit"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className={`h-full flex flex-col px-2 ${config.padding} pointer-events-none`}>
+                          <div className={`font-bold text-white truncate ${config.fontSize} pr-6`}>
+                            {activity.title}
+                          </div>
+
+                          {cardStyle !== 'small' && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 overflow-hidden">
+                              {visibleFields.includes('status') && status && (
+                                <span className="text-[10px] bg-white/20 text-white px-1 rounded truncate max-w-full">
+                                  {status.name}
+                                </span>
+                              )}
+                              {visibleFields.includes('campaign') && campaign && (
+                                <span className="text-[10px] text-white/80 italic truncate">
+                                  {campaign.name}
+                                </span>
+                              )}
+                              {visibleFields.includes('cost') && activity.cost !== null && (
+                                <span className="text-[10px] text-white font-medium">
+                                  {activity.currency} {activity.cost.toLocaleString()}
+                                </span>
+                              )}
+                              {visibleFields.includes('region') && activity.region && (
+                                <span className="text-[10px] text-white/70">
+                                  🌍 {activity.region}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {cardStyle === 'large' && (
+                            <>
+                              {visibleFields.includes('tags') && activity.tags && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {activity.tags.split(',').map((tag, i) => (
+                                    <span key={i} className="text-[9px] bg-black/10 text-white px-1 rounded border border-white/20">
+                                      {tag.trim()}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {visibleFields.includes('description') && activity.description && (
+                                <div className="text-[10px] text-white/90 line-clamp-2 mt-1 italic leading-tight">
+                                  {activity.description}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

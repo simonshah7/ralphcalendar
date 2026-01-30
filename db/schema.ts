@@ -1,53 +1,54 @@
-import { pgTable, uuid, text, timestamp, integer, decimal, date } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
 // Calendars table
-export const calendars = pgTable('calendars', {
-  id: uuid('id').primaryKey().defaultRandom(),
+export const calendars = sqliteTable('calendars', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
 // Statuses table
-export const statuses = pgTable('statuses', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  calendarId: uuid('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
+export const statuses = sqliteTable('statuses', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   color: text('color').notNull(),
   sortOrder: integer('sort_order').default(0),
 });
 
 // Swimlanes table
-export const swimlanes = pgTable('swimlanes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  calendarId: uuid('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
+export const swimlanes = sqliteTable('swimlanes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   sortOrder: integer('sort_order').default(0),
 });
 
 // Campaigns table
-export const campaigns = pgTable('campaigns', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  calendarId: uuid('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
+export const campaigns = sqliteTable('campaigns', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
 });
 
 // Activities table
-export const activities = pgTable('activities', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  calendarId: uuid('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
-  swimlaneId: uuid('swimlane_id').notNull().references(() => swimlanes.id, { onDelete: 'cascade' }),
-  statusId: uuid('status_id').notNull().references(() => statuses.id),
-  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+export const activities = sqliteTable('activities', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
+  swimlaneId: text('swimlane_id').notNull().references(() => swimlanes.id, { onDelete: 'cascade' }),
+  statusId: text('status_id').notNull().references(() => statuses.id),
+  campaignId: text('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
-  startDate: date('start_date').notNull(),
-  endDate: date('end_date').notNull(),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
   description: text('description'),
-  cost: decimal('cost', { precision: 12, scale: 2 }).default('0'),
+  cost: real('cost').default(0),
   currency: text('currency').default('USD'),
   region: text('region').default('US'),
   tags: text('tags'),
   color: text('color'),
-  createdAt: timestamp('created_at').defaultNow(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
 // Type exports

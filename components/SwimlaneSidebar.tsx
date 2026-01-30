@@ -6,7 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 interface SwimlaneSidebarProps {
   swimlanes: Swimlane[];
-  rowHeight: number;
+  rowHeights: number[]; // Array of heights matching swimlanes order
   headerHeight: number;
   sidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
@@ -18,7 +18,7 @@ interface SwimlaneSidebarProps {
 
 export function SwimlaneSidebar({
   swimlanes,
-  rowHeight,
+  rowHeights,
   headerHeight,
   sidebarWidth,
   onSidebarWidthChange,
@@ -154,20 +154,20 @@ export function SwimlaneSidebar({
 
   return (
     <div
-      className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 relative select-none"
+      className="flex-shrink-0 border-r border-card-border bg-background relative select-none"
       style={{ width: `${sidebarWidth}px` }}
     >
       {/* Header */}
       <div
-        className="border-b border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center justify-between"
+        className="border-b border-card-border px-3 py-2 flex items-center justify-between"
         style={{ height: `${headerHeight}px` }}
       >
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+        <span className="text-sm font-medium text-foreground">
           Swimlanes
         </span>
         <button
           onClick={() => setIsAddingNew(true)}
-          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           title="Add swimlane"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ export function SwimlaneSidebar({
 
       {/* New Swimlane Input */}
       {isAddingNew && (
-        <div className="px-2 py-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
+        <div className="px-2 py-2 border-b border-card-border bg-accent-purple/10">
           <input
             ref={newInputRef}
             type="text"
@@ -195,7 +195,7 @@ export function SwimlaneSidebar({
             <button
               onClick={handleAddNew}
               disabled={!newSwimlaneValue.trim()}
-              className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-2 py-1 text-xs bg-accent-purple text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add
             </button>
@@ -210,7 +210,7 @@ export function SwimlaneSidebar({
       )}
 
       {/* Swimlane List */}
-      {swimlanes.map((swimlane) => (
+      {swimlanes.map((swimlane, index) => (
         <div
           key={swimlane.id}
           draggable={editingId !== swimlane.id}
@@ -225,7 +225,7 @@ export function SwimlaneSidebar({
             ${dragOverId === swimlane.id ? 'bg-blue-100 dark:bg-blue-900/30 border-t-2 border-t-blue-500' : ''}
             ${editingId === swimlane.id ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}
           `}
-          style={{ height: `${rowHeight}px` }}
+          style={{ height: `${rowHeights[index]}px` }}
         >
           {/* Drag Handle */}
           <div className="cursor-grab opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">

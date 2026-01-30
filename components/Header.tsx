@@ -2,6 +2,7 @@
 
 import { Calendar } from '@/db/schema';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 type ViewType = 'timeline' | 'calendar' | 'table';
 
@@ -33,25 +34,24 @@ export function Header({
   ];
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+    <header className="bg-background border-b border-card-border px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           {/* Logo */}
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">
+          <h1 className="text-xl font-bold text-accent-purple">
             CampaignOS
           </h1>
 
           {/* View Tabs */}
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+          <div className="flex bg-muted rounded-lg p-1">
             {views.map((view) => (
               <button
                 key={view.key}
                 onClick={() => onViewChange(view.key)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  currentView === view.key
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${currentView === view.key
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 {view.label}
               </button>
@@ -68,11 +68,14 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {/* Export Button */}
           <button
             onClick={onExport}
             disabled={!currentCalendar}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Export
           </button>
@@ -81,7 +84,7 @@ export function Header({
           <button
             onClick={onCreateActivity}
             disabled={!currentCalendar}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-accent-purple rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

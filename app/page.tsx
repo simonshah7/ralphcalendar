@@ -10,7 +10,7 @@ import { ActivityModal, ActivityFormData } from '@/components/ActivityModal';
 import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 
 type ViewType = 'timeline' | 'calendar' | 'table';
 
@@ -41,6 +41,7 @@ export default function Home() {
     swimlaneId?: string;
     startDate?: string;
     endDate?: string;
+    defaults?: Partial<Activity>;
   }>({});
 
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -222,10 +223,33 @@ export default function Home() {
     setShowActivityModal(true);
   };
 
-  const handleActivityCreate = (swimlaneId: string, startDate: string, endDate: string) => {
-    setEditingActivity(null);
-    setActivityDefaults({ swimlaneId, startDate, endDate });
-    setShowActivityModal(true);
+  const handleActivityCreate = async (swimlaneId: string, startDate: string, endDate: string, defaults?: Partial<Activity>, silent?: boolean) => {
+    const activityData: ActivityFormData = {
+      title: defaults?.title || 'New Activity',
+      startDate,
+      endDate,
+      statusId: defaults?.statusId || currentCalendar?.statuses[0]?.id || '',
+      swimlaneId,
+      campaignId: defaults?.campaignId || null,
+      description: defaults?.description || '',
+      cost: defaults?.cost || 0,
+      currency: defaults?.currency || 'USD',
+      region: defaults?.region || 'US',
+      tags: defaults?.tags || '',
+      color: defaults?.color || '',
+    };
+
+    if (silent) {
+      try {
+        await handleActivitySubmit(activityData);
+      } catch (error) {
+        console.error('Failed to create activity silently:', error);
+      }
+    } else {
+      setEditingActivity(null);
+      setActivityDefaults({ swimlaneId, startDate, endDate, defaults });
+      setShowActivityModal(true);
+    }
   };
 
   const handleDateClick = (date: string) => {
@@ -234,22 +258,107 @@ export default function Home() {
     setShowActivityModal(true);
   };
 
-  const handleExport = async (startDate: string, endDate: string) => {
-    if (!mainContentRef.current) return;
+  const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => {
+    if (exportFormat === 'csv') {
+      exportToCSV(startDate, endDate);
+      return;
+    }
+
+    const elementToCapture = mainContentRef.current;
+    if (!elementToCapture) {
+      console.error('Target element not found');
+      alert('Unable to export: content not ready');
+      return;
+    }
 
     try {
-      const canvas = await html2canvas(mainContentRef.current, {
+      // html-to-image is much better at supporting modern CSS like lab() and oklch()
+      const dataUrl = await htmlToImage.toPng(elementToCapture, {
         backgroundColor: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff',
-        scale: 2,
+        quality: 1,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        }
       });
 
       const link = document.createElement('a');
-      link.download = `campaignos-export-${startDate}-to-${endDate}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = `campaignos-${exportType}-export-${startDate}-to-${endDate}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
     }
+  };
+
+  const exportToCSV = (startDate: string, endDate: string) => {
+    if (!currentCalendar) return;
+
+    // Filter activities by date range
+    const activitiesToExport = filteredActivities.filter(a => {
+      const aStart = a.startDate;
+      const aEnd = a.endDate;
+      return aStart <= endDate && aEnd >= startDate;
+    });
+
+    const headers = [
+      'Title',
+      'Start Date',
+      'End Date',
+      'Status',
+      'Swimlane',
+      'Campaign',
+      'Cost',
+      'Currency',
+      'Region',
+      'Tags',
+      'Description'
+    ];
+
+    const escapeCSV = (val: any): string => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvContent = [
+      headers.join(','),
+      ...activitiesToExport.map(a => {
+        const status = currentCalendar.statuses.find(s => s.id === a.statusId)?.name || '';
+        const swimlane = currentCalendar.swimlanes.find(s => s.id === a.swimlaneId)?.name || '';
+        const campaign = currentCalendar.campaigns.find(c => c.id === a.campaignId)?.name || 'N/A';
+
+        return [
+          escapeCSV(a.title),
+          escapeCSV(a.startDate),
+          escapeCSV(a.endDate),
+          escapeCSV(status),
+          escapeCSV(swimlane),
+          escapeCSV(campaign),
+          escapeCSV(a.cost),
+          escapeCSV(a.currency),
+          escapeCSV(a.region || ''),
+          escapeCSV(a.tags || ''),
+          escapeCSV(a.description || '')
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `campaignos-activities-${startDate}-to-${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Filter activities
@@ -287,10 +396,10 @@ export default function Home() {
           currentCalendar={null}
           currentView={currentView}
           onViewChange={setCurrentView}
-          onCalendarSelect={() => {}}
+          onCalendarSelect={() => { }}
           onCreateCalendar={() => setShowCreateCalendar(true)}
-          onCreateActivity={() => {}}
-          onExport={() => {}}
+          onCreateActivity={() => { }}
+          onExport={() => { }}
         />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto px-4">
@@ -399,6 +508,7 @@ export default function Home() {
                 activities={filteredActivities}
                 swimlanes={currentCalendar.swimlanes}
                 statuses={currentCalendar.statuses}
+                campaigns={currentCalendar.campaigns}
                 onActivityClick={handleActivityClick}
                 onActivityCreate={handleActivityCreate}
                 onActivityUpdate={handleActivityUpdate}
@@ -449,11 +559,13 @@ export default function Home() {
           defaultStartDate={activityDefaults.startDate}
           defaultEndDate={activityDefaults.endDate}
           defaultSwimlaneId={activityDefaults.swimlaneId}
+          defaults={activityDefaults.defaults as any} // Cast as any to handle Partial<Activity> to Partial<ActivityFormData> mapping
           onClose={() => {
             setShowActivityModal(false);
             setEditingActivity(null);
             setActivityDefaults({});
           }}
+          onCampaignsChange={() => fetchCalendarData(currentCalendar.id)}
           onSubmit={handleActivitySubmit}
           onDelete={handleActivityDelete}
         />
@@ -461,6 +573,7 @@ export default function Home() {
 
       <ExportModal
         isOpen={showExportModal}
+        currentView={currentView}
         onClose={() => setShowExportModal(false)}
         onExport={handleExport}
       />

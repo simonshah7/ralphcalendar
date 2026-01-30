@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, activities, statuses, swimlanes, neonSql } from '@/db';
+import { db, activities, statuses, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
 
@@ -102,36 +102,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Status not found' }, { status: 400 });
     }
 
-    // Use neon client directly with tagged template for proper NULL handling
+    // Use Drizzle ORM insert
     const campaignIdValue = (campaignId && typeof campaignId === 'string' && campaignId.trim()) ? campaignId.trim() : null;
     const descriptionValue = (description && typeof description === 'string' && description.trim()) ? description.trim() : null;
     const tagsValue = (tags && typeof tags === 'string' && tags.trim()) ? tags.trim() : null;
     const colorValue = (color && typeof color === 'string' && color.trim()) ? color.trim() : null;
 
-    const result = await neonSql`
-      INSERT INTO activities (
-        calendar_id, swimlane_id, status_id, campaign_id,
-        title, start_date, end_date, description,
-        cost, currency, region, tags, color
-      ) VALUES (
-        ${calendarId}::uuid,
-        ${swimlaneId}::uuid,
-        ${statusId}::uuid,
-        ${campaignIdValue}::uuid,
-        ${title.trim()},
-        ${startDate}::date,
-        ${endDate}::date,
-        ${descriptionValue},
-        ${cost?.toString() || '0'}::decimal,
-        ${(currency || 'USD').toLowerCase()},
-        ${(region || 'US').toLowerCase()},
-        ${tagsValue},
-        ${colorValue}
-      )
-      RETURNING *
-    `;
-
-    const newActivity = result[0];
+    const [newActivity] = await db.insert(activities).values({
+      calendarId,
+      swimlaneId,
+      statusId,
+      campaignId: campaignIdValue,
+      title: title.trim(),
+      startDate,
+      endDate,
+      description: descriptionValue,
+      cost: cost !== undefined ? cost : 0,
+      currency: currency || 'USD',
+      region: region || 'US',
+      tags: tagsValue,
+      color: colorValue,
+    }).returning();
 
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
