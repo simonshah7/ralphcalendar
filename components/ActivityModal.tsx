@@ -120,7 +120,7 @@ export function ActivityModal({
       newErrors.endDate = 'End date is required';
     }
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
-      newErrors.endDate = 'End date must be after start date';
+      newErrors.endDate = 'End date must be on or after start date';
     }
     if (!formData.statusId) {
       newErrors.statusId = 'Status is required';

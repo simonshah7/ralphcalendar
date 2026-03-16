@@ -70,11 +70,16 @@ export async function PUT(
     if (startDate !== undefined) updates.startDate = startDate;
     if (endDate !== undefined) updates.endDate = endDate;
 
-    // Validate date range if both are being updated or one is being updated
-    const finalStartDate = startDate || undefined;
-    const finalEndDate = endDate || undefined;
-    if (finalStartDate && finalEndDate && new Date(finalEndDate) < new Date(finalStartDate)) {
-      return NextResponse.json({ error: 'End date must be after or equal to start date' }, { status: 400 });
+    // Validate date range - fetch current activity to compare against when only one date changes
+    if (startDate !== undefined || endDate !== undefined) {
+      const [currentActivity] = await db.select().from(activities).where(eq(activities.id, id));
+      if (currentActivity) {
+        const finalStartDate = startDate ?? currentActivity.startDate;
+        const finalEndDate = endDate ?? currentActivity.endDate;
+        if (new Date(finalEndDate) < new Date(finalStartDate)) {
+          return NextResponse.json({ error: 'End date must be after or equal to start date' }, { status: 400 });
+        }
+      }
     }
 
     if (description !== undefined) updates.description = emptyToNull(description);
@@ -83,7 +88,7 @@ export async function PUT(
       if (cost < 0) {
         return NextResponse.json({ error: 'Cost must be >= 0' }, { status: 400 });
       }
-      updates.cost = cost.toString();
+      updates.cost = Number(cost);
     }
 
     if (currency !== undefined) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
 import { addDays, getDaysBetween } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
@@ -225,10 +225,10 @@ export function TimelineView({
     };
   };
 
-  const swimlaneData = swimlanes.reduce((acc, s) => {
+  const swimlaneData = useMemo(() => swimlanes.reduce((acc, s) => {
     acc[s.id] = getSwimlaneActivitiesWithLevels(s.id);
     return acc;
-  }, {} as Record<string, { activities: (Activity & { level: number })[], maxLevel: number, totalHeight: number }>);
+  }, {} as Record<string, { activities: (Activity & { level: number })[], maxLevel: number, totalHeight: number }>), [swimlanes, activities, tempActivity, isDragging, dragStart, dragCurrent, rowHeight, getDateFromX]);
 
   const getActivityStyle = (activity: Activity & { level?: number }) => {
     const isTemp = tempActivity && tempActivity.id === activity.id;
@@ -310,9 +310,20 @@ export function TimelineView({
       const duration = getDaysBetween(activity.startDate, activity.endDate);
       const newEnd = addDays(newStart, duration - 1);
 
-      // Calculate current swimlane based on Y position
+      // Calculate current swimlane based on Y position using actual variable row heights
       const y = e.clientY - rect.top + (timelineRef.current?.scrollTop || 0) - HEADER_HEIGHT;
-      const swimlaneIndex = Math.max(0, Math.min(swimlanes.length - 1, Math.floor(y / rowHeight)));
+      let cumulativeHeight = 0;
+      let swimlaneIndex = 0;
+      for (let i = 0; i < swimlanes.length; i++) {
+        const slHeight = swimlaneData[swimlanes[i].id]?.totalHeight || rowHeight;
+        if (y < cumulativeHeight + slHeight) {
+          swimlaneIndex = i;
+          break;
+        }
+        cumulativeHeight += slHeight;
+        swimlaneIndex = i;
+      }
+      swimlaneIndex = Math.max(0, Math.min(swimlanes.length - 1, swimlaneIndex));
       const currentSwimlaneId = swimlanes[swimlaneIndex].id;
 
       setTempActivity({
@@ -324,7 +335,7 @@ export function TimelineView({
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDragging && dragStart && dragCurrent !== null) {
       const minX = Math.min(dragStart.x, dragCurrent);
       const maxX = Math.max(dragStart.x, dragCurrent);
@@ -350,7 +361,7 @@ export function TimelineView({
     setResizing(null);
     setMoving(null);
     setTempActivity(null);
-  };
+  }, [isDragging, dragStart, dragCurrent, tempActivity, getDateFromX, onActivityCreate, onActivityUpdate]);
 
   const handleActivityMouseDown = (e: React.MouseEvent, activity: Activity) => {
     e.stopPropagation();
@@ -536,17 +547,9 @@ export function TimelineView({
   };
 
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-      setDragStart(null);
-      setDragCurrent(null);
-      setResizing(null);
-      setMoving(null);
-    };
-
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, []);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [handleMouseUp]);
 
   if (swimlanes.length === 0) {
     return (

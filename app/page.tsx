@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { FilterBar } from '@/components/FilterBar';
 import { TimelineView } from '@/components/TimelineView';
@@ -362,7 +362,7 @@ export default function Home() {
   };
 
   // Filter activities
-  const filteredActivities = currentCalendar?.activities.filter((activity) => {
+  const filteredActivities = useMemo(() => currentCalendar?.activities.filter((activity) => {
     if (searchQuery && !activity.title.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
@@ -373,7 +373,7 @@ export default function Home() {
       return false;
     }
     return true;
-  }) || [];
+  }) || [], [currentCalendar?.activities, searchQuery, selectedCampaignId, selectedStatusId]);
 
   // Loading state
   if (isLoading) {
@@ -452,7 +452,12 @@ export default function Home() {
         currentCalendar={currentCalendar}
         currentView={currentView}
         onViewChange={setCurrentView}
-        onCalendarSelect={(calendar) => fetchCalendarData(calendar.id)}
+        onCalendarSelect={(calendar) => {
+          setSearchQuery('');
+          setSelectedCampaignId(null);
+          setSelectedStatusId(null);
+          fetchCalendarData(calendar.id);
+        }}
         onCreateCalendar={() => setShowCreateCalendar(true)}
         onCreateActivity={() => {
           setEditingActivity(null);

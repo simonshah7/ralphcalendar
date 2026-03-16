@@ -163,7 +163,14 @@ export function CalendarView({
                         </div>
                       ))}
                       {dayActivities.length > 3 && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                        <div
+                          className="text-xs text-blue-600 dark:text-blue-400 px-1 cursor-pointer hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Open the first hidden activity to let users navigate
+                            onActivityClick(dayActivities[3]);
+                          }}
+                        >
                           +{dayActivities.length - 3} more
                         </div>
                       )}
