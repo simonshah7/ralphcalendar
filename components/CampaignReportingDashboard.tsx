@@ -1,8 +1,27 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import type { CampaignReportData } from '@/db/schema';
+
+// ─── AI Insight type ────────────────────────────────────
+interface AIInsight {
+  type: 'learning' | 'improvement' | 'suggestion' | 'warning' | 'success';
+  title: string;
+  description: string;
+  source: string;
+  metric: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+const INSIGHT_CONFIG: Record<string, { icon: string; color: string; bg: string; label: string }> = {
+  learning: { icon: '💡', color: '#3B53FF', bg: 'rgba(59,83,255,0.1)', label: 'Learning' },
+  improvement: { icon: '📈', color: '#7A00C1', bg: 'rgba(122,0,193,0.1)', label: 'Improvement' },
+  suggestion: { icon: '✨', color: '#006170', bg: 'rgba(0,97,112,0.1)', label: 'Suggestion' },
+  warning: { icon: '⚠️', color: '#FFA943', bg: 'rgba(255,169,67,0.1)', label: 'Warning' },
+  success: { icon: '✅', color: '#34E5E2', bg: 'rgba(52,229,226,0.1)', label: 'Success' },
+};
 
 interface CampaignReportingDashboardProps {
   calendarId: string;
@@ -35,17 +54,23 @@ function pctRaw(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
-// ─── Mini bar for tables ──────────────────────────────────
+// ─── Mini bar for tables (animated) ──────────────────────
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const w = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
     <div className="h-2 bg-muted rounded-full overflow-hidden w-20 inline-block ml-2 align-middle">
-      <div className="h-full rounded-full" style={{ width: `${w}%`, backgroundColor: color }} />
+      <motion.div
+        className="h-full rounded-full"
+        style={{ backgroundColor: color }}
+        initial={{ width: 0 }}
+        animate={{ width: `${w}%` }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+      />
     </div>
   );
 }
 
-// ─── Funnel visualization ─────────────────────────────────
+// ─── Funnel visualization (animated) ─────────────────────
 function FunnelChart({ stages, color }: { stages: { label: string; value: number }[]; color: string }) {
   const maxVal = Math.max(...stages.map((s) => s.value), 1);
   return (
@@ -54,19 +79,24 @@ function FunnelChart({ stages, color }: { stages: { label: string; value: number
         const w = Math.max((stage.value / maxVal) * 100, 8);
         const opacity = 1 - i * 0.12;
         return (
-          <div key={stage.label} className="flex items-center gap-3">
+          <motion.div
+            key={stage.label}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.08, duration: 0.3 }}
+            className="flex items-center gap-3"
+          >
             <span className="text-xs text-muted-foreground w-28 text-right truncate">{stage.label}</span>
             <div className="flex-1 relative">
-              <div
-                className="h-7 rounded-md flex items-center px-2 transition-all"
-                style={{
-                  width: `${w}%`,
-                  backgroundColor: color,
-                  opacity,
-                }}
+              <motion.div
+                className="h-7 rounded-md flex items-center px-2"
+                initial={{ width: '8%' }}
+                animate={{ width: `${w}%` }}
+                transition={{ delay: 0.2 + i * 0.08, duration: 0.6, ease: 'easeOut' }}
+                style={{ backgroundColor: color, opacity }}
               >
                 <span className="text-xs font-semibold text-white">{fmtCompact(stage.value)}</span>
-              </div>
+              </motion.div>
             </div>
             {i > 0 && (
               <span className="text-[10px] text-muted-foreground w-14 text-right">
@@ -75,14 +105,14 @@ function FunnelChart({ stages, color }: { stages: { label: string; value: number
                   : '—'}
               </span>
             )}
-          </div>
+          </motion.div>
         );
       })}
     </div>
   );
 }
 
-// ─── Sparkline (simple SVG) ───────────────────────────────
+// ─── Sparkline (animated SVG) ────────────────────────────
 function Sparkline({ data, color, height = 24 }: { data: number[]; color: string; height?: number }) {
   if (data.length < 2) return null;
   const max = Math.max(...data, 1);
@@ -92,49 +122,97 @@ function Sparkline({ data, color, height = 24 }: { data: number[]; color: string
   const points = data
     .map((v, i) => `${(i / (data.length - 1)) * w},${height - ((v - min) / range) * (height - 4) - 2}`)
     .join(' ');
+  // Area fill path
+  const areaPoints = `0,${height} ${points} ${w},${height}`;
   return (
-    <svg width={w} height={height} className="inline-block align-middle">
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={w} height={height} className="inline-block align-middle overflow-visible">
+      <defs>
+        <linearGradient id={`spark-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <motion.polygon
+        points={areaPoints}
+        fill={`url(#spark-${color.replace('#','')})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      />
+      <motion.polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+      />
+      {/* End dot */}
+      <motion.circle
+        cx={(data.length - 1) / (data.length - 1) * w}
+        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        r="2"
+        fill={color}
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1, duration: 0.3 }}
+      />
     </svg>
   );
 }
 
-// ─── Section card wrapper ─────────────────────────────────
+// ─── Section card wrapper (animated) ─────────────────────
 function Card({ title, children, className = '' }: { title?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-card border border-card-border rounded-lg p-4 ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`bg-card border border-card-border rounded-lg p-4 ${className}`}
+    >
       {title && <h3 className="text-sm font-semibold text-foreground mb-3">{title}</h3>}
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-// ─── KPI Stat ────────────────────────────────────────────
+// ─── KPI Stat (animated) ────────────────────────────────
 function Stat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="text-center">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="text-center"
+    >
       <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{label}</div>
       <div className="text-xl font-bold" style={color ? { color } : undefined}>
         {value}
       </div>
       {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
-    </div>
+    </motion.div>
   );
 }
 
-// ─── Horizontal stacked bar ──────────────────────────────
+// ─── Horizontal stacked bar (animated) ──────────────────
 function StackedBar({ segments }: { segments: { label: string; value: number; color: string }[] }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   if (total === 0) return <div className="h-6 bg-muted rounded-md" />;
   return (
     <div className="space-y-1">
       <div className="h-6 rounded-md overflow-hidden flex bg-muted">
-        {segments.map((seg) =>
+        {segments.map((seg, i) =>
           seg.value > 0 ? (
-            <div
+            <motion.div
               key={seg.label}
-              className="h-full transition-all"
-              style={{ width: `${(seg.value / total) * 100}%`, backgroundColor: seg.color }}
+              className="h-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${(seg.value / total) * 100}%` }}
+              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 + i * 0.08 }}
+              style={{ backgroundColor: seg.color }}
               title={`${seg.label}: ${fmtCompact(seg.value)}`}
             />
           ) : null,
@@ -149,6 +227,302 @@ function StackedBar({ segments }: { segments: { label: string; value: number; co
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── Progress Ring (SVG circle) ─────────────────────────
+function ProgressRing({ value, max, size = 64, strokeWidth = 5, color }: { value: number; max: number; size?: number; strokeWidth?: number; color: string }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pctValue = max > 0 ? Math.min(value / max, 1) : 0;
+  const offset = circumference * (1 - pctValue);
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-muted/30" />
+        <motion.circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeLinecap="round" strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+        />
+      </svg>
+      <span className="absolute text-xs font-bold" style={{ color }}>{pctRaw(pctValue * 100)}</span>
+    </div>
+  );
+}
+
+// ─── Radar Chart (SVG) ──────────────────────────────────
+function RadarChart({ dimensions, color, size = 200 }: { dimensions: { label: string; value: number; max: number }[]; color: string; size?: number }) {
+  const n = dimensions.length;
+  if (n < 3) return null;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size * 0.38;
+
+  const angleStep = (2 * Math.PI) / n;
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+
+  const getPoint = (i: number, scale: number) => ({
+    x: cx + r * scale * Math.sin(i * angleStep),
+    y: cy - r * scale * Math.cos(i * angleStep),
+  });
+
+  const dataPoints = dimensions.map((d, i) => {
+    const normalized = d.max > 0 ? Math.min(d.value / d.max, 1) : 0;
+    return getPoint(i, normalized);
+  });
+
+  const dataPath = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+
+  return (
+    <svg width={size} height={size} className="mx-auto">
+      {/* Grid */}
+      {gridLevels.map((level) => (
+        <polygon
+          key={level}
+          points={Array.from({ length: n }, (_, i) => { const p = getPoint(i, level); return `${p.x},${p.y}`; }).join(' ')}
+          fill="none" stroke="currentColor" strokeWidth="0.5" className="text-card-border"
+        />
+      ))}
+      {/* Axes */}
+      {Array.from({ length: n }, (_, i) => {
+        const p = getPoint(i, 1);
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="currentColor" strokeWidth="0.5" className="text-card-border" />;
+      })}
+      {/* Data polygon */}
+      <motion.path
+        d={dataPath} fill={color} fillOpacity={0.15} stroke={color} strokeWidth="2"
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
+      />
+      {/* Data points */}
+      {dataPoints.map((p, i) => (
+        <motion.circle
+          key={i} cx={p.x} cy={p.y} r={3} fill={color}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 + i * 0.1 }}
+        />
+      ))}
+      {/* Labels */}
+      {dimensions.map((d, i) => {
+        const labelP = getPoint(i, 1.18);
+        return (
+          <text key={i} x={labelP.x} y={labelP.y} textAnchor="middle" dominantBaseline="middle"
+            className="fill-muted-foreground text-[9px]"
+          >
+            {d.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── Campaign Health Gauge ──────────────────────────────
+function HealthGauge({ score, size = 120 }: { score: number; size?: number }) {
+  const clampedScore = Math.max(0, Math.min(100, score));
+  const r = size * 0.4;
+  const cx = size / 2;
+  const cy = size * 0.55;
+  const startAngle = Math.PI;
+  const sweepAngle = Math.PI;
+  const arcLength = sweepAngle * r;
+
+  const x1 = cx + r * Math.cos(startAngle);
+  const y1 = cy + r * Math.sin(startAngle);
+  const x2 = cx + r * Math.cos(0);
+  const y2 = cy + r * Math.sin(0);
+
+  const color = clampedScore >= 75 ? '#34E5E2' : clampedScore >= 50 ? '#FFA943' : '#FF715A';
+
+  return (
+    <div className="relative inline-flex flex-col items-center">
+      <svg width={size} height={size * 0.65}>
+        <path d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" strokeLinecap="round" />
+        <motion.path
+          d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+          fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={arcLength}
+          initial={{ strokeDashoffset: arcLength }}
+          animate={{ strokeDashoffset: arcLength * (1 - clampedScore / 100) }}
+          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+        />
+      </svg>
+      <div className="absolute bottom-0 text-center">
+        <div className="text-2xl font-bold" style={{ color }}>{Math.round(clampedScore)}</div>
+        <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Health Score</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI Insights Panel ──────────────────────────────────
+function AIInsightsPanel({ calendarId }: { calendarId: string }) {
+  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [filterType, setFilterType] = useState<string | null>(null);
+
+  const fetchInsights = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/ai/campaign-insights?calendarId=${calendarId}`);
+      if (res.ok) setInsights(await res.json());
+    } catch (e) {
+      console.error('Failed to fetch AI insights:', e);
+    }
+    setLoading(false);
+  }, [calendarId]);
+
+  useEffect(() => { fetchInsights(); }, [fetchInsights]);
+
+  const filteredInsights = filterType ? insights.filter((i) => i.type === filterType) : insights;
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const i of insights) counts[i.type] = (counts[i.type] || 0) + 1;
+    return counts;
+  }, [insights]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="bg-card border border-card-border rounded-lg overflow-hidden"
+    >
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-purple-400">
+              <path d="M8 1l2 4.5L15 6l-3.5 3.5L12.5 15 8 12.5 3.5 15l1-5.5L1 6l5-0.5L8 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-foreground">AI Insights & Recommendations</span>
+          {insights.length > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-purple/15 text-accent-purple font-medium">
+              {insights.length}
+            </span>
+          )}
+        </div>
+        <motion.svg
+          width="16" height="16" viewBox="0 0 16 16" fill="none"
+          animate={{ rotate: expanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-muted-foreground"
+        >
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </motion.svg>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-3">
+              {/* Type filter chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setFilterType(null)}
+                  className={`px-2 py-1 text-[10px] rounded-md font-medium transition-colors ${
+                    !filterType ? 'bg-accent-purple text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  All ({insights.length})
+                </button>
+                {Object.entries(INSIGHT_CONFIG).map(([type, cfg]) => (
+                  typeCounts[type] ? (
+                    <button
+                      key={type}
+                      onClick={() => setFilterType(filterType === type ? null : type)}
+                      className={`px-2 py-1 text-[10px] rounded-md font-medium transition-colors flex items-center gap-1 ${
+                        filterType === type ? 'text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                      style={filterType === type ? { backgroundColor: cfg.color } : undefined}
+                    >
+                      <span>{cfg.icon}</span> {cfg.label} ({typeCounts[type]})
+                    </button>
+                  ) : null
+                ))}
+              </div>
+
+              {loading && (
+                <div className="flex items-center gap-2 py-4 justify-center text-xs text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
+                  Analyzing campaign data...
+                </div>
+              )}
+
+              {!loading && filteredInsights.length === 0 && (
+                <div className="text-center py-4 text-xs text-muted-foreground">
+                  No insights available for this filter.
+                </div>
+              )}
+
+              {/* Insight cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
+                {filteredInsights.map((insight, i) => {
+                  const cfg = INSIGHT_CONFIG[insight.type] || INSIGHT_CONFIG.learning;
+                  return (
+                    <motion.div
+                      key={`${insight.type}-${i}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.25 }}
+                      className="rounded-lg border border-card-border p-3 space-y-1.5"
+                      style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">{cfg.icon}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.color }}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                            insight.priority === 'high' ? 'bg-red-500/15 text-red-400' :
+                            insight.priority === 'medium' ? 'bg-amber-500/15 text-amber-400' :
+                            'bg-green-500/15 text-green-400'
+                          }`}>
+                            {insight.priority}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs font-semibold text-foreground">{insight.title}</div>
+                      <div className="text-[11px] text-muted-foreground leading-relaxed">{insight.description}</div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wide">
+                          {insight.source.replace(/_/g, ' ')}
+                        </span>
+                        {insight.metric && (
+                          <span className="text-[10px] font-bold" style={{ color: cfg.color }}>
+                            {insight.metric}
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -277,94 +651,164 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
     { key: 'event-leads', label: 'Event Leads', anomalyCount: 0 },
   ];
 
+  // ── Campaign health score ──────────────────────────────
+  const healthScore = useMemo(() => {
+    if (data.length === 0) return 0;
+    let score = 50; // baseline
+
+    // Theme performance contribution
+    const themes = bySource['marketo_theme'] || [];
+    const totalSaos = themes.reduce((s, r) => s + num((r.metrics as Record<string, number>).saos), 0);
+    if (totalSaos > 50) score += 10;
+    else if (totalSaos > 20) score += 5;
+
+    // Channel engagement
+    const channels = bySource['marketo_channel'] || [];
+    const totalEngagements = channels.reduce((s, r) => s + num((r.metrics as Record<string, number>).engagements), 0);
+    const totalViews = channels.reduce((s, r) => s + num((r.metrics as Record<string, number>).views), 0);
+    const engRate = totalViews > 0 ? totalEngagements / totalViews : 0;
+    if (engRate > 0.05) score += 10;
+    else if (engRate > 0.02) score += 5;
+
+    // ICP penetration
+    const icp = bySource['icp_penetration'] || [];
+    const summary = icp.find((r) => r.category === 'summary');
+    if (summary) {
+      const sm = summary.metrics as Record<string, number>;
+      const penetration = num(sm.targetAccounts) > 0 ? num(sm.engaged) / num(sm.targetAccounts) : 0;
+      if (penetration > 0.4) score += 10;
+      else if (penetration > 0.2) score += 5;
+    }
+
+    // Outreach reply rate
+    const outreach = bySource['outreach_sequence'] || [];
+    const totalSent = outreach.reduce((s, r) => s + num((r.metrics as Record<string, number>).sent), 0);
+    const totalReplied = outreach.reduce((s, r) => s + num((r.metrics as Record<string, number>).replied), 0);
+    const replyRate = totalSent > 0 ? totalReplied / totalSent : 0;
+    if (replyRate > 0.05) score += 10;
+    else if (replyRate > 0.02) score += 5;
+
+    // Event conversion
+    const events = bySource['sfdc_event_leads'] || [];
+    const totalRegistered = events.reduce((s, r) => s + num((r.metrics as Record<string, number>).registered), 0);
+    const totalClosedWon = events.reduce((s, r) => s + num((r.metrics as Record<string, number>).closedWon), 0);
+    if (totalRegistered > 0 && totalClosedWon / totalRegistered > 0.02) score += 10;
+    else if (totalRegistered > 0 && totalClosedWon > 0) score += 5;
+
+    return Math.min(100, score);
+  }, [data, bySource]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-        Loading campaign reports...
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <div className="relative w-10 h-10">
+            <div className="absolute inset-0 rounded-full border-2 border-card-border" />
+            <div className="absolute inset-0 rounded-full border-2 border-accent-purple border-t-transparent animate-spin" />
+          </div>
+          <span>Loading campaign reports...</span>
+        </motion.div>
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground text-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-12 text-muted-foreground text-sm"
+      >
         No campaign reporting data available. Seed data to populate reports.
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* ── Cross-tab Anomaly Highlights ──────────────────── */}
-      {anomalies.length > 0 && (
-        <div className="bg-card border border-card-border rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 16 16">
-              <path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-            <h3 className="text-xs font-semibold text-foreground">Key Highlights Across All Tabs</h3>
-            <span className="text-[10px] text-muted-foreground">({anomalies.length} items)</span>
+      {/* AI Insights Panel */}
+      <AIInsightsPanel calendarId={calendarId} />
+
+      {/* Health Score + Overview Row */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="grid grid-cols-1 lg:grid-cols-4 gap-4"
+      >
+        <Card className="flex flex-col items-center justify-center py-2">
+          <HealthGauge score={healthScore} />
+        </Card>
+        <Card className="lg:col-span-3">
+          <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide font-medium">Cross-Channel Overview</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{fmtCompact((bySource['marketo_theme'] || []).reduce((s, r) => s + num((r.metrics as Record<string, number>).saos), 0))}</div>
+              <div className="text-[10px] text-muted-foreground">Theme SAOs</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{fmtCompact((bySource['marketo_channel'] || []).reduce((s, r) => s + num((r.metrics as Record<string, number>).mqls), 0))}</div>
+              <div className="text-[10px] text-muted-foreground">Channel MQLs</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{fmtCompact((bySource['linkedin_ads'] || []).reduce((s, r) => s + num((r.metrics as Record<string, number>).leads), 0))}</div>
+              <div className="text-[10px] text-muted-foreground">LinkedIn Leads</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{formatCurrency((bySource['sfdc_event_leads'] || []).reduce((s, r) => s + num((r.metrics as Record<string, number>).revenue), 0))}</div>
+              <div className="text-[10px] text-muted-foreground">Event Revenue</div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-            {anomalies.map((anomaly, i) => (
-              <button
-                key={i}
-                onClick={() => setTab(anomaly.tab)}
-                className={`flex items-start gap-2 text-[11px] p-2 rounded-md text-left transition-colors hover:ring-1 hover:ring-accent/30 ${
-                  anomaly.type === 'warning'
-                    ? 'bg-amber-500/10 text-amber-400'
-                    : anomaly.type === 'opportunity'
-                    ? 'bg-green-500/10 text-green-400'
-                    : 'bg-blue-500/10 text-blue-400'
-                }`}
-              >
-                <span className="flex-shrink-0 mt-0.5">
-                  {anomaly.type === 'warning' ? (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><path d="M7 1.5l5.5 10H1.5L7 1.5z" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 6v2" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="10" r="0.5" fill="currentColor"/></svg>
-                  ) : anomaly.type === 'opportunity' ? (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><path d="M2 10l3-3 2 2L12 4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 4h3v3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" strokeWidth="1.5"/><path d="M7 5v2.5" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="9.5" r="0.5" fill="currentColor"/></svg>
-                  )}
-                </span>
-                <span className="flex-1">{anomaly.message}</span>
-                <span className="flex-shrink-0 text-[9px] text-muted-foreground/60 uppercase">{tabs.find((t) => t.key === anomaly.tab)?.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+        </Card>
+      </motion.div>
 
       {/* Sub-tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1">
-        {tabs.map((t) => (
-          <button
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="flex items-center gap-1 overflow-x-auto pb-1"
+      >
+        {tabs.map((t, i) => (
+          <motion.button
             key={t.key}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + i * 0.03 }}
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors flex items-center gap-1.5 ${
               tab === t.key
-                ? 'bg-accent-purple text-white'
+                ? 'bg-accent-purple text-white shadow-sm shadow-accent-purple/20'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             {t.label}
-            {t.anomalyCount > 0 && (
-              <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold ${
-                tab === t.key ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-500'
-              }`}>{t.anomalyCount}</span>
-            )}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
-      {/* Tab content */}
-      {tab === 'themes' && <ThemePerformance rows={bySource['marketo_theme'] || []} />}
-      {tab === 'channels' && <ChannelPerformance rows={bySource['marketo_channel'] || []} />}
-      {tab === 'hero-assets' && <HeroAssets rows={bySource['hero_asset'] || []} />}
-      {tab === 'linkedin' && <LinkedInAds rows={bySource['linkedin_ads'] || []} />}
-      {tab === 'icp' && <ICPPenetration rows={bySource['icp_penetration'] || []} />}
-      {tab === 'outreach' && <OutreachSequences rows={bySource['outreach_sequence'] || []} />}
-      {tab === 'event-leads' && <EventLeadProgress rows={bySource['sfdc_event_leads'] || []} />}
+      {/* Tab content with transitions */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25 }}
+        >
+          {tab === 'themes' && <ThemePerformance rows={bySource['marketo_theme'] || []} />}
+          {tab === 'channels' && <ChannelPerformance rows={bySource['marketo_channel'] || []} />}
+          {tab === 'hero-assets' && <HeroAssets rows={bySource['hero_asset'] || []} />}
+          {tab === 'linkedin' && <LinkedInAds rows={bySource['linkedin_ads'] || []} />}
+          {tab === 'icp' && <ICPPenetration rows={bySource['icp_penetration'] || []} />}
+          {tab === 'outreach' && <OutreachSequences rows={bySource['outreach_sequence'] || []} />}
+          {tab === 'event-leads' && <EventLeadProgress rows={bySource['sfdc_event_leads'] || []} />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -503,6 +947,43 @@ function ThemePerformance({ rows }: { rows: CampaignReportData[] }) {
           </table>
         </div>
       </Card>
+
+      {/* Radar + Funnel side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card title="Theme Performance Radar">
+          <RadarChart
+            dimensions={themes.map((th) => [
+              { label: 'Impressions', value: num(th.m.impressions), max: Math.max(...themes.map((t) => num(t.m.impressions)), 1) },
+              { label: 'Clicks', value: num(th.m.clicks), max: Math.max(...themes.map((t) => num(t.m.clicks)), 1) },
+              { label: 'MQLs', value: num(th.m.mqls), max: Math.max(...themes.map((t) => num(t.m.mqls)), 1) },
+              { label: 'SAOs', value: num(th.m.saos), max: Math.max(...themes.map((t) => num(t.m.saos)), 1) },
+              { label: 'Pipeline', value: num(th.m.pipeline), max: Math.max(...themes.map((t) => num(t.m.pipeline)), 1) },
+            ]).sort((a, b) => b.reduce((s, d) => s + d.value / d.max, 0) - a.reduce((s, d) => s + d.value / d.max, 0))[0] || []}
+            color="#7A00C1"
+            size={220}
+          />
+          <div className="text-center text-[10px] text-muted-foreground mt-1">
+            Showing top performing theme dimensions
+          </div>
+        </Card>
+
+        <Card title="Conversion Rates">
+          <div className="flex items-center justify-around py-4">
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.clicks} max={totals.impressions} color="#7A00C1" />
+              <span className="text-[10px] text-muted-foreground mt-1">CTR</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.mqls} max={totals.clicks} color="#3B53FF" />
+              <span className="text-[10px] text-muted-foreground mt-1">Click-to-MQL</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.saos} max={totals.mqls} color="#006170" />
+              <span className="text-[10px] text-muted-foreground mt-1">MQL-to-SAO</span>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Conversion funnel */}
       <Card title="Theme Conversion Funnel (All Themes)">
@@ -1002,19 +1483,34 @@ function ICPPenetration({ rows: _rows }: { rows: CampaignReportData[] }) {
         ))}
       </div>
 
-      {subTab === 'overview' && (
-        <>
-          {/* KPI row */}
-          <Card>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <Stat label="ICP Accounts (Engaged)" value={fmtCompact(sm.totalAccounts)} color="#3B53FF" />
-              <Stat label="Untouched ICP" value={fmtCompact(sm.untouchedAccounts)} color="#94a3b8" />
-              <Stat label="Penetration Rate" value={pctRaw(penetrationRate)} sub={`${sm.totalAccounts} of ${totalTarget}`} color="#7A00C1" />
-              <Stat label="Total Opportunities" value={fmtCompact(sm.totalOpportunities)} color="#006170" />
-              <Stat label="Active Pipeline" value={fmtCompact(sm.activePipelineCount)} sub={`${sm.closedWonCount} won`} color="#22c55e" />
-              <Stat label="Win Rate" value={pctRaw(winRate)} sub={`${sm.closedWonCount}W / ${sm.closedLostCount}L`} color="#FF715A" />
+      {/* Penetration rings + funnel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card title="Penetration Rates" className="flex flex-col items-center justify-center">
+          <div className="flex items-center justify-around w-full py-2">
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={num(sm.engaged)} max={num(sm.targetAccounts)} color="#3B53FF" size={72} />
+              <span className="text-[10px] text-muted-foreground">Engagement</span>
             </div>
-          </Card>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={num(sm.withSaos)} max={num(sm.engaged)} color="#006170" size={72} />
+              <span className="text-[10px] text-muted-foreground">SAO Rate</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Account Penetration Funnel" className="lg:col-span-2">
+          <FunnelChart
+            stages={[
+              { label: 'Target Accounts', value: num(sm.targetAccounts) },
+              { label: 'Engaged', value: num(sm.engaged) },
+              { label: 'With MQLs', value: num(sm.withMqls) },
+              { label: 'With SAOs', value: num(sm.withSaos) },
+              { label: 'Opportunity', value: num(sm.withOpportunity) },
+            ]}
+            color="#3B53FF"
+          />
+        </Card>
+      </div>
 
           {/* Stage Funnel using real stages */}
           <Card title="Opportunity Stage Funnel">
@@ -1355,19 +1851,38 @@ function OutreachSequences({ rows }: { rows: CampaignReportData[] }) {
         </div>
       </Card>
 
-      {/* Outreach funnel */}
-      <Card title="Outreach Conversion Funnel">
-        <FunnelChart
-          stages={[
-            { label: 'Emails Sent', value: totals.sent },
-            { label: 'Opened', value: totals.opened },
-            { label: 'Replied', value: totals.replied },
-            { label: 'Meetings', value: totals.meetings },
-            { label: 'SAOs', value: totals.saos },
-          ]}
-          color="#006170"
-        />
-      </Card>
+      {/* Conversion Rings + Outreach funnel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card title="Key Conversion Rates" className="flex flex-col items-center justify-center">
+          <div className="flex items-center justify-around w-full py-2">
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.opened} max={totals.sent} color="#006170" />
+              <span className="text-[10px] text-muted-foreground">Open Rate</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.replied} max={totals.sent} color="#3B53FF" />
+              <span className="text-[10px] text-muted-foreground">Reply Rate</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.meetings} max={totals.replied} color="#7A00C1" />
+              <span className="text-[10px] text-muted-foreground">Meeting Rate</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Outreach Conversion Funnel" className="lg:col-span-2">
+          <FunnelChart
+            stages={[
+              { label: 'Emails Sent', value: totals.sent },
+              { label: 'Opened', value: totals.opened },
+              { label: 'Replied', value: totals.replied },
+              { label: 'Meetings', value: totals.meetings },
+              { label: 'SAOs', value: totals.saos },
+            ]}
+            color="#006170"
+          />
+        </Card>
+      </div>
 
       {/* Sequence comparison table */}
       <Card title="Sequence Performance">
@@ -1467,20 +1982,43 @@ function EventLeadProgress({ rows }: { rows: CampaignReportData[] }) {
         </div>
       </Card>
 
-      {/* Lead progression waterfall */}
-      <Card title="Lead Progression Waterfall">
-        <FunnelChart
-          stages={[
-            { label: 'Registered', value: totals.registered },
-            { label: 'Attended', value: totals.attended },
-            { label: 'MQL', value: totals.mql },
-            { label: 'SAO', value: totals.sao },
-            { label: 'Opportunity', value: totals.opportunity },
-            { label: 'Closed Won', value: totals.closedWon },
-          ]}
-          color="#FF715A"
-        />
-      </Card>
+      {/* Conversion rings + Lead progression waterfall */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card title="Event Conversion Rates" className="flex flex-col items-center justify-center">
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.attended} max={totals.registered} color="#FF715A" size={60} strokeWidth={4} />
+              <span className="text-[10px] text-muted-foreground">Attendance</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.mql} max={totals.attended} color="#3B53FF" size={60} strokeWidth={4} />
+              <span className="text-[10px] text-muted-foreground">MQL Rate</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.sao} max={totals.mql} color="#006170" size={60} strokeWidth={4} />
+              <span className="text-[10px] text-muted-foreground">SAO Rate</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <ProgressRing value={totals.closedWon} max={totals.opportunity} color="#FFA943" size={60} strokeWidth={4} />
+              <span className="text-[10px] text-muted-foreground">Win Rate</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Lead Progression Waterfall" className="lg:col-span-2">
+          <FunnelChart
+            stages={[
+              { label: 'Registered', value: totals.registered },
+              { label: 'Attended', value: totals.attended },
+              { label: 'MQL', value: totals.mql },
+              { label: 'SAO', value: totals.sao },
+              { label: 'Opportunity', value: totals.opportunity },
+              { label: 'Closed Won', value: totals.closedWon },
+            ]}
+            color="#FF715A"
+          />
+        </Card>
+      </div>
 
       {/* Event comparison table */}
       <Card title="Event-by-Event Lead Progress">
