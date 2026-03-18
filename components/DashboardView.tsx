@@ -181,24 +181,33 @@ function KpiCard({
   value,
   sub,
   trend,
+  sparklineData,
+  sparklineColor,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
   trend?: { label: string; positive: boolean } | null;
+  sparklineData?: number[];
+  sparklineColor?: string;
 }) {
   const colors = kpiColors[label] || { bg: 'bg-muted', text: 'text-muted-foreground', bgColor: '', textColor: '' };
   return (
     <div className="bg-card border border-card-border rounded-lg p-3 sm:p-4 flex flex-col gap-1 sm:gap-1.5 min-w-0">
-      <div className="flex items-center gap-2.5 text-muted-foreground text-xs font-medium uppercase tracking-wide">
-        <span
-          className="inline-flex items-center justify-center w-7 h-7 rounded-md"
-          style={colors.bgColor ? { backgroundColor: colors.bgColor, color: colors.textColor } : undefined}
-        >
-          {icon}
-        </span>
-        <span className="truncate">{label}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5 text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          <span
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md"
+            style={colors.bgColor ? { backgroundColor: colors.bgColor, color: colors.textColor } : undefined}
+          >
+            {icon}
+          </span>
+          <span className="truncate">{label}</span>
+        </div>
+        {sparklineData && sparklineData.length >= 2 && (
+          <KpiSparkline data={sparklineData} color={sparklineColor || colors.textColor || '#6B7280'} />
+        )}
       </div>
       <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</div>
       {sub && <div className="text-xs text-muted-foreground truncate">{sub}</div>}
@@ -290,6 +299,67 @@ function ColumnToggle({
 
 // ─── Main Component ─────────────────────────────────────
 
+// ─── AI Insight Card ────────────────────────────────────
+
+interface Insight {
+  type: 'warning' | 'opportunity' | 'success';
+  title: string;
+  description: string;
+  metric?: string;
+}
+
+function InsightCard({ insight, onDismiss }: { insight: Insight; onDismiss: () => void }) {
+  const styles = {
+    warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', icon: 'text-amber-500', badge: 'bg-amber-500/20 text-amber-400' },
+    opportunity: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: 'text-blue-500', badge: 'bg-blue-500/20 text-blue-400' },
+    success: { bg: 'bg-green-500/10', border: 'border-green-500/30', icon: 'text-green-500', badge: 'bg-green-500/20 text-green-400' },
+  };
+  const s = styles[insight.type];
+  return (
+    <div className={`${s.bg} border ${s.border} rounded-lg p-3 flex items-start gap-3 group`}>
+      <span className={`flex-shrink-0 mt-0.5 ${s.icon}`}>
+        {insight.type === 'warning' ? <IconAlertTriangle className="w-4 h-4" /> : insight.type === 'success' ? (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" strokeWidth="1.5"/><path d="M5.5 8l1.5 1.5 3-3.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" strokeWidth="1.5"/><path d="M8 5v3l2.5 1.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        )}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-xs font-semibold text-foreground">{insight.title}</span>
+          {insight.metric && (
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${s.badge}`}>{insight.metric}</span>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">{insight.description}</p>
+      </div>
+      <button onClick={onDismiss} className="flex-shrink-0 text-muted-foreground/50 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 14 14"><path d="M4 4l6 6M10 4l-6 6" strokeWidth="1.5" strokeLinecap="round"/></svg>
+      </button>
+    </div>
+  );
+}
+
+// ─── Sparkline for KPI cards ────────────────────────────
+
+function KpiSparkline({ data, color, height = 28 }: { data: number[]; color: string; height?: number }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const w = 64;
+  const points = data
+    .map((v, i) => `${(i / (data.length - 1)) * w},${height - ((v - min) / range) * (height - 4) - 2}`)
+    .join(' ');
+  const lastY = height - ((data[data.length - 1] - min) / range) * (height - 4) - 2;
+  return (
+    <svg width={w} height={height} className="inline-block">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+      <circle cx={w} cy={lastY} r="2" fill={color} />
+    </svg>
+  );
+}
+
 export function DashboardView({ activities, campaigns, swimlanes, statuses, calendarId }: DashboardViewProps) {
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>('overview');
   const [sortField, setSortField] = useState<SortField>('name');
@@ -297,6 +367,23 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
   const [visibleColumns, setVisibleColumns] = useState<Set<SortField>>(
     () => new Set(ALL_COLUMNS.map((c) => c.field)),
   );
+  const [showDetails, setShowDetails] = useState(false);
+  const [aiInsights, setAiInsights] = useState<Insight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(() => new Set());
+
+  // Fetch AI insights on mount / calendar change
+  useEffect(() => {
+    if (!calendarId) return;
+    let cancelled = false;
+    setInsightsLoading(true);
+    fetch(`/api/ai/budget-insights?calendarId=${calendarId}`)
+      .then((res) => res.ok ? res.json() : [])
+      .then((data) => { if (!cancelled) setAiInsights(data); })
+      .catch(() => { if (!cancelled) setAiInsights([]); })
+      .finally(() => { if (!cancelled) setInsightsLoading(false); });
+    return () => { cancelled = true; };
+  }, [calendarId]);
 
   function toggleColumn(field: SortField) {
     setVisibleColumns((prev) => {
@@ -660,81 +747,231 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
 
       {/* Overview Tab */}
       {dashboardTab === 'overview' && <>
-      {/* KPI summary explanation */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>
-          <strong>Budget</strong> = sum of campaign budgets.{' '}
-          <strong>Planned</strong> = total estimated costs across activities.{' '}
-          <strong>Actual</strong> = what you've actually spent.{' '}
-          <strong>SAOs</strong> = Sales Accepted Opportunities.{' '}
-          <strong>Pipeline ROI</strong> = pipeline value divided by actual spend.
-        </span>
-      </div>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard
-          icon={<IconDollar />}
-          label="Total Budget"
-          value={formatCurrency(metrics.totalBudget)}
-          trend={null}
-        />
-        <KpiCard
-          icon={<IconClipboard />}
-          label="Planned Cost"
-          value={formatCurrency(metrics.totalPlanned)}
-          sub={`${pct(metrics.totalBudget > 0 ? metrics.totalPlanned / metrics.totalBudget : 0)} of budget`}
-        />
-        <KpiCard
-          icon={<IconReceipt />}
-          label="Actual Cost"
-          value={formatCurrency(metrics.totalActual)}
-          trend={
-            metrics.totalPlanned > 0
-              ? {
-                  label: `${pct(metrics.totalActual / metrics.totalPlanned)} of planned`,
-                  positive: metrics.totalActual <= metrics.totalPlanned,
-                }
-              : null
-          }
-        />
-        <KpiCard
-          icon={<IconGauge />}
-          label="Budget Utilization"
-          value={pct(metrics.budgetUtil)}
-          trend={{
-            label: metrics.budgetUtil > 1 ? 'Over budget' : 'Within budget',
-            positive: metrics.budgetUtil <= 1,
-          }}
-        />
-        <KpiCard
-          icon={<IconTarget />}
-          label="SAOs"
-          value={fmtCompact(metrics.totalActualSaos)}
-          sub={`${fmtCompact(metrics.totalExpectedSaos)} expected`}
-          trend={
-            metrics.totalExpectedSaos > 0
-              ? {
-                  label: pct(metrics.totalActualSaos / metrics.totalExpectedSaos),
-                  positive: metrics.totalActualSaos >= metrics.totalExpectedSaos,
-                }
-              : null
-          }
-        />
-        <KpiCard
-          icon={<IconTrendUp />}
-          label="Pipeline ROI"
-          value={`${metrics.pipelineRoi.toFixed(1)}x`}
-          sub={`${formatCurrency(metrics.totalPipeline)} pipeline`}
-          trend={{
-            label: metrics.pipelineRoi >= 3 ? 'Strong' : metrics.pipelineRoi >= 1 ? 'Moderate' : 'Low',
-            positive: metrics.pipelineRoi >= 1,
-          }}
-        />
+
+      {/* ── AI Insights + Alerts (promoted to top) ─────────── */}
+      {(() => {
+        const visibleInsights = aiInsights.filter((ins) => !dismissedInsights.has(ins.title));
+        const hasContent = visibleInsights.length > 0 || alerts.length > 0;
+        if (!hasContent && !insightsLoading) return null;
+        return (
+          <div className="space-y-3">
+            {/* AI Insights */}
+            {insightsLoading && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg">
+                <div className="w-3 h-3 rounded-full border border-muted-foreground/30 border-t-accent animate-spin" />
+                Generating AI insights...
+              </div>
+            )}
+            {visibleInsights.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 16 16"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                    AI Insights
+                  </h3>
+                  {visibleInsights.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground">{visibleInsights.length} insights</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {visibleInsights.slice(0, 6).map((insight) => (
+                    <InsightCard
+                      key={insight.title}
+                      insight={insight}
+                      onDismiss={() => setDismissedInsights((prev) => new Set([...prev, insight.title]))}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Alerts (promoted from bottom) */}
+            {alerts.length > 0 && (
+              <div className="bg-card border border-amber-500/30 rounded-lg p-3">
+                <h3 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  Activities Needing Attention
+                  <span className="text-[10px] font-normal text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full">{alerts.length}</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
+                  {alerts.map((alert, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-start gap-2 text-[11px] p-2 rounded-md ${
+                        alert.type === 'error'
+                          ? 'bg-red-500/10 text-red-400'
+                          : 'bg-amber-500/10 text-amber-400'
+                      }`}
+                    >
+                      <span className="flex-shrink-0 mt-0.5">
+                        {alert.type === 'error' ? <IconX className="w-3 h-3" /> : <IconAlertCircle className="w-3 h-3" />}
+                      </span>
+                      <span>{alert.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Executive Summary / Detail Toggle ────────────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="hidden sm:inline">
+            <strong>Budget</strong> = campaign budgets. <strong>Actual</strong> = what you've spent. <strong>Pipeline ROI</strong> = pipeline / spend.
+          </span>
+        </div>
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-card-border hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {showDetails ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Show Summary
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Show Details
+            </>
+          )}
+        </button>
       </div>
 
+      {/* ── KPI Cards (always visible — core 4 in summary, all 6 in detail) */}
+      {!showDetails ? (
+        /* Executive Summary: 4 key KPIs */
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            icon={<IconDollar />}
+            label="Total Budget"
+            value={formatCurrency(metrics.totalBudget)}
+            sub={`${formatCurrency(metrics.totalActual)} spent (${pct(metrics.budgetUtil)})`}
+            trend={{
+              label: metrics.budgetUtil > 1 ? 'Over budget' : metrics.budgetUtil > 0.8 ? 'Nearing limit' : 'On track',
+              positive: metrics.budgetUtil <= 1,
+            }}
+            sparklineData={campaignRows.map((r) => r.budget).filter((v) => v > 0)}
+            sparklineColor="#006170"
+          />
+          <KpiCard
+            icon={<IconTrendUp />}
+            label="Pipeline ROI"
+            value={`${metrics.pipelineRoi.toFixed(1)}x`}
+            sub={`${formatCurrency(metrics.totalPipeline)} pipeline`}
+            trend={{
+              label: metrics.pipelineRoi >= 3 ? 'Strong' : metrics.pipelineRoi >= 1 ? 'Moderate' : 'Low',
+              positive: metrics.pipelineRoi >= 1,
+            }}
+            sparklineData={campaignRows.filter((r) => r.actual > 0).map((r) => r.roi)}
+            sparklineColor="#34E5E2"
+          />
+          <KpiCard
+            icon={<IconTarget />}
+            label="SAOs"
+            value={`${fmtCompact(metrics.totalActualSaos)} / ${fmtCompact(metrics.totalExpectedSaos)}`}
+            sub={metrics.totalExpectedSaos > 0 ? `${pct(metrics.totalActualSaos / metrics.totalExpectedSaos)} of target` : 'No target set'}
+            trend={
+              metrics.totalExpectedSaos > 0
+                ? {
+                    label: metrics.totalActualSaos >= metrics.totalExpectedSaos ? 'Target met' : `${fmtCompact(metrics.totalExpectedSaos - metrics.totalActualSaos)} gap`,
+                    positive: metrics.totalActualSaos >= metrics.totalExpectedSaos,
+                  }
+                : null
+            }
+            sparklineData={campaignRows.map((r) => r.actualSaos).filter((v) => v > 0)}
+            sparklineColor="#FF715A"
+          />
+          <KpiCard
+            icon={<IconAlertTriangle />}
+            label="Attention"
+            value={`${alerts.length}`}
+            sub={`${alerts.filter((a) => a.type === 'error').length} critical, ${alerts.filter((a) => a.type === 'warning').length} warnings`}
+            trend={alerts.length > 0 ? { label: 'Needs review', positive: false } : { label: 'All clear', positive: true }}
+          />
+        </div>
+      ) : (
+        /* Detailed view: all 6 KPIs with sparklines */
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard
+            icon={<IconDollar />}
+            label="Total Budget"
+            value={formatCurrency(metrics.totalBudget)}
+            trend={null}
+            sparklineData={campaignRows.map((r) => r.budget).filter((v) => v > 0)}
+            sparklineColor="#006170"
+          />
+          <KpiCard
+            icon={<IconClipboard />}
+            label="Planned Cost"
+            value={formatCurrency(metrics.totalPlanned)}
+            sub={`${pct(metrics.totalBudget > 0 ? metrics.totalPlanned / metrics.totalBudget : 0)} of budget`}
+            sparklineData={campaignRows.map((r) => r.planned).filter((v) => v > 0)}
+            sparklineColor="#3B53FF"
+          />
+          <KpiCard
+            icon={<IconReceipt />}
+            label="Actual Cost"
+            value={formatCurrency(metrics.totalActual)}
+            trend={
+              metrics.totalPlanned > 0
+                ? {
+                    label: `${pct(metrics.totalActual / metrics.totalPlanned)} of planned`,
+                    positive: metrics.totalActual <= metrics.totalPlanned,
+                  }
+                : null
+            }
+            sparklineData={campaignRows.map((r) => r.actual).filter((v) => v > 0)}
+            sparklineColor="#7A00C1"
+          />
+          <KpiCard
+            icon={<IconGauge />}
+            label="Budget Utilization"
+            value={pct(metrics.budgetUtil)}
+            trend={{
+              label: metrics.budgetUtil > 1 ? 'Over budget' : 'Within budget',
+              positive: metrics.budgetUtil <= 1,
+            }}
+          />
+          <KpiCard
+            icon={<IconTarget />}
+            label="SAOs"
+            value={fmtCompact(metrics.totalActualSaos)}
+            sub={`${fmtCompact(metrics.totalExpectedSaos)} expected`}
+            trend={
+              metrics.totalExpectedSaos > 0
+                ? {
+                    label: pct(metrics.totalActualSaos / metrics.totalExpectedSaos),
+                    positive: metrics.totalActualSaos >= metrics.totalExpectedSaos,
+                  }
+                : null
+            }
+            sparklineData={campaignRows.map((r) => r.actualSaos).filter((v) => v > 0)}
+            sparklineColor="#FF715A"
+          />
+          <KpiCard
+            icon={<IconTrendUp />}
+            label="Pipeline ROI"
+            value={`${metrics.pipelineRoi.toFixed(1)}x`}
+            sub={`${formatCurrency(metrics.totalPipeline)} pipeline`}
+            trend={{
+              label: metrics.pipelineRoi >= 3 ? 'Strong' : metrics.pipelineRoi >= 1 ? 'Moderate' : 'Low',
+              positive: metrics.pipelineRoi >= 1,
+            }}
+            sparklineData={campaignRows.filter((r) => r.actual > 0).map((r) => r.roi)}
+            sparklineColor="#34E5E2"
+          />
+        </div>
+      )}
+
+      {/* ── Detailed sections (hidden in summary mode) ───── */}
+      {showDetails && <>
       {/* Middle row: Budget by Campaign + Region Donut + Status Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Budget by Campaign */}
@@ -988,33 +1225,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
         </div>
       </div>
 
-      {/* Activities Needing Attention */}
-      {alerts.length > 0 && (
-        <div className="bg-card border border-card-border rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <IconAlertTriangle className="w-4 h-4 text-amber-500" />
-            Activities Needing Attention
-            <span className="text-xs font-normal text-muted-foreground">({alerts.length})</span>
-          </h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {alerts.map((alert, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-2 text-xs p-2.5 rounded-md ${
-                  alert.type === 'error'
-                    ? 'bg-red-500/10 text-red-400'
-                    : 'bg-amber-500/10 text-amber-400'
-                }`}
-              >
-                <span className="flex-shrink-0 mt-0.5">
-                  {alert.type === 'error' ? <IconX className="w-3.5 h-3.5" /> : <IconAlertCircle className="w-3.5 h-3.5" />}
-                </span>
-                <span>{alert.message}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </>}
       </>}
     </div>
   );
