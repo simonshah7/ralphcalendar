@@ -188,14 +188,93 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
     return map;
   }, [data]);
 
-  const tabs: { key: ReportTab; label: string }[] = [
-    { key: 'themes', label: 'Theme Performance' },
-    { key: 'channels', label: 'Channel Performance' },
-    { key: 'hero-assets', label: 'Hero Assets' },
-    { key: 'linkedin', label: 'LinkedIn & Ads' },
-    { key: 'icp', label: 'ICP Penetration' },
-    { key: 'outreach', label: 'Outreach' },
-    { key: 'event-leads', label: 'Event Leads' },
+  // ── Anomaly detection across all tabs ─────────────────
+  const anomalies = useMemo(() => {
+    const items: Array<{ type: 'warning' | 'opportunity' | 'info'; message: string; tab: ReportTab }> = [];
+
+    // Theme anomalies
+    const themes = (bySource['marketo_theme'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
+    if (themes.length >= 2) {
+      const themeRois = themes.filter((t) => num(t.m.spend) > 0).map((t) => ({ name: t.name, roi: num(t.m.pipeline) / num(t.m.spend) }));
+      if (themeRois.length >= 2) {
+        const sorted = [...themeRois].sort((a, b) => a.roi - b.roi);
+        const worst = sorted[0];
+        const best = sorted[sorted.length - 1];
+        if (best.roi > worst.roi * 2 && worst.roi < 1) {
+          items.push({ type: 'warning', message: `"${worst.name}" theme has ${worst.roi.toFixed(1)}x ROI vs ${best.roi.toFixed(1)}x for "${best.name}" — consider reallocating budget`, tab: 'themes' });
+        }
+      }
+      // Theme with spend but no SAOs
+      for (const t of themes) {
+        if (num(t.m.spend) > 5000 && num(t.m.saos) === 0) {
+          items.push({ type: 'warning', message: `"${t.name}" theme has ${formatCurrency(num(t.m.spend))} spend but zero SAOs`, tab: 'themes' });
+        }
+      }
+    }
+
+    // Channel anomalies
+    const channels = (bySource['marketo_channel'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
+    if (channels.length >= 2) {
+      // Highest cost-per-MQL
+      const costPerMqls = channels.filter((c) => num(c.m.mqls) > 0 && num(c.m.spend) > 0).map((c) => ({ name: c.name, cpm: num(c.m.spend) / num(c.m.mqls) }));
+      if (costPerMqls.length >= 2) {
+        const sorted = [...costPerMqls].sort((a, b) => b.cpm - a.cpm);
+        const avg = costPerMqls.reduce((s, c) => s + c.cpm, 0) / costPerMqls.length;
+        if (sorted[0].cpm > avg * 1.5) {
+          items.push({ type: 'warning', message: `"${sorted[0].name}" cost/MQL (${formatCurrency(sorted[0].cpm)}) is ${Math.round((sorted[0].cpm / avg - 1) * 100)}% above average`, tab: 'channels' });
+        }
+      }
+      // Lowest engagement rate
+      const engRates = channels.filter((c) => num(c.m.views) > 100).map((c) => ({ name: c.name, rate: num(c.m.engagements) / num(c.m.views) }));
+      if (engRates.length >= 2) {
+        const sorted = [...engRates].sort((a, b) => a.rate - b.rate);
+        const avg = engRates.reduce((s, c) => s + c.rate, 0) / engRates.length;
+        if (sorted[0].rate < avg * 0.5) {
+          items.push({ type: 'info', message: `"${sorted[0].name}" engagement rate (${pctRaw(sorted[0].rate * 100)}) is well below average (${pctRaw(avg * 100)})`, tab: 'channels' });
+        }
+      }
+    }
+
+    // LinkedIn anomalies
+    const linkedin = (bySource['linkedin_ads'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
+    for (const ad of linkedin) {
+      const ctr = num(ad.m.impressions) > 0 ? num(ad.m.clicks) / num(ad.m.impressions) : 0;
+      if (ctr < 0.003 && num(ad.m.impressions) > 1000) {
+        items.push({ type: 'warning', message: `LinkedIn "${ad.name}" CTR is ${pctRaw(ctr * 100)} — below 0.3% benchmark`, tab: 'linkedin' });
+      }
+      if (num(ad.m.spend) > 5000 && num(ad.m.conversions) === 0) {
+        items.push({ type: 'warning', message: `LinkedIn "${ad.name}" has ${formatCurrency(num(ad.m.spend))} spend with zero conversions`, tab: 'linkedin' });
+      }
+    }
+
+    // Hero asset anomalies
+    const assets = (bySource['hero_asset'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
+    for (const a of assets) {
+      const completionRate = num(a.m.downloads) > 0 ? num(a.m.completions) / num(a.m.downloads) : 0;
+      if (completionRate < 0.3 && num(a.m.downloads) > 50) {
+        items.push({ type: 'info', message: `"${a.name}" has ${pctRaw(completionRate * 100)} completion rate — content may need optimization`, tab: 'hero-assets' });
+      }
+    }
+
+    // Success highlights
+    if (themes.length > 0) {
+      const bestTheme = themes.filter((t) => num(t.m.spend) > 0).sort((a, b) => (num(b.m.pipeline) / num(b.m.spend)) - (num(a.m.pipeline) / num(a.m.spend)))[0];
+      if (bestTheme && num(bestTheme.m.pipeline) / num(bestTheme.m.spend) > 3) {
+        items.push({ type: 'opportunity', message: `"${bestTheme.name}" theme is generating ${(num(bestTheme.m.pipeline) / num(bestTheme.m.spend)).toFixed(1)}x ROI — consider increasing investment`, tab: 'themes' });
+      }
+    }
+
+    return items;
+  }, [bySource]);
+
+  const tabs: { key: ReportTab; label: string; anomalyCount: number }[] = [
+    { key: 'themes', label: 'Theme Performance', anomalyCount: anomalies.filter((a) => a.tab === 'themes').length },
+    { key: 'channels', label: 'Channel Performance', anomalyCount: anomalies.filter((a) => a.tab === 'channels').length },
+    { key: 'hero-assets', label: 'Hero Assets', anomalyCount: anomalies.filter((a) => a.tab === 'hero-assets').length },
+    { key: 'linkedin', label: 'LinkedIn & Ads', anomalyCount: anomalies.filter((a) => a.tab === 'linkedin').length },
+    { key: 'icp', label: 'ICP Penetration', anomalyCount: 0 },
+    { key: 'outreach', label: 'Outreach', anomalyCount: 0 },
+    { key: 'event-leads', label: 'Event Leads', anomalyCount: 0 },
   ];
 
   if (loading) {
@@ -216,19 +295,64 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
 
   return (
     <div className="space-y-4">
+      {/* ── Cross-tab Anomaly Highlights ──────────────────── */}
+      {anomalies.length > 0 && (
+        <div className="bg-card border border-card-border rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+              <path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
+            <h3 className="text-xs font-semibold text-foreground">Key Highlights Across All Tabs</h3>
+            <span className="text-[10px] text-muted-foreground">({anomalies.length} items)</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+            {anomalies.map((anomaly, i) => (
+              <button
+                key={i}
+                onClick={() => setTab(anomaly.tab)}
+                className={`flex items-start gap-2 text-[11px] p-2 rounded-md text-left transition-colors hover:ring-1 hover:ring-accent/30 ${
+                  anomaly.type === 'warning'
+                    ? 'bg-amber-500/10 text-amber-400'
+                    : anomaly.type === 'opportunity'
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-blue-500/10 text-blue-400'
+                }`}
+              >
+                <span className="flex-shrink-0 mt-0.5">
+                  {anomaly.type === 'warning' ? (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><path d="M7 1.5l5.5 10H1.5L7 1.5z" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 6v2" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="10" r="0.5" fill="currentColor"/></svg>
+                  ) : anomaly.type === 'opportunity' ? (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><path d="M2 10l3-3 2 2L12 4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 4h3v3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" strokeWidth="1.5"/><path d="M7 5v2.5" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="9.5" r="0.5" fill="currentColor"/></svg>
+                  )}
+                </span>
+                <span className="flex-1">{anomaly.message}</span>
+                <span className="flex-shrink-0 text-[9px] text-muted-foreground/60 uppercase">{tabs.find((t) => t.key === anomaly.tab)?.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Sub-tab bar */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors flex items-center gap-1.5 ${
               tab === t.key
                 ? 'bg-accent-purple text-white'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             {t.label}
+            {t.anomalyCount > 0 && (
+              <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold ${
+                tab === t.key ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-500'
+              }`}>{t.anomalyCount}</span>
+            )}
           </button>
         ))}
       </div>
