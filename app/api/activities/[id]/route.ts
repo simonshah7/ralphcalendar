@@ -34,10 +34,16 @@ export async function PUT(
       endDate,
       description,
       cost,
+      actualCost,
       currency,
       region,
       tags,
       color,
+      expectedSaos,
+      actualSaos,
+      pipelineGenerated,
+      revenueGenerated,
+      attachments,
     } = body;
 
     const updates: Record<string, unknown> = {};
@@ -107,6 +113,18 @@ export async function PUT(
 
     if (tags !== undefined) updates.tags = emptyToNull(tags);
     if (color !== undefined) updates.color = emptyToNull(color);
+
+    if (actualCost !== undefined) {
+      if (actualCost < 0) {
+        return NextResponse.json({ error: 'Actual cost must be >= 0' }, { status: 400 });
+      }
+      updates.actualCost = Number(actualCost);
+    }
+    if (expectedSaos !== undefined) updates.expectedSaos = String(expectedSaos);
+    if (actualSaos !== undefined) updates.actualSaos = String(actualSaos);
+    if (pipelineGenerated !== undefined) updates.pipelineGenerated = String(pipelineGenerated);
+    if (revenueGenerated !== undefined) updates.revenueGenerated = String(revenueGenerated);
+    if (attachments !== undefined) updates.attachments = attachments;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

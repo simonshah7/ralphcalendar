@@ -22,6 +22,15 @@ interface ActivityModalProps {
   onCampaignsChange?: () => void;
 }
 
+interface AttachmentData {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
 export interface ActivityFormData {
   title: string;
   startDate: string;
@@ -31,10 +40,16 @@ export interface ActivityFormData {
   campaignId: string | null;
   description: string;
   cost: number;
+  actualCost: number;
   currency: string;
   region: string;
   tags: string;
   color: string;
+  expectedSaos: number;
+  actualSaos: number;
+  pipelineGenerated: number;
+  revenueGenerated: number;
+  attachments: AttachmentData[];
 }
 
 export function ActivityModal({
@@ -53,21 +68,52 @@ export function ActivityModal({
   onCampaignsChange,
 }: ActivityModalProps) {
   const [formData, setFormData] = useState<ActivityFormData>({
-    title: '', startDate: '', endDate: '', statusId: '', swimlaneId: '',
-    campaignId: null, description: '', cost: 0, currency: 'US$', region: 'US', tags: '', color: '',
+    title: '',
+    startDate: '',
+    endDate: '',
+    statusId: '',
+    swimlaneId: '',
+    campaignId: null,
+    description: '',
+    cost: 0,
+    actualCost: 0,
+    currency: 'US$',
+    region: 'US',
+    tags: '',
+    color: '',
+    expectedSaos: 0,
+    actualSaos: 0,
+    pipelineGenerated: 0,
+    revenueGenerated: 0,
+    attachments: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'metrics' | 'documents'>('details');
 
   useEffect(() => {
     if (activity) {
       setFormData({
-        title: activity.title, startDate: activity.startDate, endDate: activity.endDate,
-        statusId: activity.statusId || '', swimlaneId: activity.swimlaneId,
-        campaignId: activity.campaignId, description: activity.description || '',
-        cost: Number(activity.cost) || 0, currency: activity.currency || 'US$',
-        region: activity.region || 'US', tags: activity.tags || '', color: activity.color || '',
+        title: activity.title,
+        startDate: activity.startDate,
+        endDate: activity.endDate,
+        statusId: activity.statusId || '',
+        swimlaneId: activity.swimlaneId,
+        campaignId: activity.campaignId,
+        description: activity.description || '',
+        cost: Number(activity.cost) || 0,
+        actualCost: Number(activity.actualCost) || 0,
+        currency: activity.currency || 'US$',
+        region: activity.region || 'US',
+        tags: activity.tags || '',
+        color: activity.color || '',
+        expectedSaos: Number(activity.expectedSaos) || 0,
+        actualSaos: Number(activity.actualSaos) || 0,
+        pipelineGenerated: Number(activity.pipelineGenerated) || 0,
+        revenueGenerated: Number(activity.revenueGenerated) || 0,
+        attachments: (activity.attachments as AttachmentData[]) || [],
       });
     } else {
       setFormData({
@@ -75,14 +121,73 @@ export function ActivityModal({
         endDate: defaults?.endDate || defaultEndDate || new Date().toISOString().split('T')[0],
         statusId: defaults?.statusId || statuses[0]?.id || '',
         swimlaneId: defaults?.swimlaneId || defaultSwimlaneId || swimlanes[0]?.id || '',
-        campaignId: defaults?.campaignId ?? null, description: defaults?.description || '',
-        cost: Number(defaults?.cost) || 0, currency: defaults?.currency || 'US$',
-        region: defaults?.region || 'US', tags: defaults?.tags || '', color: defaults?.color || '',
+        campaignId: defaults?.campaignId ?? null,
+        description: defaults?.description || '',
+        cost: Number(defaults?.cost) || 0,
+        actualCost: 0,
+        currency: defaults?.currency || 'US$',
+        region: defaults?.region || 'US',
+        tags: defaults?.tags || '',
+        color: defaults?.color || '',
+        expectedSaos: 0,
+        actualSaos: 0,
+        pipelineGenerated: 0,
+        revenueGenerated: 0,
+        attachments: [],
       });
     }
     setErrors({});
     setShowDeleteConfirm(false);
   }, [activity, isOpen, statuses, swimlanes, defaultStartDate, defaultEndDate, defaultSwimlaneId, defaults]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const newAttachments: AttachmentData[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fd = new FormData();
+        fd.append('file', file);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: fd,
+        });
+
+        if (response.ok) {
+          const attachment = await response.json();
+          newAttachments.push(attachment);
+        }
+      }
+      setFormData((prev) => ({
+        ...prev,
+        attachments: [...prev.attachments, ...newAttachments],
+      }));
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((a) => a.id !== id),
+    }));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  if (!isOpen) return null;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -182,6 +287,26 @@ export function ActivityModal({
               </button>
             </div>
 
+          {/* Tab navigation */}
+          <div className="flex border-b border-card-border">
+            {(['details', 'metrics', 'documents'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${
+                  activeTab === tab
+                    ? 'border-accent-purple text-accent-purple'
+                    : 'border-transparent text-gray-500 hover:text-foreground'
+                }`}
+              >
+                {tab === 'details' ? 'Details' : tab === 'metrics' ? 'Budget & Metrics' : `Documents${formData.attachments.length > 0 ? ` (${formData.attachments.length})` : ''}`}
+              </button>
+            ))}
+          </div>
+
+          {/* === DETAILS TAB === */}
+          {activeTab === 'details' && (
           <div className="grid grid-cols-12 gap-4">
             {/* Title */}
             <div className="col-span-8">
@@ -276,23 +401,9 @@ export function ActivityModal({
               {errors.swimlaneId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.swimlaneId}</p>}
             </div>
 
-            {/* Cost, Currency, Region, Tags */}
+            {/* Currency & Region */}
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                Cost
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Currency
               </label>
               <select
@@ -308,8 +419,8 @@ export function ActivityModal({
               </select>
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Region
               </label>
               <select
@@ -325,8 +436,8 @@ export function ActivityModal({
               </select>
             </div>
 
-            <div className="col-span-5">
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+            <div className="col-span-6">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Tags (comma-separated)
               </label>
               <input
@@ -381,6 +492,255 @@ export function ActivityModal({
               </div>
             </div>
           </div>
+          )}
+
+          {/* === BUDGET & METRICS TAB === */}
+          {activeTab === 'metrics' && (
+          <div className="grid grid-cols-12 gap-4">
+            <div className="col-span-12">
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Cost Tracking</h3>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Planned Cost
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Actual Cost
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.actualCost}
+                onChange={(e) => setFormData({ ...formData, actualCost: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Variance
+              </label>
+              <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
+                formData.actualCost > formData.cost
+                  ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                  : formData.actualCost > 0 && formData.actualCost < formData.cost
+                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                  : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+              }`}>
+                {formData.cost > 0 ? `${(((formData.actualCost - formData.cost) / formData.cost) * 100).toFixed(1)}%` : '--'}
+                {formData.actualCost > formData.cost && ' over budget'}
+                {formData.actualCost > 0 && formData.actualCost < formData.cost && ' under budget'}
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Currency
+              </label>
+              <div className="px-3 py-1.5 border border-card-border rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+                {formData.currency}
+              </div>
+            </div>
+
+            <div className="col-span-12 mt-2">
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Performance Metrics</h3>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Expected SAOs
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.expectedSaos}
+                onChange={(e) => setFormData({ ...formData, expectedSaos: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Actual SAOs
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.actualSaos}
+                onChange={(e) => setFormData({ ...formData, actualSaos: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                SAO Attainment
+              </label>
+              <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
+                formData.expectedSaos > 0 && formData.actualSaos >= formData.expectedSaos
+                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                  : formData.expectedSaos > 0 && formData.actualSaos > 0
+                  ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20'
+                  : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+              }`}>
+                {formData.expectedSaos > 0 ? `${((formData.actualSaos / formData.expectedSaos) * 100).toFixed(0)}%` : '--'}
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Cost per SAO
+              </label>
+              <div className="px-3 py-1.5 border border-card-border rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+                {formData.actualSaos > 0 && formData.actualCost > 0
+                  ? `${formData.currency}${(formData.actualCost / formData.actualSaos).toFixed(0)}`
+                  : '--'}
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Pipeline Generated
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.pipelineGenerated}
+                onChange={(e) => setFormData({ ...formData, pipelineGenerated: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Revenue Generated
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.revenueGenerated}
+                onChange={(e) => setFormData({ ...formData, revenueGenerated: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Pipeline ROI
+              </label>
+              <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
+                formData.actualCost > 0 && formData.pipelineGenerated > formData.actualCost
+                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                  : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+              }`}>
+                {formData.actualCost > 0 ? `${(formData.pipelineGenerated / formData.actualCost).toFixed(1)}x` : '--'}
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Revenue ROI
+              </label>
+              <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
+                formData.actualCost > 0 && formData.revenueGenerated > formData.actualCost
+                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                  : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
+              }`}>
+                {formData.actualCost > 0 ? `${(formData.revenueGenerated / formData.actualCost).toFixed(1)}x` : '--'}
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* === DOCUMENTS TAB === */}
+          {activeTab === 'documents' && (
+          <div className="space-y-4">
+            {/* Upload area */}
+            <div className="border-2 border-dashed border-card-border rounded-lg p-6 text-center hover:border-accent-purple/50 transition-colors">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.csv,.txt,.zip"
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <svg className="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {isUploading ? 'Uploading...' : 'Click to upload contracts, briefs, creative assets'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLS, PPT, images up to 10MB</p>
+              </label>
+            </div>
+
+            {/* File list */}
+            {formData.attachments.length > 0 && (
+              <div className="space-y-2">
+                {formData.attachments.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between p-3 bg-card border border-card-border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-accent-purple/10 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-accent-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-accent-purple hover:underline"
+                      >
+                        View
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(file.id)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {formData.attachments.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                No documents attached yet. Upload contracts, briefs, or creative assets.
+              </p>
+            )}
+          </div>
+          )}
 
           <div className="flex justify-between pt-3 border-t border-card-border">
             <div>

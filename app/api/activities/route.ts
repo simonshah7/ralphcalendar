@@ -52,10 +52,16 @@ export async function POST(request: Request) {
       endDate,
       description,
       cost,
+      actualCost,
       currency,
       region,
       tags,
       color,
+      expectedSaos,
+      actualSaos,
+      pipelineGenerated,
+      revenueGenerated,
+      attachments,
     } = body;
 
     // Validation
@@ -118,10 +124,16 @@ export async function POST(request: Request) {
       endDate,
       description: descriptionValue,
       cost: cost !== undefined ? String(cost) : '0',
+      actualCost: actualCost !== undefined ? String(actualCost) : '0',
       currency: currency || 'US$',
       region: region || 'US',
       tags: tagsValue,
       color: colorValue,
+      expectedSaos: expectedSaos !== undefined ? String(expectedSaos) : '0',
+      actualSaos: actualSaos !== undefined ? String(actualSaos) : '0',
+      pipelineGenerated: pipelineGenerated !== undefined ? String(pipelineGenerated) : '0',
+      revenueGenerated: revenueGenerated !== undefined ? String(revenueGenerated) : '0',
+      attachments: attachments || [],
     }).returning();
 
     return NextResponse.json(newActivity, { status: 201 });
