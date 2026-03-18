@@ -13,11 +13,10 @@ import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
 import { AICopilot } from '@/components/AICopilot';
 import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
+import { VoiceAgent } from '@/components/VoiceAgent';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
-import { EventsListView, EventListItem } from '@/components/EventsListView';
-import { EventDetailView } from '@/components/EventDetailView';
-import * as htmlToImage from 'html-to-image';
-import PptxGenJS from 'pptxgenjs';
+import type { VoiceAgentCallbacks, CalendarContext } from '@/hooks/useVoiceAgent';
+import { exportToPNG, exportToCSV } from '@/lib/export';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
 
@@ -43,6 +42,7 @@ export default function Home() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
   const [showBriefGenerator, setShowBriefGenerator] = useState(false);
+  const [showVoiceAgent, setShowVoiceAgent] = useState(false);
   const [isSeedingData, setIsSeedingData] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityDefaults, setActivityDefaults] = useState<{
@@ -478,6 +478,7 @@ export default function Home() {
         onExport={() => setShowExportModal(true)}
         onToggleCopilot={() => setShowCopilot(!showCopilot)}
         onOpenBriefGenerator={() => setShowBriefGenerator(true)}
+        onToggleVoiceAgent={() => setShowVoiceAgent(!showVoiceAgent)}
         onSeedData={handleSeedData}
         isSeedingData={isSeedingData}
       />
@@ -663,6 +664,52 @@ export default function Home() {
           onApply={handleApplyBrief}
         />
       )}
+
+      {/* Voice Agent */}
+      <VoiceAgent
+        isOpen={showVoiceAgent}
+        onOpen={() => setShowVoiceAgent(true)}
+        onClose={() => setShowVoiceAgent(false)}
+        context={currentCalendar ? {
+          calendarId: currentCalendar.id,
+          swimlanes: currentCalendar.swimlanes.map((s) => ({ id: s.id, name: s.name })),
+          statuses: currentCalendar.statuses.map((s) => ({ id: s.id, name: s.name, color: s.color })),
+          campaigns: currentCalendar.campaigns.map((c) => ({ id: c.id, name: c.name })),
+          activities: currentCalendar.activities.map((a) => ({
+            id: a.id,
+            title: a.title,
+            swimlaneId: a.swimlaneId,
+            statusId: a.statusId || '',
+            campaignId: a.campaignId,
+          })),
+        } satisfies CalendarContext : null}
+        callbacks={{
+          onCreateActivity: async (data) => {
+            await handleActivityCreate(data.swimlaneId, data.startDate, data.endDate, {
+              title: data.title,
+              statusId: data.statusId,
+              description: data.description || '',
+              cost: data.cost !== undefined ? String(data.cost) : '0',
+              currency: (data.currency || 'USD') as 'USD' | 'GBP' | 'EUR',
+              region: (data.region || 'US') as 'US' | 'EMEA' | 'ROW',
+              campaignId: data.campaignId || null,
+            } as Partial<Activity>, true);
+          },
+          onUpdateActivity: handleActivityUpdate,
+          onDeleteActivity: handleActivityDelete,
+          onSwitchView: setCurrentView,
+          onSetSearch: setSearchQuery,
+          onSetCampaignFilter: setSelectedCampaignId,
+          onSetStatusFilter: setSelectedStatusId,
+          onClearFilters: () => {
+            setSearchQuery('');
+            setSelectedCampaignId(null);
+            setSelectedStatusId(null);
+          },
+          onOpenCopilot: () => setShowCopilot(true),
+          onOpenBriefGenerator: () => setShowBriefGenerator(true),
+        } satisfies VoiceAgentCallbacks}
+      />
     </div>
   );
 }

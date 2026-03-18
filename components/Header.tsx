@@ -19,6 +19,7 @@ interface HeaderProps {
   onExport: () => void;
   onToggleCopilot?: () => void;
   onOpenBriefGenerator?: () => void;
+  onToggleVoiceAgent?: () => void;
   onSeedData?: (action: 'seed' | 'reset' | 'clear') => void;
   isSeedingData?: boolean;
 }
@@ -62,6 +63,7 @@ export function Header({
   onExport,
   onToggleCopilot,
   onOpenBriefGenerator,
+  onToggleVoiceAgent,
   onSeedData,
   isSeedingData,
 }: HeaderProps) {
@@ -216,6 +218,20 @@ export function Header({
             </button>
           )}
 
+          {onToggleVoiceAgent && (
+            <button
+              onClick={onToggleVoiceAgent}
+              disabled={!currentCalendar}
+              className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Voice Agent"
+            >
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+              </svg>
+              Voice
+            </button>
+          )}
+
           <button
             onClick={onExport}
             disabled={!currentCalendar}
@@ -320,6 +336,19 @@ export function Header({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                     </svg>
                     Copilot
+                  </button>
+                )}
+
+                {onToggleVoiceAgent && (
+                  <button
+                    onClick={() => { onToggleVoiceAgent(); setMobileMenuOpen(false); }}
+                    disabled={!currentCalendar}
+                    className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 flex items-center gap-1.5 justify-center"
+                  >
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                    </svg>
+                    Voice
                   </button>
                 )}
 
