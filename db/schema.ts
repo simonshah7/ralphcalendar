@@ -183,6 +183,111 @@ export const activityHistory = pgTable('activity_history', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ─── Event Management Tables ────────────────────────────
+
+export const attendeeTypeEnum = pgEnum('attendee_type', ['internal', 'customer']);
+
+export const events = pgTable('events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  calendarId: uuid('calendar_id')
+    .notNull()
+    .references(() => calendars.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  seriesName: text('series_name'),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
+  location: text('location'),
+  venue: text('venue'),
+  statusId: uuid('status_id').references(() => statuses.id),
+  totalPasses: integer('total_passes').default(0),
+  slackWebhookUrl: text('slack_webhook_url'),
+  description: text('description'),
+  priorEventId: uuid('prior_event_id'),
+  cost: numeric('cost').default('0'),
+  actualCost: numeric('actual_cost').default('0'),
+  currency: currencyEnum('currency').default('US$'),
+  region: regionEnum('region').default('US'),
+  expectedSaos: numeric('expected_saos').default('0'),
+  actualSaos: numeric('actual_saos').default('0'),
+  pipelineGenerated: numeric('pipeline_generated').default('0'),
+  revenueGenerated: numeric('revenue_generated').default('0'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const subEvents = pgTable('sub_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  type: text('type'),
+  startDatetime: text('start_datetime').notNull(),
+  endDatetime: text('end_datetime').notNull(),
+  location: text('location'),
+  description: text('description'),
+  calendarEventId: text('calendar_event_id'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const eventAttendees = pgTable('event_attendees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  email: text('email'),
+  company: text('company'),
+  attendeeType: attendeeTypeEnum('attendee_type').notNull(),
+  role: text('role'),
+  hasPass: boolean('has_pass').notNull().default(false),
+  travelStatus: text('travel_status').default('not_booked'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const subEventAttendees = pgTable('sub_event_attendees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  subEventId: uuid('sub_event_id')
+    .notNull()
+    .references(() => subEvents.id, { onDelete: 'cascade' }),
+  attendeeId: uuid('attendee_id')
+    .notNull()
+    .references(() => eventAttendees.id, { onDelete: 'cascade' }),
+});
+
+export const checklistItems = pgTable('checklist_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  isDone: boolean('is_done').notNull().default(false),
+  category: text('category'),
+  dueDate: text('due_date'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const campaignEvents = pgTable('campaign_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id')
+    .notNull()
+    .references(() => campaigns.id, { onDelete: 'cascade' }),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+});
+
+export const adminSettings = pgTable('admin_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ─── Type exports ────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -202,3 +307,14 @@ export type Activity = typeof activities.$inferSelect;
 export type NewActivity = typeof activities.$inferInsert;
 export type ActivityComment = typeof activityComments.$inferSelect;
 export type ActivityHistoryEntry = typeof activityHistory.$inferSelect;
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
+export type SubEvent = typeof subEvents.$inferSelect;
+export type NewSubEvent = typeof subEvents.$inferInsert;
+export type EventAttendee = typeof eventAttendees.$inferSelect;
+export type NewEventAttendee = typeof eventAttendees.$inferInsert;
+export type SubEventAttendee = typeof subEventAttendees.$inferSelect;
+export type ChecklistItem = typeof checklistItems.$inferSelect;
+export type NewChecklistItem = typeof checklistItems.$inferInsert;
+export type CampaignEvent = typeof campaignEvents.$inferSelect;
+export type AdminSetting = typeof adminSettings.$inferSelect;
