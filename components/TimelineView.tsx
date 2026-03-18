@@ -546,6 +546,7 @@ export function TimelineView({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
+        </div>
 
         <div className="flex items-center gap-4">
           {/* Activity Creation Hint */}
@@ -665,10 +666,10 @@ export function TimelineView({
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -778,8 +779,8 @@ export function TimelineView({
                           const textColor = getContrastTextColor(bgColor);
                           const isLight = textColor === '#000000';
                           return (
-                            <div className={`h-full flex flex-col px-2 ${config.padding} pointer-events-none`}>
-                              <div className={`font-bold truncate ${config.fontSize} pr-6`} style={{ color: textColor }}>
+                            <div className={`h-full flex flex-col px-2 ${STYLE_CONFIG[cardStyle].padding} pointer-events-none`}>
+                              <div className={`font-bold truncate ${STYLE_CONFIG[cardStyle].fontSize} pr-6`} style={{ color: textColor }}>
                                 {activity.title}
                               </div>
 

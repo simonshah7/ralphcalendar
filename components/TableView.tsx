@@ -423,6 +423,9 @@ export function TableView({
   const thBtnClass = "flex items-center gap-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors";
   const inputClass = "text-sm px-2 py-1 border border-card-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40";
 
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-end px-4 py-2 border-b border-card-border bg-surface">
         {/* Column settings button */}
         <div className="relative" data-column-menu>
           <button
@@ -577,7 +580,7 @@ export function TableView({
 
                 <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: status?.color }} />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: statuses.find(s => s.id === activity.statusId)?.color }} />
                     <select
                       value={activity.statusId || ''}
                       onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
@@ -668,8 +671,8 @@ export function TableView({
                   </select>
                 </td>
               </tr>
-            );
-          })}
+            ))}
+
         </tbody>
       </table>
 
@@ -681,6 +684,7 @@ export function TableView({
           <p className="text-sm text-muted-foreground">No activities found</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

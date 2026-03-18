@@ -73,28 +73,7 @@ export function FilterBar({
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-card border border-card-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-purple text-foreground"
             />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search activities..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 bg-muted border border-transparent rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-card focus:border-accent/40 focus:ring-1 focus:ring-ring transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <span className="text-foreground">
-                {selectedCampaign?.name || 'All Campaigns'}
-              </span>
-              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
+          </div>
 
         {/* Campaign Filter */}
         <div className="relative" ref={campaignRef}>
@@ -168,6 +147,7 @@ export function FilterBar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
+            <AnimatePresence>
             {statusOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -4, scale: 0.98 }}
@@ -201,6 +181,7 @@ export function FilterBar({
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
         </div>
 
         {/* Clear All Filters */}

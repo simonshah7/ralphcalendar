@@ -217,54 +217,7 @@ export default function Home() {
     setShowActivityModal(true);
   };
 
-  const handleApplyBrief = async (generatedActivities: Array<{
-    title: string;
-    startDate: string;
-    endDate: string;
-    estimatedCost: number;
-    swimlaneSuggestion: string;
-    description: string;
-  }>) => {
-    if (!currentCalendar) return;
-
-    for (const ga of generatedActivities) {
-      // Match swimlane by name suggestion
-      const swimlane = currentCalendar.swimlanes.find(
-        (s) => s.name.toLowerCase().includes(ga.swimlaneSuggestion.toLowerCase())
-      ) || currentCalendar.swimlanes[0];
-
-      if (!swimlane) continue;
-
-      const activityData: ActivityFormData = {
-        title: ga.title,
-        startDate: ga.startDate,
-        endDate: ga.endDate,
-        statusId: currentCalendar.statuses[0]?.id || '',
-        swimlaneId: swimlane.id,
-        campaignId: null,
-        description: ga.description,
-        cost: ga.estimatedCost,
-        actualCost: 0,
-        currency: 'US$',
-        region: 'US',
-        tags: '',
-        color: '',
-        expectedSaos: 0,
-        actualSaos: 0,
-        pipelineGenerated: 0,
-        revenueGenerated: 0,
-        attachments: [],
-      };
-
-      try {
-        await handleActivitySubmit(activityData);
-      } catch (error) {
-        console.error('Failed to create activity from brief:', error);
-      }
-    }
-  };
-
-  const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => {
+  const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv' | 'pptx') => {
     if (exportFormat === 'csv') { exportToCSV(startDate, endDate); return; }
     const elementToCapture = mainContentRef.current;
     if (!elementToCapture) { alert('Unable to export: content not ready'); return; }
