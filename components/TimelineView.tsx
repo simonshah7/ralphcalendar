@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
 import { addDays, getDaysBetween } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
@@ -75,7 +76,6 @@ export function TimelineView({
   const [tempActivity, setTempActivity] = useState<{ id: string; startDate: string; endDate: string; swimlaneId: string } | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 
-  // View Settings
   const [cardStyle, setCardStyle] = useState<CardStyle>('medium');
   const [visibleFields, setVisibleFields] = useState<string[]>(['status', 'campaign']);
   const [showSettings, setShowSettings] = useState(false);
@@ -84,7 +84,6 @@ export function TimelineView({
   const timelineRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
-  // Load settings from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('timeline_view_settings');
     if (saved) {
@@ -98,12 +97,10 @@ export function TimelineView({
     }
   }, []);
 
-  // Save settings to localStorage
   useEffect(() => {
     localStorage.setItem('timeline_view_settings', JSON.stringify({ cardStyle, visibleFields }));
   }, [cardStyle, visibleFields]);
 
-  // Close settings when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -134,7 +131,6 @@ export function TimelineView({
     return daysDiff * config.dayWidth;
   }, [config.dayWidth, startDate]);
 
-  // Activity Stacking Logic
   const getSwimlaneActivitiesWithLevels = (swimlaneId: string) => {
     const rawActivities = activities.filter((a) => {
       const isTemp = tempActivity && tempActivity.id === a.id;
@@ -142,15 +138,12 @@ export function TimelineView({
       return currentSwimlaneId === swimlaneId;
     });
 
-    // If current temp activity is for a new creation (not move/resize), add it
     if (isDragging && dragStart && dragStart.swimlaneId === swimlaneId && dragCurrent !== null) {
       const minX = Math.min(dragStart.x, dragCurrent);
       const maxX = Math.max(dragStart.x, dragCurrent);
       const start = getDateFromX(minX).toISOString().split('T')[0];
       const end = getDateFromX(maxX).toISOString().split('T')[0];
 
-      // If it exists in rawActivities (e.g. update), it's already handled
-      // But for new drag creation, we add a mock activity
       if (!rawActivities.find(a => a.id === 'temp-new')) {
         rawActivities.push({
           id: 'temp-new',
@@ -173,12 +166,10 @@ export function TimelineView({
       }
     }
 
-    // Sort by start date, then by duration (longer first)
     const sorted = [...rawActivities].sort((a, b) => {
       const aStart = new Date(tempActivity?.id === a.id ? tempActivity.startDate : a.startDate).getTime();
       const bStart = new Date(tempActivity?.id === b.id ? tempActivity.startDate : b.startDate).getTime();
       if (aStart !== bStart) return aStart - bStart;
-
       const aEnd = new Date(tempActivity?.id === a.id ? tempActivity.endDate : a.endDate).getTime();
       const bEnd = new Date(tempActivity?.id === b.id ? tempActivity.endDate : b.endDate).getTime();
       return (bEnd - bStart) - (aEnd - aStart);
@@ -194,14 +185,7 @@ export function TimelineView({
 
       let levelFound = -1;
       for (let i = 0; i < levels.length; i++) {
-        // Check if any activity in this level overlaps
-        const hasOverlap = levels[i].some(l => {
-          // Add a small buffer (1ms) to prevent edge-to-edge overlap issues if desired, 
-          // or keep it strict if same day end/start is okay.
-          // In this calendar, end date is inclusive, so we need to check if start <= levelEnd
-          return start <= l.end;
-        });
-
+        const hasOverlap = levels[i].some(l => start <= l.end);
         if (!hasOverlap) {
           levelFound = i;
           break;
@@ -236,14 +220,14 @@ export function TimelineView({
     const end = getXFromDate(isTemp ? tempActivity.endDate : activity.endDate);
     const width = end - start + config.dayWidth;
     const status = statuses.find((s) => s.id === activity.statusId);
-    const color = activity.color || status?.color || '#3B82F6';
+    const color = activity.color || status?.color || '#0d9488';
     const level = activity.level ?? 0;
 
     return {
       left: `${start}px`,
       width: `${Math.max(width, config.dayWidth)}px`,
-      top: `${(level * rowHeight) + 8}px`,
-      height: `${rowHeight - 16}px`,
+      top: `${(level * rowHeight) + 6}px`,
+      height: `${rowHeight - 12}px`,
       backgroundColor: color,
       opacity: isTemp ? 0.7 : 1,
       zIndex: isTemp ? 20 : 1,
@@ -252,10 +236,8 @@ export function TimelineView({
 
   const handleMouseDown = (e: React.MouseEvent, swimlaneId: string) => {
     if ((e.target as HTMLElement).closest('.activity-bar')) return;
-
     const rect = timelineRef.current?.getBoundingClientRect();
     if (!rect) return;
-
     const x = e.clientX - rect.left + (timelineRef.current?.scrollLeft || 0);
     setDragStart({ x, swimlaneId });
     setDragCurrent(x);
@@ -265,7 +247,6 @@ export function TimelineView({
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = timelineRef.current?.getBoundingClientRect();
     if (!rect) return;
-
     const x = e.clientX - rect.left + (timelineRef.current?.scrollLeft || 0);
 
     if (isDragging && dragStart) {
@@ -275,26 +256,14 @@ export function TimelineView({
     if (resizing) {
       const activity = activities.find((a) => a.id === resizing.activityId);
       if (!activity) return;
-
       const newDate = getDateFromX(x).toISOString().split('T')[0];
-
       if (resizing.edge === 'end') {
         if (newDate >= activity.startDate) {
-          setTempActivity({
-            id: activity.id,
-            startDate: activity.startDate,
-            endDate: newDate,
-            swimlaneId: activity.swimlaneId
-          });
+          setTempActivity({ id: activity.id, startDate: activity.startDate, endDate: newDate, swimlaneId: activity.swimlaneId });
         }
       } else {
         if (newDate <= activity.endDate) {
-          setTempActivity({
-            id: activity.id,
-            startDate: newDate,
-            endDate: activity.endDate,
-            swimlaneId: activity.swimlaneId
-          });
+          setTempActivity({ id: activity.id, startDate: newDate, endDate: activity.endDate, swimlaneId: activity.swimlaneId });
         }
       }
     }
@@ -302,7 +271,6 @@ export function TimelineView({
     if (moving) {
       const activity = activities.find((a) => a.id === moving.activityId);
       if (!activity) return;
-
       const deltaX = x - moving.initialX;
       const deltaDays = Math.round(deltaX / config.dayWidth);
       const initialStart = new Date(moving.initialStartDate);
@@ -310,7 +278,6 @@ export function TimelineView({
       const duration = getDaysBetween(activity.startDate, activity.endDate);
       const newEnd = addDays(newStart, duration - 1);
 
-      // Calculate current swimlane based on Y position using actual variable row heights
       const y = e.clientY - rect.top + (timelineRef.current?.scrollTop || 0) - HEADER_HEIGHT;
       let cumulativeHeight = 0;
       let swimlaneIndex = 0;
@@ -339,7 +306,6 @@ export function TimelineView({
     if (isDragging && dragStart && dragCurrent !== null) {
       const minX = Math.min(dragStart.x, dragCurrent);
       const maxX = Math.max(dragStart.x, dragCurrent);
-
       if (maxX - minX > 10) {
         const startDateStr = getDateFromX(minX).toISOString().split('T')[0];
         const endDateStr = getDateFromX(maxX).toISOString().split('T')[0];
@@ -365,7 +331,6 @@ export function TimelineView({
 
   const handleActivityMouseDown = (e: React.MouseEvent, activity: Activity) => {
     e.stopPropagation();
-
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const relativeX = e.clientX - rect.left;
     const width = rect.width;
@@ -378,12 +343,7 @@ export function TimelineView({
       const timelineRect = timelineRef.current?.getBoundingClientRect();
       if (timelineRect) {
         const x = e.clientX - timelineRect.left + (timelineRef.current?.scrollLeft || 0);
-        setMoving({
-          activityId: activity.id,
-          initialX: x,
-          initialStartDate: activity.startDate,
-          initialSwimlaneId: activity.swimlaneId
-        });
+        setMoving({ activityId: activity.id, initialX: x, initialStartDate: activity.startDate, initialSwimlaneId: activity.swimlaneId });
       }
     }
   };
@@ -408,11 +368,10 @@ export function TimelineView({
         const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
         const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
         const width = daysInMonth * config.dayWidth;
-
         headers.push(
           <div
             key={`month-${i}`}
-            className="flex-shrink-0 border-r border-card-border text-center text-sm font-medium text-foreground py-2"
+            className="flex-shrink-0 border-r border-card-border text-center text-xs font-medium text-muted-foreground py-2"
             style={{ width: `${width}px` }}
           >
             {monthStart.toLocaleDateString('en-US', { month: 'short' })}
@@ -428,7 +387,7 @@ export function TimelineView({
         headers.push(
           <div
             key={`month-${i}`}
-            className="flex-shrink-0 border-r border-card-border text-center text-sm font-medium text-foreground py-2"
+            className="flex-shrink-0 border-r border-card-border text-center text-xs font-semibold text-foreground py-2"
             style={{ width: `${width}px` }}
           >
             {monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -441,8 +400,9 @@ export function TimelineView({
           subHeaders.push(
             <div
               key={`day-${i}-${d}`}
-              className={`flex-shrink-0 border-r border-card-border/50 text-center text-xs py-1 ${isWeekend ? 'bg-muted text-muted-foreground' : 'text-muted-foreground'
-                }`}
+              className={`flex-shrink-0 border-r border-card-border/40 text-center text-[10px] py-1 ${
+                isWeekend ? 'bg-muted/60 text-muted-foreground/60' : 'text-muted-foreground'
+              }`}
               style={{ width: `${config.dayWidth}px` }}
             >
               {d}
@@ -452,11 +412,10 @@ export function TimelineView({
       }
     } else {
       const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-
       headers.push(
         <div
           key="month"
-          className="flex-shrink-0 text-center text-sm font-medium text-foreground py-2"
+          className="flex-shrink-0 text-center text-xs font-semibold text-foreground py-2"
           style={{ width: `${totalWidth}px` }}
         >
           {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -470,11 +429,12 @@ export function TimelineView({
         subHeaders.push(
           <div
             key={`day-${d}`}
-            className={`flex-shrink-0 border-r border-gray-100 dark:border-gray-800 text-center text-xs py-1 ${isWeekend ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'text-gray-500 dark:text-gray-400'
-              }`}
+            className={`flex-shrink-0 border-r border-card-border/30 text-center text-[10px] py-1 ${
+              isWeekend ? 'bg-muted/60 text-muted-foreground/50' : 'text-muted-foreground'
+            }`}
             style={{ width: `${config.dayWidth}px` }}
           >
-            <div>{dayName}</div>
+            <div className="leading-tight">{dayName}</div>
             <div className="font-medium">{d}</div>
           </div>
         );
@@ -482,7 +442,7 @@ export function TimelineView({
     }
 
     return (
-      <div className="border-b border-card-border">
+      <div className="border-b border-card-border bg-surface">
         <div className="flex">{headers}</div>
         {subHeaders.length > 0 && <div className="flex">{subHeaders}</div>}
       </div>
@@ -496,29 +456,26 @@ export function TimelineView({
 
     return (
       <div
-        className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none"
+        className="absolute top-0 bottom-0 w-0.5 bg-today-line z-10 pointer-events-none"
         style={{ left: `${x}px` }}
       >
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full" />
+        <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 bg-today-line rounded-full" />
       </div>
     );
   };
 
   const renderDragSelection = () => {
     if (!isDragging || !dragStart || dragCurrent === null) return null;
-
     const swimlaneIndex = swimlanes.findIndex((s) => s.id === dragStart.swimlaneId);
     if (swimlaneIndex === -1) return null;
-
     const minX = Math.min(dragStart.x, dragCurrent);
     const maxX = Math.max(dragStart.x, dragCurrent);
-
     const data = swimlaneData[dragStart.swimlaneId];
     if (!data) return null;
 
     return (
       <div
-        className="absolute bg-blue-200/50 dark:bg-blue-600/30 border-2 border-blue-400 dark:border-blue-500 rounded pointer-events-none"
+        className="absolute bg-accent/15 border-2 border-accent/40 rounded-lg pointer-events-none"
         style={{
           left: `${minX}px`,
           top: `${swimlanes.slice(0, swimlaneIndex).reduce((sum, s) => sum + swimlaneData[s.id].totalHeight, 0) + (data.maxLevel * rowHeight) + 4}px`,
@@ -530,7 +487,6 @@ export function TimelineView({
     );
   };
 
-  // Navigate timeline
   const navigatePrev = () => {
     const days = zoomLevel === 'year' ? 365 : zoomLevel === 'quarter' ? 90 : 30;
     setStartDate(addDays(startDate, -days));
@@ -555,8 +511,8 @@ export function TimelineView({
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-gray-500 dark:text-gray-400 mb-2">No swimlanes yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">
+          <p className="text-muted-foreground mb-2">No swimlanes yet</p>
+          <p className="text-sm text-muted-foreground/60">
             Add swimlanes to start organizing your activities
           </p>
         </div>
@@ -567,114 +523,158 @@ export function TimelineView({
   return (
     <div className="flex-1 flex flex-col bg-card overflow-hidden">
       {/* Timeline Controls */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-background">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-surface">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={navigatePrev}
-            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <button
             onClick={navigateToday}
-            className="px-3 py-1 text-sm font-medium text-foreground bg-muted rounded hover:opacity-80 transition-opacity"
+            className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors"
           >
             Today
           </button>
           <button
             onClick={navigateNext}
-            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
-        </div>
 
-        <div className="flex items-center gap-4">
-          {/* Activity Creation Hint */}
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-3 py-1.5 rounded-full">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Drag on timeline to create activity</span>
-          </div>
+          <div className="w-px h-5 bg-card-border mx-1.5" />
 
           {/* Zoom Controls */}
+          <div className="flex bg-muted rounded-md p-0.5">
+            {(['year', 'quarter', 'month'] as ZoomLevel[]).map((level) => (
+              <button
+                key={level}
+                onClick={() => setZoomLevel(level)}
+                className={`px-2.5 py-1 text-xs font-medium rounded capitalize transition-colors ${
+                  zoomLevel === level
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 relative" ref={settingsRef}>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showSettings
-              ? 'bg-accent-purple text-white'
-              : 'bg-muted text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        <div className="flex items-center gap-3">
+          {/* Drag hint */}
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground/70 px-2.5 py-1 rounded-full bg-muted/60">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             </svg>
-            <span>View Settings</span>
-          </button>
+            <span>Drag to create</span>
+          </div>
 
-          {showSettings && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-card-border rounded-lg shadow-xl z-50 p-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    Card Style
-                  </label>
-                  <div className="grid grid-cols-3 gap-1 bg-muted p-1 rounded-md">
-                    {(['small', 'medium', 'large'] as CardStyle[]).map((style) => (
-                      <button
-                        key={style}
-                        onClick={() => setCardStyle(style)}
-                        className={`px-2 py-1 text-xs rounded capitalize ${cardStyle === style
-                          ? 'bg-card text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          {/* View Settings */}
+          <div className="relative" ref={settingsRef}>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                showSettings
+                  ? 'bg-accent text-white'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+              </svg>
+              Settings
+            </button>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    Visible Fields
-                  </label>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground opacity-50 cursor-not-allowed">
-                      <input type="checkbox" checked readOnly className="rounded" />
-                      <span>Title (Always shown)</span>
-                    </div>
-                    {AVAILABLE_FIELDS.map((field) => (
-                      <label key={field.id} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-muted rounded cursor-pointer transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={visibleFields.includes(field.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setVisibleFields([...visibleFields, field.id]);
-                            } else {
-                              setVisibleFields(visibleFields.filter(f => f !== field.id));
-                            }
-                          }}
-                          className="rounded text-accent-purple focus:ring-accent-purple"
-                        />
-                        <span className="text-foreground">{field.label}</span>
+            <AnimatePresence>
+              {showSettings && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-56 bg-card border border-card-border rounded-xl shadow-lg shadow-black/8 z-50 p-3.5"
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        Card Size
                       </label>
-                    ))}
+                      <div className="grid grid-cols-3 gap-1 bg-muted p-0.5 rounded-md">
+                        {(['small', 'medium', 'large'] as CardStyle[]).map((style) => (
+                          <button
+                            key={style}
+                            onClick={() => setCardStyle(style)}
+                            className={`px-2 py-1 text-[11px] rounded capitalize transition-colors ${
+                              cardStyle === style
+                                ? 'bg-card text-foreground shadow-sm font-medium'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {style}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        Visible Fields
+                      </label>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] text-muted-foreground/50">
+                          <div className="w-3.5 h-3.5 rounded border border-accent/30 bg-accent/10 flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 text-accent" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span>Title (always)</span>
+                        </div>
+                        {AVAILABLE_FIELDS.map((field) => (
+                          <label key={field.id} className="flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted rounded-md cursor-pointer transition-colors">
+                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                              visibleFields.includes(field.id)
+                                ? 'border-accent bg-accent'
+                                : 'border-card-border'
+                            }`}>
+                              {visibleFields.includes(field.id) && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={visibleFields.includes(field.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setVisibleFields([...visibleFields, field.id]);
+                                } else {
+                                  setVisibleFields(visibleFields.filter(f => f !== field.id));
+                                }
+                              }}
+                              className="sr-only"
+                            />
+                            <span className="text-foreground">{field.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
+
       {/* Timeline Content */}
       <div className="flex-1 flex overflow-hidden" ref={containerRef}>
         <SwimlaneSidebar
@@ -711,26 +711,22 @@ export function TimelineView({
               return (
                 <div
                   key={swimlane.id}
-                  className={`relative border-b border-card-border/50 ${index % 2 === 0 ? 'bg-card' : 'bg-background/50'
-                    } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-accent-purple/10' : ''}`}
+                  className={`relative border-b border-card-border/30 ${
+                    index % 2 === 0 ? 'bg-card' : 'bg-surface/30'
+                  } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-accent/5' : ''}`}
                   style={{ height: `${totalHeight}px` }}
                   onMouseDown={(e) => handleMouseDown(e, swimlane.id)}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                  }}
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
                   onDrop={(e) => {
                     e.preventDefault();
                     const activityId = e.dataTransfer.getData('activityId');
-                    if (activityId) {
-                      handleSwimlaneChange(activityId, swimlane.id);
-                    }
+                    if (activityId) handleSwimlaneChange(activityId, swimlane.id);
                   }}
                 >
                   {isEmpty && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-xs text-gray-400 dark:text-gray-500 opacity-50">
-                        Click and drag to create an activity
+                      <span className="text-[11px] text-muted-foreground/30">
+                        Drag to create
                       </span>
                     </div>
                   )}
@@ -739,72 +735,69 @@ export function TimelineView({
                     const style = getActivityStyle(activity);
                     const status = statuses.find(s => s.id === activity.statusId);
                     const campaign = campaigns.find(c => c.id === activity.campaignId);
-                    const config = STYLE_CONFIG[cardStyle];
+                    const cardConfig = STYLE_CONFIG[cardStyle];
 
                     return (
                       <div
                         key={activity.id}
-                        className={`activity-bar absolute rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden group border border-black/10`}
+                        className="activity-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden group border border-white/15"
                         style={style}
                         onDoubleClick={() => onActivityClick(activity)}
                         onMouseDown={(e) => handleActivityMouseDown(e, activity)}
                         title={`${activity.title}\n${activity.startDate} - ${activity.endDate}`}
                       >
                         {/* Resize handles */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/30 hover:bg-white/50 transition-colors z-10" />
-                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/30 hover:bg-white/50 transition-colors z-10" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/20 hover:bg-white/40 transition-all z-10 rounded-l-lg" />
+                        <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/20 hover:bg-white/40 transition-all z-10 rounded-r-lg" />
 
-                        {/* Actions group */}
-                        <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all z-20">
+                        {/* Actions */}
+                        <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-20">
                           <button
-                            className="p-1 rounded bg-black/20 hover:bg-black/40 text-white"
+                            className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm"
                             onClick={(e) => handleCloneActivity(e, activity)}
                             title="Clone"
                           >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                             </svg>
                           </button>
                           <button
-                            className="p-1 rounded bg-black/20 hover:bg-black/40 text-white"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onActivityClick(activity);
-                            }}
+                            className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm"
+                            onClick={(e) => { e.stopPropagation(); onActivityClick(activity); }}
                             title="Edit"
                           >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                             </svg>
                           </button>
                         </div>
 
                         {/* Content */}
-                        <div className={`h-full flex flex-col px-2 ${config.padding} pointer-events-none`}>
-                          <div className={`font-bold text-white truncate ${config.fontSize} pr-6`}>
+                        <div className={`h-full flex flex-col px-2 ${cardConfig.padding} pointer-events-none`}>
+                          <div className={`font-semibold text-white truncate ${cardConfig.fontSize} pr-6 leading-tight`}>
                             {activity.title}
                           </div>
 
                           {cardStyle !== 'small' && (
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 overflow-hidden">
                               {visibleFields.includes('status') && status && (
-                                <span className="text-[10px] bg-white/20 text-white px-1 rounded truncate max-w-full">
+                                <span className="text-[10px] bg-white/20 text-white/90 px-1.5 rounded-full truncate max-w-full backdrop-blur-sm">
                                   {status.name}
                                 </span>
                               )}
                               {visibleFields.includes('campaign') && campaign && (
-                                <span className="text-[10px] text-white/80 italic truncate">
+                                <span className="text-[10px] text-white/70 italic truncate">
                                   {campaign.name}
                                 </span>
                               )}
                               {visibleFields.includes('cost') && activity.cost !== null && (
-                                <span className="text-[10px] text-white font-medium">
-                                  {activity.currency} {activity.cost.toLocaleString()}
+                                <span className="text-[10px] text-white/90 font-medium">
+                                  {activity.currency} {Number(activity.cost).toLocaleString()}
                                 </span>
                               )}
                               {visibleFields.includes('region') && activity.region && (
-                                <span className="text-[10px] text-white/70">
-                                  🌍 {activity.region}
+                                <span className="text-[10px] text-white/60">
+                                  {activity.region}
                                 </span>
                               )}
                             </div>
@@ -815,14 +808,14 @@ export function TimelineView({
                               {visibleFields.includes('tags') && activity.tags && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {activity.tags.split(',').map((tag, i) => (
-                                    <span key={i} className="text-[9px] bg-black/10 text-white px-1 rounded border border-white/20">
+                                    <span key={i} className="text-[9px] bg-white/10 text-white/80 px-1.5 rounded-full border border-white/10">
                                       {tag.trim()}
                                     </span>
                                   ))}
                                 </div>
                               )}
                               {visibleFields.includes('description') && activity.description && (
-                                <div className="text-[10px] text-white/90 line-clamp-2 mt-1 italic leading-tight">
+                                <div className="text-[10px] text-white/70 line-clamp-2 mt-1 leading-tight">
                                   {activity.description}
                                 </div>
                               )}
