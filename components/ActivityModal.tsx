@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
 import { CampaignDropdown } from './CampaignDropdown';
+import { StatusDropdown } from './StatusDropdown';
+import { SwimlaneDropdown } from './SwimlaneDropdown';
 
 interface ActivityModalProps {
   isOpen: boolean;
@@ -20,6 +22,8 @@ interface ActivityModalProps {
   onSubmit: (data: ActivityFormData) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   onCampaignsChange?: () => void;
+  onStatusesChange?: () => void;
+  onSwimlanesChange?: () => void;
 }
 
 interface AttachmentData {
@@ -46,6 +50,7 @@ export interface ActivityFormData {
   tags: string;
   color: string;
   expectedSaos: number;
+  targetSaos: number;
   actualSaos: number;
   pipelineGenerated: number;
   revenueGenerated: number;
@@ -66,6 +71,8 @@ export function ActivityModal({
   onSubmit,
   onDelete,
   onCampaignsChange,
+  onStatusesChange,
+  onSwimlanesChange,
 }: ActivityModalProps) {
   const [formData, setFormData] = useState<ActivityFormData>({
     title: '',
@@ -82,6 +89,7 @@ export function ActivityModal({
     tags: '',
     color: '',
     expectedSaos: 0,
+    targetSaos: 0,
     actualSaos: 0,
     pipelineGenerated: 0,
     revenueGenerated: 0,
@@ -110,6 +118,7 @@ export function ActivityModal({
         tags: activity.tags || '',
         color: activity.color || '',
         expectedSaos: Number(activity.expectedSaos) || 0,
+        targetSaos: Number((activity as any).targetSaos) || 0,
         actualSaos: Number(activity.actualSaos) || 0,
         pipelineGenerated: Number(activity.pipelineGenerated) || 0,
         revenueGenerated: Number(activity.revenueGenerated) || 0,
@@ -130,6 +139,7 @@ export function ActivityModal({
         tags: defaults?.tags || '',
         color: defaults?.color || '',
         expectedSaos: 0,
+        targetSaos: 0,
         actualSaos: 0,
         pipelineGenerated: 0,
         revenueGenerated: 0,
@@ -229,6 +239,8 @@ export function ActivityModal({
     }
   };
 
+  const calendarId = activity?.calendarId || swimlanes[0]?.calendarId || '';
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -272,6 +284,35 @@ export function ActivityModal({
               </button>
             </div>
 
+            {/* Tab Navigation */}
+            <div className="px-6 pt-3 flex gap-1 border-b border-card-border">
+              {(['details', 'metrics', 'documents'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-colors -mb-px ${
+                    activeTab === tab
+                      ? 'bg-card text-accent-purple border border-card-border border-b-card'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {tab === 'details' && 'Details'}
+                  {tab === 'metrics' && 'Metrics & SAOs'}
+                  {tab === 'documents' && (
+                    <span className="flex items-center gap-1.5">
+                      Documents
+                      {formData.attachments.length > 0 && (
+                        <span className="bg-accent-purple/20 text-accent-purple px-1.5 py-0.5 rounded-full text-[10px]">
+                          {formData.attachments.length}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
           <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           {activeTab === 'details' && (
           <div className="grid grid-cols-12 gap-4">
@@ -297,7 +338,7 @@ export function ActivityModal({
               <CampaignDropdown
                 campaigns={campaigns}
                 selectedCampaignId={formData.campaignId}
-                calendarId={activity?.calendarId || swimlanes[0]?.calendarId || ''}
+                calendarId={calendarId}
                 onSelect={(id) => setFormData({ ...formData, campaignId: id })}
                 onCampaignsChange={onCampaignsChange || (() => { })}
               />
@@ -334,18 +375,13 @@ export function ActivityModal({
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Status *
               </label>
-              <select
-                value={formData.statusId}
-                onChange={(e) => setFormData({ ...formData, statusId: e.target.value })}
-                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
-              >
-                <option value="">Select status</option>
-                {statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </select>
+              <StatusDropdown
+                statuses={statuses}
+                selectedStatusId={formData.statusId}
+                calendarId={calendarId}
+                onSelect={(id) => setFormData({ ...formData, statusId: id })}
+                onStatusesChange={onStatusesChange || (() => { })}
+              />
               {errors.statusId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.statusId}</p>}
             </div>
 
@@ -353,18 +389,13 @@ export function ActivityModal({
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Swimlane *
               </label>
-              <select
-                value={formData.swimlaneId}
-                onChange={(e) => setFormData({ ...formData, swimlaneId: e.target.value })}
-                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
-              >
-                <option value="">Select</option>
-                {swimlanes.map((swimlane) => (
-                  <option key={swimlane.id} value={swimlane.id}>
-                    {swimlane.name}
-                  </option>
-                ))}
-              </select>
+              <SwimlaneDropdown
+                swimlanes={swimlanes}
+                selectedSwimlaneId={formData.swimlaneId}
+                calendarId={calendarId}
+                onSelect={(id) => setFormData({ ...formData, swimlaneId: id })}
+                onSwimlanesChange={onSwimlanesChange || (() => { })}
+              />
               {errors.swimlaneId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.swimlaneId}</p>}
             </div>
 
@@ -523,7 +554,7 @@ export function ActivityModal({
             </div>
 
             <div className="col-span-12 mt-2">
-              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Performance Metrics</h3>
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">SAO Tracking</h3>
             </div>
 
             <div className="col-span-3">
@@ -536,6 +567,20 @@ export function ActivityModal({
                 step="1"
                 value={formData.expectedSaos}
                 onChange={(e) => setFormData({ ...formData, expectedSaos: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
+              />
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Target SAOs
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.targetSaos}
+                onChange={(e) => setFormData({ ...formData, targetSaos: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
             </div>
@@ -569,20 +614,13 @@ export function ActivityModal({
               </div>
             </div>
 
-            <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                Cost per SAO
-              </label>
-              <div className="px-3 py-1.5 border border-card-border rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
-                {formData.actualSaos > 0 && formData.actualCost > 0
-                  ? `${formData.currency}${(formData.actualCost / formData.actualSaos).toFixed(0)}`
-                  : '--'}
-              </div>
+            <div className="col-span-12 mt-2">
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Pipeline & Revenue</h3>
             </div>
 
             <div className="col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                Pipeline Generated
+                Pipeline Value ({formData.currency})
               </label>
               <input
                 type="number"
@@ -610,6 +648,17 @@ export function ActivityModal({
 
             <div className="col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                Cost per SAO
+              </label>
+              <div className="px-3 py-1.5 border border-card-border rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+                {formData.actualSaos > 0 && formData.actualCost > 0
+                  ? `${formData.currency}${(formData.actualCost / formData.actualSaos).toFixed(0)}`
+                  : '--'}
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Pipeline ROI
               </label>
               <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
@@ -618,19 +667,6 @@ export function ActivityModal({
                   : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
               }`}>
                 {formData.actualCost > 0 ? `${(formData.pipelineGenerated / formData.actualCost).toFixed(1)}x` : '--'}
-              </div>
-            </div>
-
-            <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                Revenue ROI
-              </label>
-              <div className={`px-3 py-1.5 border border-card-border rounded text-sm font-medium ${
-                formData.actualCost > 0 && formData.revenueGenerated > formData.actualCost
-                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
-                  : 'text-gray-500 bg-gray-50 dark:bg-gray-800'
-              }`}>
-                {formData.actualCost > 0 ? `${(formData.revenueGenerated / formData.actualCost).toFixed(1)}x` : '--'}
               </div>
             </div>
           </div>

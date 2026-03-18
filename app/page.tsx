@@ -207,6 +207,7 @@ export default function Home() {
       tags: defaults?.tags || '',
       color: defaults?.color || '',
       expectedSaos: 0,
+      targetSaos: 0,
       actualSaos: 0,
       pipelineGenerated: 0,
       revenueGenerated: 0,
@@ -250,6 +251,7 @@ export default function Home() {
         tags: '',
         color: '',
         expectedSaos: 0,
+        targetSaos: 0,
         actualSaos: 0,
         pipelineGenerated: 0,
         revenueGenerated: 0,
@@ -550,6 +552,8 @@ export default function Home() {
             setActivityDefaults({});
           }}
           onCampaignsChange={() => fetchCalendarData(currentCalendar.id)}
+          onStatusesChange={() => fetchCalendarData(currentCalendar.id)}
+          onSwimlanesChange={() => fetchCalendarData(currentCalendar.id)}
           onSubmit={handleActivitySubmit}
           onDelete={handleActivityDelete}
         />

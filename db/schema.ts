@@ -138,6 +138,7 @@ export const activities = pgTable('activities', {
   currency: currencyEnum('currency').default('US$'),
   region: regionEnum('region').default('US'),
   expectedSaos: numeric('expected_saos').default('0'),
+  targetSaos: numeric('target_saos').default('0'),
   actualSaos: numeric('actual_saos').default('0'),
   pipelineGenerated: numeric('pipeline_generated').default('0'),
   revenueGenerated: numeric('revenue_generated').default('0'),

@@ -44,6 +44,7 @@ export async function PUT(
       tags,
       color,
       expectedSaos,
+      targetSaos,
       actualSaos,
       pipelineGenerated,
       revenueGenerated,
@@ -125,6 +126,7 @@ export async function PUT(
       updates.actualCost = Number(actualCost);
     }
     if (expectedSaos !== undefined) updates.expectedSaos = String(expectedSaos);
+    if (targetSaos !== undefined) updates.targetSaos = String(targetSaos);
     if (actualSaos !== undefined) updates.actualSaos = String(actualSaos);
     if (pipelineGenerated !== undefined) updates.pipelineGenerated = String(pipelineGenerated);
     if (revenueGenerated !== undefined) updates.revenueGenerated = String(revenueGenerated);
