@@ -297,13 +297,14 @@ export default function Home() {
     setShowBriefGenerator(false);
   };
 
-  const handleCreateEvent = async () => {
+  const handleCreateEvent = async (startDateParam?: string, endDateParam?: string) => {
     if (!currentCalendar) return;
-    // Create a new event with defaults and navigate to its detail view
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
-    const endDate = nextWeek.toISOString().split('T')[0];
+
+    const eventStartDate = startDateParam || today;
+    const eventEndDate = endDateParam || nextWeek.toISOString().split('T')[0];
 
     try {
       const res = await fetch('/api/events', {
@@ -312,14 +313,15 @@ export default function Home() {
         body: JSON.stringify({
           calendarId: currentCalendar.id,
           title: 'New Event',
-          startDate: today,
-          endDate,
+          startDate: eventStartDate,
+          endDate: eventEndDate,
           statusId: currentCalendar.statuses[0]?.id || null,
         }),
       });
       if (res.ok) {
         const newEvent = await res.json();
-        fetchEvents(currentCalendar.id);
+        await fetchEvents(currentCalendar.id);
+        setCurrentView('events');
         setSelectedEventId(newEvent.id);
       }
     } catch (error) {
@@ -563,6 +565,7 @@ export default function Home() {
                 onDeleteSwimlane={handleDeleteSwimlane}
                 onReorderSwimlanes={handleReorderSwimlanes}
                 onEventClick={(id) => { setCurrentView('events'); setSelectedEventId(id); }}
+                onEventCreate={(startDate, endDate) => handleCreateEvent(startDate, endDate)}
               />
             )}
 
@@ -602,7 +605,7 @@ export default function Home() {
                 statuses={currentCalendar.statuses}
                 campaigns={currentCalendar.campaigns}
                 onEventClick={(id) => setSelectedEventId(id)}
-                onCreateEvent={handleCreateEvent}
+                onCreateEvent={() => handleCreateEvent()}
               />
             )}
 
