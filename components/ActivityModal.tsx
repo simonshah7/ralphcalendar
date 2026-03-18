@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
 import { CampaignDropdown } from './CampaignDropdown';
@@ -52,18 +53,8 @@ export function ActivityModal({
   onCampaignsChange,
 }: ActivityModalProps) {
   const [formData, setFormData] = useState<ActivityFormData>({
-    title: '',
-    startDate: '',
-    endDate: '',
-    statusId: '',
-    swimlaneId: '',
-    campaignId: null,
-    description: '',
-    cost: 0,
-    currency: 'US$',
-    region: 'US',
-    tags: '',
-    color: '',
+    title: '', startDate: '', endDate: '', statusId: '', swimlaneId: '',
+    campaignId: null, description: '', cost: 0, currency: 'US$', region: 'US', tags: '', color: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,63 +63,35 @@ export function ActivityModal({
   useEffect(() => {
     if (activity) {
       setFormData({
-        title: activity.title,
-        startDate: activity.startDate,
-        endDate: activity.endDate,
-        statusId: activity.statusId || '',
-        swimlaneId: activity.swimlaneId,
-        campaignId: activity.campaignId,
-        description: activity.description || '',
-        cost: Number(activity.cost) || 0,
-        currency: activity.currency || 'US$',
-        region: activity.region || 'US',
-        tags: activity.tags || '',
-        color: activity.color || '',
+        title: activity.title, startDate: activity.startDate, endDate: activity.endDate,
+        statusId: activity.statusId || '', swimlaneId: activity.swimlaneId,
+        campaignId: activity.campaignId, description: activity.description || '',
+        cost: Number(activity.cost) || 0, currency: activity.currency || 'US$',
+        region: activity.region || 'US', tags: activity.tags || '', color: activity.color || '',
       });
     } else {
       setFormData({
-        title: defaults?.title || '',
-        startDate: defaults?.startDate || defaultStartDate || new Date().toISOString().split('T')[0],
+        title: defaults?.title || '', startDate: defaults?.startDate || defaultStartDate || new Date().toISOString().split('T')[0],
         endDate: defaults?.endDate || defaultEndDate || new Date().toISOString().split('T')[0],
         statusId: defaults?.statusId || statuses[0]?.id || '',
         swimlaneId: defaults?.swimlaneId || defaultSwimlaneId || swimlanes[0]?.id || '',
-        campaignId: defaults?.campaignId ?? null,
-        description: defaults?.description || '',
-        cost: Number(defaults?.cost) || 0,
-        currency: defaults?.currency || 'US$',
-        region: defaults?.region || 'US',
-        tags: defaults?.tags || '',
-        color: defaults?.color || '',
+        campaignId: defaults?.campaignId ?? null, description: defaults?.description || '',
+        cost: Number(defaults?.cost) || 0, currency: defaults?.currency || 'US$',
+        region: defaults?.region || 'US', tags: defaults?.tags || '', color: defaults?.color || '',
       });
     }
     setErrors({});
     setShowDeleteConfirm(false);
   }, [activity, isOpen, statuses, swimlanes, defaultStartDate, defaultEndDate, defaultSwimlaneId, defaults]);
 
-  if (!isOpen) return null;
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    }
-    if (!formData.startDate) {
-      newErrors.startDate = 'Start date is required';
-    }
-    if (!formData.endDate) {
-      newErrors.endDate = 'End date is required';
-    }
-    if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
-      newErrors.endDate = 'End date must be on or after start date';
-    }
-    if (!formData.statusId) {
-      newErrors.statusId = 'Status is required';
-    }
-    if (!formData.swimlaneId) {
-      newErrors.swimlaneId = 'Swimlane is required';
-    }
-
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.startDate) newErrors.startDate = 'Start date is required';
+    if (!formData.endDate) newErrors.endDate = 'End date is required';
+    if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) newErrors.endDate = 'End date must be on or after start date';
+    if (!formData.statusId) newErrors.statusId = 'Status is required';
+    if (!formData.swimlaneId) newErrors.swimlaneId = 'Channel is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -136,7 +99,6 @@ export function ActivityModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
@@ -177,12 +139,48 @@ export function ActivityModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {errors.form && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm">
-              {errors.form}
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 bg-overlay backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative bg-card rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto border border-card-border"
+          >
+            <div className="sticky top-0 bg-card border-b border-card-border px-6 py-3.5 flex items-center justify-between z-10 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity ? 'bg-warm-soft' : 'bg-accent-soft'}`}>
+                  {activity ? (
+                    <svg className="w-4 h-4 text-warm" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  )}
+                </div>
+                <h2 className="text-base font-semibold text-foreground">
+                  {activity ? 'Edit Activity' : 'New Activity'}
+                </h2>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          )}
 
           <div className="grid grid-cols-12 gap-4">
             {/* Title */}
@@ -404,7 +402,7 @@ export function ActivityModal({
                         onClick={() => setShowDeleteConfirm(false)}
                         className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground font-bold"
                       >
-                        NO
+                        Clear
                       </button>
                     </div>
                   ) : (

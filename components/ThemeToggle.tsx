@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
@@ -8,14 +9,11 @@ export function ThemeToggle() {
 
   useEffect(() => {
     setMounted(true);
-    // Check localStorage first, then system preference
     const stored = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = stored === 'dark' || (!stored && prefersDark);
-    
+
     setIsDark(shouldBeDark);
-    
-    // Apply the theme to the document
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -27,8 +25,6 @@ export function ThemeToggle() {
     const newDark = !isDark;
     setIsDark(newDark);
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    
-    // Toggle the dark class on the html element
     if (newDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -36,7 +32,6 @@ export function ThemeToggle() {
     }
   };
 
-  // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return (
       <button

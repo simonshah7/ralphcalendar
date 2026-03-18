@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CreateCalendarModalProps {
   isOpen: boolean;
@@ -13,17 +14,13 @@ export function CreateCalendarModal({ isOpen, onClose, onSubmit }: CreateCalenda
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     if (!name.trim()) {
       setError('Calendar name is required');
       return;
     }
-
     setIsSubmitting(true);
     try {
       await onSubmit(name.trim());

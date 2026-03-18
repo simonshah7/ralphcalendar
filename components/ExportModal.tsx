@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => void;
+  onExport: (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv' | 'pptx') => void;
   currentView: 'timeline' | 'calendar' | 'table';
 }
 
@@ -17,9 +18,7 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
   const [startDate, setStartDate] = useState(firstOfMonth.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(lastOfMonth.toISOString().split('T')[0]);
   const [exportType, setExportType] = useState<'timeline' | 'calendar' | 'table'>(currentView);
-  const [exportFormat, setExportFormat] = useState<'png' | 'csv'>('png');
-
-  if (!isOpen) return null;
+  const [exportFormat, setExportFormat] = useState<'png' | 'csv' | 'pptx'>('png');
 
   const setQuickRange = (range: 'month' | 'quarter' | 'year' | 'all') => {
     const now = new Date();
@@ -55,10 +54,9 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
     onClose();
   };
 
-  // When export type changes to something other than table, reset format to png
   const handleTypeChange = (type: 'timeline' | 'calendar' | 'table') => {
     setExportType(type);
-    if (type !== 'table' && exportFormat === 'csv') {
+    if (type !== 'table' && (exportFormat === 'csv')) {
       setExportFormat('png');
     }
   };
@@ -91,7 +89,6 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
                 </button>
               ))}
             </div>
-          </div>
 
           {/* Export Format */}
           <div>
@@ -144,13 +141,13 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
                 onClick={() => setQuickRange('quarter')}
                 className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                This Quarter
+                Cancel
               </button>
               <button
                 onClick={() => setQuickRange('year')}
                 className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                This Year
+                Export {exportFormat.toUpperCase()}
               </button>
               <button
                 onClick={() => setQuickRange('all')}
@@ -206,4 +203,3 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
     </div>
   );
 }
-

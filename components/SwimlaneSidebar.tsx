@@ -6,7 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 interface SwimlaneSidebarProps {
   swimlanes: Swimlane[];
-  rowHeights: number[]; // Array of heights matching swimlanes order
+  rowHeights: number[];
   headerHeight: number;
   sidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
@@ -40,7 +40,6 @@ export function SwimlaneSidebar({
   const newInputRef = useRef<HTMLInputElement>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  // Handle sidebar width resizing
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
@@ -52,23 +51,18 @@ export function SwimlaneSidebar({
       const newWidth = Math.max(150, Math.min(400, e.clientX));
       onSidebarWidthChange(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+    const handleMouseUp = () => setIsResizing(false);
 
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     }
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, onSidebarWidthChange]);
 
-  // Focus edit input when editing starts
   useEffect(() => {
     if (editingId && editInputRef.current) {
       editInputRef.current.focus();
@@ -76,7 +70,6 @@ export function SwimlaneSidebar({
     }
   }, [editingId]);
 
-  // Focus new input when adding
   useEffect(() => {
     if (isAddingNew && newInputRef.current) {
       newInputRef.current.focus();
@@ -114,7 +107,6 @@ export function SwimlaneSidebar({
     setIsAddingNew(false);
   };
 
-  // Drag and drop reordering
   const handleDragStart = (e: React.DragEvent, swimlaneId: string) => {
     setDraggedId(swimlaneId);
     e.dataTransfer.effectAllowed = 'move';
@@ -124,22 +116,16 @@ export function SwimlaneSidebar({
   const handleDragOver = (e: React.DragEvent, swimlaneId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (draggedId && draggedId !== swimlaneId) {
-      setDragOverId(swimlaneId);
-    }
+    if (draggedId && draggedId !== swimlaneId) setDragOverId(swimlaneId);
   };
 
-  const handleDragLeave = () => {
-    setDragOverId(null);
-  };
+  const handleDragLeave = () => setDragOverId(null);
 
   const handleDrop = (e: React.DragEvent, targetSwimlaneId: string) => {
     e.preventDefault();
     if (draggedId && draggedId !== targetSwimlaneId) {
       const targetIndex = swimlanes.findIndex(s => s.id === targetSwimlaneId);
-      if (targetIndex !== -1) {
-        onReorderSwimlanes(draggedId, targetIndex);
-      }
+      if (targetIndex !== -1) onReorderSwimlanes(draggedId, targetIndex);
     }
     setDraggedId(null);
     setDragOverId(null);
@@ -154,31 +140,31 @@ export function SwimlaneSidebar({
 
   return (
     <div
-      className="flex-shrink-0 border-r border-card-border bg-background relative select-none"
+      className="flex-shrink-0 border-r border-card-border bg-sidebar-bg relative select-none"
       style={{ width: `${sidebarWidth}px` }}
     >
       {/* Header */}
       <div
-        className="border-b border-card-border px-3 py-2 flex items-center justify-between"
+        className="border-b border-card-border px-3 py-2 flex items-center justify-between bg-surface"
         style={{ height: `${headerHeight}px` }}
       >
-        <span className="text-sm font-medium text-foreground">
-          Swimlanes
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Channels
         </span>
         <button
           onClick={() => setIsAddingNew(true)}
-          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          title="Add swimlane"
+          className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-accent transition-colors"
+          title="Add channel"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
         </button>
       </div>
 
       {/* New Swimlane Input */}
       {isAddingNew && (
-        <div className="px-2 py-2 border-b border-card-border bg-accent-purple/10">
+        <div className="px-2.5 py-2.5 border-b border-card-border bg-accent-soft/50">
           <input
             ref={newInputRef}
             type="text"
@@ -191,7 +177,7 @@ export function SwimlaneSidebar({
             placeholder="Swimlane name..."
             className="w-full px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:ring-2 focus:ring-accent-purple focus:border-transparent"
           />
-          <div className="flex gap-1 mt-1">
+          <div className="flex gap-1.5 mt-2">
             <button
               onClick={handleAddNew}
               disabled={!newSwimlaneValue.trim()}
@@ -259,15 +245,14 @@ export function SwimlaneSidebar({
                 {swimlane.name}
               </span>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleStartEdit(swimlane)}
                   className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                   title="Edit swimlane"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                   </svg>
                 </button>
                 <button
@@ -275,8 +260,8 @@ export function SwimlaneSidebar({
                   className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
                   title="Delete swimlane"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                   </svg>
                 </button>
               </div>
@@ -293,7 +278,7 @@ export function SwimlaneSidebar({
             onClick={() => setIsAddingNew(true)}
             className="text-sm text-accent-purple hover:underline"
           >
-            Add your first swimlane
+            Add your first channel
           </button>
         </div>
       )}
@@ -313,8 +298,8 @@ export function SwimlaneSidebar({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteConfirm}
-        title="Delete Swimlane"
-        message={`Are you sure you want to delete "${swimlaneToDelete?.name}"? All activities in this swimlane will also be deleted.`}
+        title="Delete Channel"
+        message={`Are you sure you want to delete "${swimlaneToDelete?.name}"? All activities in this channel will also be deleted.`}
         confirmLabel="Delete"
         variant="danger"
         onConfirm={() => {

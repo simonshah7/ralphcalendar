@@ -204,34 +204,13 @@ export function TableView({
     let bValue: string | number = '';
 
     switch (sortField) {
-      case 'title':
-        aValue = a.title.toLowerCase();
-        bValue = b.title.toLowerCase();
-        break;
-      case 'startDate':
-        aValue = a.startDate;
-        bValue = b.startDate;
-        break;
-      case 'endDate':
-        aValue = a.endDate;
-        bValue = b.endDate;
-        break;
-      case 'status':
-        aValue = statuses.find((s) => s.id === a.statusId)?.name || '';
-        bValue = statuses.find((s) => s.id === b.statusId)?.name || '';
-        break;
-      case 'swimlane':
-        aValue = swimlanes.find((s) => s.id === a.swimlaneId)?.name || '';
-        bValue = swimlanes.find((s) => s.id === b.swimlaneId)?.name || '';
-        break;
-      case 'campaign':
-        aValue = campaigns.find((c) => c.id === a.campaignId)?.name || '';
-        bValue = campaigns.find((c) => c.id === b.campaignId)?.name || '';
-        break;
-      case 'cost':
-        aValue = parseFloat(String(a.cost)) || 0;
-        bValue = parseFloat(String(b.cost)) || 0;
-        break;
+      case 'title': aValue = a.title.toLowerCase(); bValue = b.title.toLowerCase(); break;
+      case 'startDate': aValue = a.startDate; bValue = b.startDate; break;
+      case 'endDate': aValue = a.endDate; bValue = b.endDate; break;
+      case 'status': aValue = statuses.find((s) => s.id === a.statusId)?.name || ''; bValue = statuses.find((s) => s.id === b.statusId)?.name || ''; break;
+      case 'swimlane': aValue = swimlanes.find((s) => s.id === a.swimlaneId)?.name || ''; bValue = swimlanes.find((s) => s.id === b.swimlaneId)?.name || ''; break;
+      case 'campaign': aValue = campaigns.find((c) => c.id === a.campaignId)?.name || ''; bValue = campaigns.find((c) => c.id === b.campaignId)?.name || ''; break;
+      case 'cost': aValue = Number(a.cost) || 0; bValue = Number(b.cost) || 0; break;
     }
 
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
@@ -242,60 +221,35 @@ export function TableView({
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
       return (
-        <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        <svg className="w-3.5 h-3.5 text-muted-foreground/40" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
         </svg>
       );
     }
     return sortDirection === 'asc' ? (
-      <svg className="w-3.5 h-3.5 text-accent-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
       </svg>
     ) : (
-      <svg className="w-3.5 h-3.5 text-accent-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
       </svg>
     );
   };
 
   const handleInlineEdit = useCallback(async (activityId: string, field: string, value: string | null) => {
     const updates: Partial<Activity> = {};
-
     switch (field) {
-      case 'title':
-        if (value && value.trim()) {
-          updates.title = value.trim();
-        }
-        break;
-      case 'statusId':
-        updates.statusId = value || '';
-        break;
-      case 'swimlaneId':
-        updates.swimlaneId = value || '';
-        break;
-      case 'campaignId':
-        updates.campaignId = value;
-        break;
-      case 'startDate':
-      case 'endDate':
-        if (value) {
-          (updates as Record<string, string>)[field] = value;
-        }
-        break;
-      case 'cost':
-        updates.cost = String(parseFloat(value || '0'));
-        break;
-      case 'currency':
-        updates.currency = (value || 'US$') as 'US$' | 'UK£' | 'EUR';
-        break;
-      case 'region':
-        updates.region = (value || 'US') as 'US' | 'EMEA' | 'ROW';
-        break;
+      case 'title': if (value && value.trim()) updates.title = value.trim(); break;
+      case 'statusId': updates.statusId = value || ''; break;
+      case 'swimlaneId': updates.swimlaneId = value || ''; break;
+      case 'campaignId': updates.campaignId = value; break;
+      case 'startDate': case 'endDate': if (value) (updates as Record<string, string>)[field] = value; break;
+      case 'cost': updates.cost = String(parseFloat(value || '0')); break;
+      case 'currency': updates.currency = (value || 'US$') as 'US$' | 'UK£' | 'EUR'; break;
+      case 'region': updates.region = (value || 'US') as 'US' | 'EMEA' | 'ROW'; break;
     }
-
-    if (Object.keys(updates).length > 0) {
-      await onActivityUpdate(activityId, updates);
-    }
+    if (Object.keys(updates).length > 0) await onActivityUpdate(activityId, updates);
     setEditingCell(null);
   }, [onActivityUpdate]);
 
@@ -465,18 +419,9 @@ export function TableView({
     }
   };
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-card">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-background/50">
-        <div className="text-xs text-muted-foreground">
-          {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
-          {columnSettings.hidden.length > 0 && (
-            <span className="ml-2">
-              · {visibleColumns.length}/{ALL_COLUMNS.length} columns
-            </span>
-          )}
-        </div>
+  const thClass = "text-left px-4 py-2.5";
+  const thBtnClass = "flex items-center gap-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors";
+  const inputClass = "text-sm px-2 py-1 border border-card-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40";
 
         {/* Column settings button */}
         <div className="relative" data-column-menu>
@@ -601,34 +546,141 @@ export function TableView({
             {sortedActivities.map((activity, index) => (
               <tr
                 key={activity.id}
-                className={`group transition-colors cursor-pointer ${
-                  index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
-                } hover:bg-accent-purple/5`}
+                className={`border-b border-card-border/30 hover:bg-muted/50 cursor-pointer transition-colors ${
+                  index % 2 === 0 ? '' : 'bg-surface/20'
+                }`}
                 onClick={() => onActivityClick(activity)}
               >
-                {visibleColumns.map((col) => (
-                  <td
-                    key={col.id}
-                    className="px-4 py-2.5"
-                    style={{ minWidth: col.minWidth }}
-                  >
-                    {renderCell(col, activity)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <td className="px-4 py-2.5">
+                  {editingCell?.id === activity.id && editingCell?.field === 'title' ? (
+                    <input
+                      type="text"
+                      defaultValue={activity.title}
+                      autoFocus
+                      className={`w-full ${inputClass} ring-1 ring-accent/40`}
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => handleInlineEdit(activity.id, 'title', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleInlineEdit(activity.id, 'title', e.currentTarget.value);
+                        else if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="text-sm font-medium text-foreground"
+                      onDoubleClick={(e) => { e.stopPropagation(); setEditingCell({ id: activity.id, field: 'title' }); }}
+                    >
+                      {activity.title}
+                    </span>
+                  )}
+                </td>
 
-        {activities.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-64 gap-2">
-            <svg className="w-10 h-10 text-muted-foreground/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm text-muted-foreground">No activities found</p>
-          </div>
-        )}
-      </div>
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: status?.color }} />
+                    <select
+                      value={activity.statusId || ''}
+                      onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
+                      className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                    >
+                      {statuses.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="date"
+                    value={activity.startDate}
+                    onChange={(e) => handleInlineEdit(activity.id, 'startDate', e.target.value)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  />
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="date"
+                    value={activity.endDate}
+                    onChange={(e) => handleInlineEdit(activity.id, 'endDate', e.target.value)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  />
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={activity.swimlaneId}
+                    onChange={(e) => handleInlineEdit(activity.id, 'swimlaneId', e.target.value)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  >
+                    {swimlanes.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={activity.campaignId || ''}
+                    onChange={(e) => handleInlineEdit(activity.id, 'campaignId', e.target.value || null)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  >
+                    <option value="">None</option>
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={activity.cost || '0'}
+                    onChange={(e) => handleInlineEdit(activity.id, 'cost', e.target.value)}
+                    className={`text-sm w-24 ${inputClass} border-transparent bg-transparent hover:bg-muted tabular-nums`}
+                  />
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={activity.currency || 'US$'}
+                    onChange={(e) => handleInlineEdit(activity.id, 'currency', e.target.value)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </td>
+
+                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={activity.region || 'US'}
+                    onChange={(e) => handleInlineEdit(activity.id, 'region', e.target.value)}
+                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                  >
+                    {REGIONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {activities.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-64 gap-2">
+          <svg className="w-10 h-10 text-muted-foreground/30" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+          </svg>
+          <p className="text-sm text-muted-foreground">No activities found</p>
+        </div>
+      )}
     </div>
   );
 }

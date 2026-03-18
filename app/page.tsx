@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { FilterBar } from '@/components/FilterBar';
 import { TimelineView } from '@/components/TimelineView';
@@ -11,6 +12,7 @@ import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
 import * as htmlToImage from 'html-to-image';
+import PptxGenJS from 'pptxgenjs';
 
 type ViewType = 'timeline' | 'calendar' | 'table';
 
@@ -27,12 +29,10 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('timeline');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
 
-  // Modal state
   const [showCreateCalendar, setShowCreateCalendar] = useState(false);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -46,7 +46,6 @@ export default function Home() {
 
   const mainContentRef = useRef<HTMLDivElement>(null);
 
-  // Fetch calendars on mount
   useEffect(() => {
     fetchCalendars();
   }, []);
@@ -56,7 +55,6 @@ export default function Home() {
       const response = await fetch('/api/calendars');
       const data = await response.json();
       setCalendars(data);
-
       if (data.length > 0 && !currentCalendar) {
         fetchCalendarData(data[0].id);
       } else {
@@ -86,11 +84,7 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create calendar');
-    }
-
+    if (!response.ok) throw new Error('Failed to create calendar');
     const newCalendar = await response.json();
     setCalendars((prev) => [...prev, newCalendar]);
     fetchCalendarData(newCalendar.id);
@@ -98,16 +92,12 @@ export default function Home() {
 
   const handleCreateSwimlane = async (name: string) => {
     if (!currentCalendar) return;
-
     const response = await fetch('/api/swimlanes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ calendarId: currentCalendar.id, name }),
     });
-
-    if (response.ok) {
-      fetchCalendarData(currentCalendar.id);
-    }
+    if (response.ok) fetchCalendarData(currentCalendar.id);
   };
 
   const handleEditSwimlane = async (id: string, name: string) => {
@@ -116,40 +106,23 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
-
-    if (response.ok && currentCalendar) {
-      fetchCalendarData(currentCalendar.id);
-    }
+    if (response.ok && currentCalendar) fetchCalendarData(currentCalendar.id);
   };
 
   const handleDeleteSwimlane = async (id: string) => {
-    const response = await fetch(`/api/swimlanes/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (response.ok && currentCalendar) {
-      fetchCalendarData(currentCalendar.id);
-    }
+    const response = await fetch(`/api/swimlanes/${id}`, { method: 'DELETE' });
+    if (response.ok && currentCalendar) fetchCalendarData(currentCalendar.id);
   };
 
   const handleReorderSwimlanes = async (swimlaneId: string, newIndex: number) => {
     if (!currentCalendar) return;
-
-    // Optimistically reorder locally
     const swimlanes = [...currentCalendar.swimlanes];
     const currentIndex = swimlanes.findIndex(s => s.id === swimlaneId);
     if (currentIndex === -1) return;
-
     const [movedSwimlane] = swimlanes.splice(currentIndex, 1);
     swimlanes.splice(newIndex, 0, movedSwimlane);
+    const updates = swimlanes.map((s, idx) => ({ id: s.id, sortOrder: idx }));
 
-    // Update sortOrder for all swimlanes
-    const updates = swimlanes.map((s, idx) => ({
-      id: s.id,
-      sortOrder: idx,
-    }));
-
-    // Update each swimlane's sortOrder
     try {
       await Promise.all(
         updates.map((update) =>
@@ -168,41 +141,24 @@ export default function Home() {
 
   const handleActivitySubmit = async (data: ActivityFormData) => {
     if (!currentCalendar) return;
-
-    const url = editingActivity
-      ? `/api/activities/${editingActivity.id}`
-      : '/api/activities';
+    const url = editingActivity ? `/api/activities/${editingActivity.id}` : '/api/activities';
     const method = editingActivity ? 'PUT' : 'POST';
-
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...data,
-        calendarId: currentCalendar.id,
-      }),
+      body: JSON.stringify({ ...data, calendarId: currentCalendar.id }),
     });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to save activity');
     }
-
     fetchCalendarData(currentCalendar.id);
   };
 
   const handleActivityDelete = async (id: string) => {
-    const response = await fetch(`/api/activities/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete activity');
-    }
-
-    if (currentCalendar) {
-      fetchCalendarData(currentCalendar.id);
-    }
+    const response = await fetch(`/api/activities/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Failed to delete activity');
+    if (currentCalendar) fetchCalendarData(currentCalendar.id);
   };
 
   const handleActivityUpdate = async (id: string, updates: Partial<Activity>) => {
@@ -211,10 +167,7 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
-
-    if (response.ok && currentCalendar) {
-      fetchCalendarData(currentCalendar.id);
-    }
+    if (response.ok && currentCalendar) fetchCalendarData(currentCalendar.id);
   };
 
   const handleActivityClick = (activity: Activity) => {
@@ -226,10 +179,8 @@ export default function Home() {
   const handleActivityCreate = async (swimlaneId: string, startDate: string, endDate: string, defaults?: Partial<Activity>, silent?: boolean) => {
     const activityData: ActivityFormData = {
       title: defaults?.title || 'New Activity',
-      startDate,
-      endDate,
+      startDate, endDate,
       statusId: defaults?.statusId || currentCalendar?.statuses[0]?.id || '',
-
       swimlaneId,
       campaignId: defaults?.campaignId || null,
       description: defaults?.description || '',
@@ -241,11 +192,7 @@ export default function Home() {
     };
 
     if (silent) {
-      try {
-        await handleActivitySubmit(activityData);
-      } catch (error) {
-        console.error('Failed to create activity silently:', error);
-      }
+      try { await handleActivitySubmit(activityData); } catch (error) { console.error('Failed to create activity silently:', error); }
     } else {
       setEditingActivity(null);
       setActivityDefaults({ swimlaneId, startDate, endDate, defaults });
@@ -260,29 +207,15 @@ export default function Home() {
   };
 
   const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => {
-    if (exportFormat === 'csv') {
-      exportToCSV(startDate, endDate);
-      return;
-    }
-
+    if (exportFormat === 'csv') { exportToCSV(startDate, endDate); return; }
     const elementToCapture = mainContentRef.current;
-    if (!elementToCapture) {
-      console.error('Target element not found');
-      alert('Unable to export: content not ready');
-      return;
-    }
-
+    if (!elementToCapture) { alert('Unable to export: content not ready'); return; }
     try {
-      // html-to-image is much better at supporting modern CSS like lab() and oklch()
       const dataUrl = await htmlToImage.toPng(elementToCapture, {
-        backgroundColor: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff',
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#0c0a09' : '#fafaf9',
         quality: 1,
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-        }
+        style: { transform: 'scale(1)', transformOrigin: 'top left' }
       });
-
       const link = document.createElement('a');
       link.download = `campaignos-${exportType}-export-${startDate}-to-${endDate}.png`;
       link.href = dataUrl;
@@ -297,60 +230,23 @@ export default function Home() {
 
   const exportToCSV = (startDate: string, endDate: string) => {
     if (!currentCalendar) return;
-
-    // Filter activities by date range
-    const activitiesToExport = filteredActivities.filter(a => {
-      const aStart = a.startDate;
-      const aEnd = a.endDate;
-      return aStart <= endDate && aEnd >= startDate;
-    });
-
-    const headers = [
-      'Title',
-      'Start Date',
-      'End Date',
-      'Status',
-      'Swimlane',
-      'Campaign',
-      'Cost',
-      'Currency',
-      'Region',
-      'Tags',
-      'Description'
-    ];
-
+    const activitiesToExport = filteredActivities.filter(a => a.startDate <= endDate && a.endDate >= startDate);
+    const headers = ['Title', 'Start Date', 'End Date', 'Status', 'Swimlane', 'Campaign', 'Cost', 'Currency', 'Region', 'Tags', 'Description'];
     const escapeCSV = (val: any): string => {
       if (val === null || val === undefined) return '""';
       const str = String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) return `"${str.replace(/"/g, '""')}"`;
       return str;
     };
-
     const csvContent = [
       headers.join(','),
       ...activitiesToExport.map(a => {
         const status = currentCalendar.statuses.find(s => s.id === a.statusId)?.name || '';
         const swimlane = currentCalendar.swimlanes.find(s => s.id === a.swimlaneId)?.name || '';
         const campaign = currentCalendar.campaigns.find(c => c.id === a.campaignId)?.name || 'N/A';
-
-        return [
-          escapeCSV(a.title),
-          escapeCSV(a.startDate),
-          escapeCSV(a.endDate),
-          escapeCSV(status),
-          escapeCSV(swimlane),
-          escapeCSV(campaign),
-          escapeCSV(a.cost),
-          escapeCSV(a.currency),
-          escapeCSV(a.region || ''),
-          escapeCSV(a.tags || ''),
-          escapeCSV(a.description || '')
-        ].join(',');
+        return [escapeCSV(a.title), escapeCSV(a.startDate), escapeCSV(a.endDate), escapeCSV(status), escapeCSV(swimlane), escapeCSV(campaign), escapeCSV(a.cost), escapeCSV(a.currency), escapeCSV(a.region || ''), escapeCSV(a.tags || ''), escapeCSV(a.description || '')].join(',');
       })
     ].join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -362,28 +258,29 @@ export default function Home() {
     document.body.removeChild(link);
   };
 
-  // Filter activities
   const filteredActivities = useMemo(() => currentCalendar?.activities.filter((activity) => {
-    if (searchQuery && !activity.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (selectedCampaignId && activity.campaignId !== selectedCampaignId) {
-      return false;
-    }
-    if (selectedStatusId && activity.statusId !== selectedStatusId) {
-      return false;
-    }
+    if (searchQuery && !activity.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (selectedCampaignId && activity.campaignId !== selectedCampaignId) return false;
+    if (selectedStatusId && activity.statusId !== selectedStatusId) return false;
     return true;
   }) || [], [currentCalendar?.activities, searchQuery, selectedCampaignId, selectedStatusId]);
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading CampaignOS...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="text-center"
+        >
+          <div className="relative w-10 h-10 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-card-border" />
+            <div className="absolute inset-0 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading CampaignOS</p>
+        </motion.div>
       </div>
     );
   }
@@ -391,47 +288,42 @@ export default function Home() {
   // Empty state - no calendars
   if (calendars.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex flex-col bg-background">
         <Header
           calendars={[]}
           currentCalendar={null}
           currentView={currentView}
           onViewChange={setCurrentView}
-          onCalendarSelect={() => { }}
+          onCalendarSelect={() => {}}
           onCreateCalendar={() => setShowCreateCalendar(true)}
-          onCreateActivity={() => { }}
-          onExport={() => { }}
+          onCreateActivity={() => {}}
+          onExport={() => {}}
         />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto px-4">
-            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-8 h-8 text-blue-600 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="text-center max-w-md mx-auto px-4"
+          >
+            <div className="w-16 h-16 bg-accent-soft rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
               Welcome to CampaignOS
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Your marketing campaign planning tool. Create your first calendar to get started.
+            <p className="text-muted-foreground mb-8 leading-relaxed">
+              Plan, visualize, and manage your marketing campaigns with an intuitive timeline. Create your first calendar to get started.
             </p>
             <button
               onClick={() => setShowCreateCalendar(true)}
-              className="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-2.5 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors shadow-sm shadow-accent/20"
             >
               Create Your First Calendar
             </button>
-          </div>
+          </motion.div>
         </div>
 
         <CreateCalendarModal
@@ -443,11 +335,10 @@ export default function Home() {
     );
   }
 
-  // Empty swimlanes state
   const hasNoSwimlanes = currentCalendar && currentCalendar.swimlanes.length === 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header
         calendars={calendars}
         currentCalendar={currentCalendar}
@@ -482,18 +373,28 @@ export default function Home() {
       <main className="flex-1 flex flex-col overflow-hidden" ref={mainContentRef}>
         {hasNoSwimlanes ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center max-w-md mx-auto px-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Add Swimlanes to Get Started
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-center max-w-md mx-auto px-4"
+            >
+              <div className="w-12 h-12 bg-warm-soft rounded-xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-warm" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M12 17.25h8.25" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-foreground mb-1.5">
+                Add Channels to Get Started
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Swimlanes help organize your activities into channels or categories.
+              <p className="text-sm text-muted-foreground mb-5">
+                Channels help organize your activities into marketing categories like Social, Email, or Paid.
               </p>
               <div className="flex flex-col gap-2 max-w-xs mx-auto">
                 <input
                   type="text"
-                  placeholder="Enter swimlane name"
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="e.g. Social Media"
+                  className="px-4 py-2 border border-card-border rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-accent/40"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                       handleCreateSwimlane(e.currentTarget.value.trim());
@@ -501,11 +402,11 @@ export default function Home() {
                     }
                   }}
                 />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Press Enter to add swimlane
+                <p className="text-xs text-muted-foreground/60">
+                  Press Enter to add
                 </p>
               </div>
-            </div>
+            </motion.div>
           </div>
         ) : (
           <>
@@ -548,7 +449,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Modals */}
       <CreateCalendarModal
         isOpen={showCreateCalendar}
         onClose={() => setShowCreateCalendar(false)}
@@ -565,7 +465,7 @@ export default function Home() {
           defaultStartDate={activityDefaults.startDate}
           defaultEndDate={activityDefaults.endDate}
           defaultSwimlaneId={activityDefaults.swimlaneId}
-          defaults={activityDefaults.defaults as any} // Cast as any to handle Partial<Activity> to Partial<ActivityFormData> mapping
+          defaults={activityDefaults.defaults as any}
           onClose={() => {
             setShowActivityModal(false);
             setEditingActivity(null);

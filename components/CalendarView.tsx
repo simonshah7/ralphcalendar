@@ -22,11 +22,9 @@ export function CalendarView({
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
 
-  // Get first day of the calendar grid (might be from previous month)
   const calendarStart = new Date(monthStart);
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
 
-  // Get last day of the calendar grid
   const calendarEnd = new Date(monthEnd);
   calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()));
 
@@ -58,34 +56,21 @@ export function CalendarView({
     };
   };
 
-  const isCurrentMonth = (date: Date) => {
-    return date.getMonth() === currentDate.getMonth();
-  };
+  const isCurrentMonth = (date: Date) => date.getMonth() === currentDate.getMonth();
+  const isToday = (date: Date) => isSameDay(date, new Date());
 
-  const isToday = (date: Date) => {
-    return isSameDay(date, new Date());
-  };
-
-  const navigatePrev = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-
-  const navigateNext = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
-
-  const navigateToday = () => {
-    setCurrentDate(new Date());
-  };
+  const navigatePrev = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const navigateNext = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const navigateToday = () => setCurrentDate(new Date());
 
   return (
     <div className="flex-1 flex flex-col bg-card overflow-hidden">
       {/* Calendar Controls */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-card-border bg-surface">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={navigatePrev}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -96,7 +81,7 @@ export function CalendarView({
           </h2>
           <button
             onClick={navigateNext}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -105,7 +90,7 @@ export function CalendarView({
         </div>
         <button
           onClick={navigateToday}
-          className="px-3 py-1.5 text-sm font-medium text-foreground bg-muted rounded hover:opacity-80 transition-opacity"
+          className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors"
         >
           Today
         </button>
@@ -114,7 +99,7 @@ export function CalendarView({
       {/* Calendar Grid */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Day Headers */}
-        <div className="grid grid-cols-7 border-b border-card-border">
+        <div className="grid grid-cols-7 border-b border-card-border bg-surface">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
             <div
               key={day}
@@ -128,7 +113,7 @@ export function CalendarView({
         {/* Calendar Days */}
         <div className="flex-1 grid grid-rows-[repeat(auto-fill,minmax(0,1fr))] overflow-auto">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 border-b border-card-border/50">
+            <div key={weekIndex} className="grid grid-cols-7 border-b border-card-border/30">
               {week.map((date, dayIndex) => {
                 const dayActivities = getActivitiesForDay(date);
                 const dateStr = date.toISOString().split('T')[0];
@@ -136,13 +121,15 @@ export function CalendarView({
                 return (
                   <div
                     key={dayIndex}
-                    className={`min-h-[100px] border-r border-card-border/50 p-1 cursor-pointer hover:bg-muted/50 ${!isCurrentMonth(date) ? 'bg-background' : ''
-                      }`}
+                    className={`min-h-[100px] border-r border-card-border/30 p-1.5 cursor-pointer transition-colors hover:bg-accent-soft/30 ${
+                      !isCurrentMonth(date) ? 'bg-muted/30' : ''
+                    }`}
                     onClick={() => onDateClick(dateStr)}
                   >
                     <div
-                      className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${isToday(date)
-                          ? 'bg-accent-purple text-white'
+                      className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
+                        isToday(date)
+                          ? 'bg-accent text-white'
                           : isCurrentMonth(date)
                             ? 'text-foreground'
                             : 'text-muted-foreground'
@@ -150,7 +137,7 @@ export function CalendarView({
                     >
                       {date.getDate()}
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       {dayActivities.slice(0, 3).map((activity) => (
                         <div
                           key={activity.id}
@@ -169,7 +156,6 @@ export function CalendarView({
                           className="text-xs text-accent-purple px-1 cursor-pointer hover:underline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Open the first hidden activity to let users navigate
                             onActivityClick(dayActivities[3]);
                           }}
                         >
