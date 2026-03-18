@@ -430,16 +430,18 @@ export default function Home() {
         isSeedingData={isSeedingData}
       />
 
-      <FilterBar
-        campaigns={currentCalendar?.campaigns || []}
-        statuses={currentCalendar?.statuses || []}
-        searchQuery={searchQuery}
-        selectedCampaignId={selectedCampaignId}
-        selectedStatusId={selectedStatusId}
-        onSearchChange={setSearchQuery}
-        onCampaignChange={setSelectedCampaignId}
-        onStatusChange={setSelectedStatusId}
-      />
+      {currentView !== 'dashboard' && (
+        <FilterBar
+          campaigns={currentCalendar?.campaigns || []}
+          statuses={currentCalendar?.statuses || []}
+          searchQuery={searchQuery}
+          selectedCampaignId={selectedCampaignId}
+          selectedStatusId={selectedStatusId}
+          onSearchChange={setSearchQuery}
+          onCampaignChange={setSelectedCampaignId}
+          onStatusChange={setSelectedStatusId}
+        />
+      )}
 
       <main className="flex-1 flex flex-col overflow-hidden" ref={mainContentRef}>
         {hasNoSwimlanes ? (
