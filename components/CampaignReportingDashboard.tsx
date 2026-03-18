@@ -562,93 +562,14 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
     return map;
   }, [data]);
 
-  // ── Anomaly detection across all tabs ─────────────────
-  const anomalies = useMemo(() => {
-    const items: Array<{ type: 'warning' | 'opportunity' | 'info'; message: string; tab: ReportTab }> = [];
-
-    // Theme anomalies
-    const themes = (bySource['marketo_theme'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
-    if (themes.length >= 2) {
-      const themeRois = themes.filter((t) => num(t.m.spend) > 0).map((t) => ({ name: t.name, roi: num(t.m.pipeline) / num(t.m.spend) }));
-      if (themeRois.length >= 2) {
-        const sorted = [...themeRois].sort((a, b) => a.roi - b.roi);
-        const worst = sorted[0];
-        const best = sorted[sorted.length - 1];
-        if (best.roi > worst.roi * 2 && worst.roi < 1) {
-          items.push({ type: 'warning', message: `"${worst.name}" theme has ${worst.roi.toFixed(1)}x ROI vs ${best.roi.toFixed(1)}x for "${best.name}" — consider reallocating budget`, tab: 'themes' });
-        }
-      }
-      // Theme with spend but no SAOs
-      for (const t of themes) {
-        if (num(t.m.spend) > 5000 && num(t.m.saos) === 0) {
-          items.push({ type: 'warning', message: `"${t.name}" theme has ${formatCurrency(num(t.m.spend))} spend but zero SAOs`, tab: 'themes' });
-        }
-      }
-    }
-
-    // Channel anomalies
-    const channels = (bySource['marketo_channel'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
-    if (channels.length >= 2) {
-      // Highest cost-per-MQL
-      const costPerMqls = channels.filter((c) => num(c.m.mqls) > 0 && num(c.m.spend) > 0).map((c) => ({ name: c.name, cpm: num(c.m.spend) / num(c.m.mqls) }));
-      if (costPerMqls.length >= 2) {
-        const sorted = [...costPerMqls].sort((a, b) => b.cpm - a.cpm);
-        const avg = costPerMqls.reduce((s, c) => s + c.cpm, 0) / costPerMqls.length;
-        if (sorted[0].cpm > avg * 1.5) {
-          items.push({ type: 'warning', message: `"${sorted[0].name}" cost/MQL (${formatCurrency(sorted[0].cpm)}) is ${Math.round((sorted[0].cpm / avg - 1) * 100)}% above average`, tab: 'channels' });
-        }
-      }
-      // Lowest engagement rate
-      const engRates = channels.filter((c) => num(c.m.views) > 100).map((c) => ({ name: c.name, rate: num(c.m.engagements) / num(c.m.views) }));
-      if (engRates.length >= 2) {
-        const sorted = [...engRates].sort((a, b) => a.rate - b.rate);
-        const avg = engRates.reduce((s, c) => s + c.rate, 0) / engRates.length;
-        if (sorted[0].rate < avg * 0.5) {
-          items.push({ type: 'info', message: `"${sorted[0].name}" engagement rate (${pctRaw(sorted[0].rate * 100)}) is well below average (${pctRaw(avg * 100)})`, tab: 'channels' });
-        }
-      }
-    }
-
-    // LinkedIn anomalies
-    const linkedin = (bySource['linkedin_ads'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
-    for (const ad of linkedin) {
-      const ctr = num(ad.m.impressions) > 0 ? num(ad.m.clicks) / num(ad.m.impressions) : 0;
-      if (ctr < 0.003 && num(ad.m.impressions) > 1000) {
-        items.push({ type: 'warning', message: `LinkedIn "${ad.name}" CTR is ${pctRaw(ctr * 100)} — below 0.3% benchmark`, tab: 'linkedin' });
-      }
-      if (num(ad.m.spend) > 5000 && num(ad.m.conversions) === 0) {
-        items.push({ type: 'warning', message: `LinkedIn "${ad.name}" has ${formatCurrency(num(ad.m.spend))} spend with zero conversions`, tab: 'linkedin' });
-      }
-    }
-
-    // Hero asset anomalies
-    const assets = (bySource['hero_asset'] || []).map((r) => ({ name: r.label, m: r.metrics as Record<string, number> }));
-    for (const a of assets) {
-      const completionRate = num(a.m.downloads) > 0 ? num(a.m.completions) / num(a.m.downloads) : 0;
-      if (completionRate < 0.3 && num(a.m.downloads) > 50) {
-        items.push({ type: 'info', message: `"${a.name}" has ${pctRaw(completionRate * 100)} completion rate — content may need optimization`, tab: 'hero-assets' });
-      }
-    }
-
-    // Success highlights
-    if (themes.length > 0) {
-      const bestTheme = themes.filter((t) => num(t.m.spend) > 0).sort((a, b) => (num(b.m.pipeline) / num(b.m.spend)) - (num(a.m.pipeline) / num(a.m.spend)))[0];
-      if (bestTheme && num(bestTheme.m.pipeline) / num(bestTheme.m.spend) > 3) {
-        items.push({ type: 'opportunity', message: `"${bestTheme.name}" theme is generating ${(num(bestTheme.m.pipeline) / num(bestTheme.m.spend)).toFixed(1)}x ROI — consider increasing investment`, tab: 'themes' });
-      }
-    }
-
-    return items;
-  }, [bySource]);
-
-  const tabs: { key: ReportTab; label: string; anomalyCount: number }[] = [
-    { key: 'themes', label: 'Theme Performance', anomalyCount: anomalies.filter((a) => a.tab === 'themes').length },
-    { key: 'channels', label: 'Channel Performance', anomalyCount: anomalies.filter((a) => a.tab === 'channels').length },
-    { key: 'hero-assets', label: 'Hero Assets', anomalyCount: anomalies.filter((a) => a.tab === 'hero-assets').length },
-    { key: 'linkedin', label: 'LinkedIn & Ads', anomalyCount: anomalies.filter((a) => a.tab === 'linkedin').length },
-    { key: 'icp', label: 'ICP Penetration', anomalyCount: 0 },
-    { key: 'outreach', label: 'Outreach', anomalyCount: 0 },
-    { key: 'event-leads', label: 'Event Leads', anomalyCount: 0 },
+  const tabs: { key: ReportTab; label: string }[] = [
+    { key: 'themes', label: 'Theme Performance' },
+    { key: 'channels', label: 'Channel Performance' },
+    { key: 'hero-assets', label: 'Hero Assets' },
+    { key: 'linkedin', label: 'LinkedIn & Ads' },
+    { key: 'icp', label: 'ICP Penetration' },
+    { key: 'outreach', label: 'Outreach' },
+    { key: 'event-leads', label: 'Event Leads' },
   ];
 
   // ── Campaign health score ──────────────────────────────
@@ -780,7 +701,7 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 + i * 0.03 }}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
               tab === t.key
                 ? 'bg-accent-purple text-white shadow-sm shadow-accent-purple/20'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1353,135 +1274,25 @@ function LinkedInAds({ rows }: { rows: CampaignReportData[] }) {
   );
 }
 
-// ─── ICP Sub-tab type ────────────────────────────────────
-type ICPSubTab = 'overview' | 'stages' | 'scores' | 'sources' | 'geo' | 'untouched';
-
-// ─── Stage colors ────────────────────────────────────────
-const STAGE_COLORS: Record<string, string> = {
-  'Untouched': '#94a3b8',
-  'Identify': '#a78bfa',
-  'Discovery': '#7A00C1',
-  'Solution Overview': '#3B53FF',
-  'Eval Planning': '#006170',
-  'Structured Eval': '#0891b2',
-  'Offer': '#FFA943',
-  'Negotiation': '#FF715A',
-  'Closed Won': '#22c55e',
-  'Closed Lost': '#ef4444',
-};
-
-const FA_SCORE_COLORS: Record<string, string> = {
-  'FA-A': '#22c55e',
-  'FA-B': '#FFA943',
-  'FA-C': '#ef4444',
-  'Unknown': '#94a3b8',
-};
-
-const REGION_COLORS: Record<string, string> = {
-  'Americas': '#3B53FF',
-  'EMEA': '#7A00C1',
-  'APAC': '#006170',
-  'Other': '#94a3b8',
-};
-
-const STAGE_ORDER = ['Untouched', 'Identify', 'Discovery', 'Solution Overview', 'Eval Planning', 'Structured Eval', 'Offer', 'Negotiation', 'Closed Won', 'Closed Lost'];
-
-interface ICPSummaryData {
-  totalAccounts: number;
-  totalOpportunities: number;
-  untouchedAccounts: number;
-  stageDistribution: Record<string, number>;
-  oppTypeDistribution: Record<string, number>;
-  leadSourceDistribution: Record<string, number>;
-  faScoreDistribution: Record<string, number>;
-  countryDistribution: Record<string, number>;
-  regionDistribution: Record<string, number>;
-  ownerDistribution: Record<string, number>;
-  untouchedAccountTypeDistribution: Record<string, number>;
-  activePipelineCount: number;
-  closedWonCount: number;
-  closedLostCount: number;
-}
-
-interface ICPAccountData {
-  accountName: string;
-  accountId: string;
-  totalOpps: number;
-  activeOpps: number;
-  closedWon: number;
-  closedLost: number;
-  faScore: string;
-  topStage: string;
-  leadSources: string[];
-  country: string;
-  owners: string[];
-  oppTypes: string[];
-}
-
 // ─── ICP Penetration Tab ────────────────────────────────
-function ICPPenetration({ rows: _rows }: { rows: CampaignReportData[] }) {
-  const [icpData, setIcpData] = useState<{ summary: ICPSummaryData; topAccounts: ICPAccountData[] } | null>(null);
-  const [icpLoading, setIcpLoading] = useState(true);
-  const [subTab, setSubTab] = useState<ICPSubTab>('overview');
+function ICPPenetration({ rows }: { rows: CampaignReportData[] }) {
+  // Expect one summary row + individual account rows
+  const summary = rows.find((r) => r.category === 'summary');
+  const accounts = rows.filter((r) => r.category === 'account');
 
-  useEffect(() => {
-    async function loadICP() {
-      setIcpLoading(true);
-      try {
-        const res = await fetch('/api/icp-data');
-        if (res.ok) {
-          setIcpData(await res.json());
-        }
-      } catch (e) {
-        console.error('Failed to load ICP data:', e);
-      }
-      setIcpLoading(false);
-    }
-    loadICP();
-  }, []);
-
-  if (icpLoading) {
-    return <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">Loading ICP data from spreadsheet...</div>;
-  }
-
-  if (!icpData) {
-    return <div className="text-center py-12 text-muted-foreground text-sm">Failed to load ICP data. Ensure FA ICP Opps.xlsx is in the public folder.</div>;
-  }
-
-  const { summary: sm, topAccounts } = icpData;
-  const totalTarget = sm.totalAccounts + sm.untouchedAccounts;
-  const penetrationRate = totalTarget > 0 ? (sm.totalAccounts / totalTarget) * 100 : 0;
-  const winRate = (sm.closedWonCount + sm.closedLostCount) > 0
-    ? (sm.closedWonCount / (sm.closedWonCount + sm.closedLostCount)) * 100
-    : 0;
-
-  const icpSubTabs: { key: ICPSubTab; label: string }[] = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'stages', label: 'Opportunity Stages' },
-    { key: 'scores', label: 'CAPdB Scores' },
-    { key: 'sources', label: 'Lead Sources' },
-    { key: 'geo', label: 'Geography' },
-    { key: 'untouched', label: 'Untouched Accounts' },
-  ];
+  const sm = summary?.metrics as Record<string, number> || {};
 
   return (
     <div className="space-y-4">
-      {/* Sub-navigation */}
-      <div className="flex items-center gap-1 overflow-x-auto">
-        {icpSubTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setSubTab(t.key)}
-            className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
-              subTab === t.key
-                ? 'bg-foreground/10 text-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Card>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Stat label="Target Accounts" value={fmtCompact(num(sm.targetAccounts))} />
+          <Stat label="Accounts Engaged" value={fmtCompact(num(sm.engaged))} sub={`${pctRaw(num(sm.targetAccounts) > 0 ? (num(sm.engaged) / num(sm.targetAccounts)) * 100 : 0)} penetration`} color="#3B53FF" />
+          <Stat label="Accounts w/ MQLs" value={fmtCompact(num(sm.withMqls))} color="#7A00C1" />
+          <Stat label="Accounts w/ SAOs" value={fmtCompact(num(sm.withSaos))} color="#006170" />
+          <Stat label="Total Pipeline" value={formatCurrency(num(sm.totalPipeline))} color="#FF715A" />
+        </div>
+      </Card>
 
       {/* Penetration rings + funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1512,306 +1323,50 @@ function ICPPenetration({ rows: _rows }: { rows: CampaignReportData[] }) {
         </Card>
       </div>
 
-          {/* Stage Funnel using real stages */}
-          <Card title="Opportunity Stage Funnel">
-            <FunnelChart
-              stages={STAGE_ORDER.filter((s) => num(sm.stageDistribution[s]) > 0).map((s) => ({
-                label: s,
-                value: num(sm.stageDistribution[s]),
-              }))}
-              color="#3B53FF"
-            />
-          </Card>
-
-          {/* Opp Type & FA Score side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card title="Opportunity Type Breakdown">
-              <StackedBar
-                segments={Object.entries(sm.oppTypeDistribution)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([label, value], i) => ({
-                    label,
-                    value,
-                    color: THEME_COLORS[i % THEME_COLORS.length],
-                  }))}
-              />
-            </Card>
-            <Card title="FA Score Distribution">
-              <StackedBar
-                segments={['FA-A', 'FA-B', 'FA-C', 'Unknown']
-                  .filter((s) => num(sm.faScoreDistribution[s]) > 0)
-                  .map((label) => ({
-                    label,
-                    value: num(sm.faScoreDistribution[label]),
-                    color: FA_SCORE_COLORS[label],
-                  }))}
-              />
-            </Card>
-          </div>
-
-          {/* Top Accounts Table */}
-          <Card title="Top Accounts by Active Opportunities">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Account</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Total Opps</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Active</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Won</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Lost</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">FA Score</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Best Stage</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Country</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-card-border">
-                  {topAccounts.map((acct, i) => (
-                    <tr key={acct.accountId} className={`hover:bg-muted/30 ${i % 2 === 1 ? 'bg-muted/15' : ''}`}>
-                      <td className="px-3 py-2 text-foreground font-medium">{acct.accountName}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground tabular-nums">{acct.totalOpps}</td>
-                      <td className="px-3 py-2 text-right text-foreground tabular-nums font-medium">{acct.activeOpps}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-green-500">{acct.closedWon}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-red-400">{acct.closedLost}</td>
+      {/* Top engaged accounts */}
+      {accounts.length > 0 && (
+        <Card title="Top Engaged Accounts">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Account</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Industry</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Touches</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">MQLs</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">SAOs</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Pipeline</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Stage</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-card-border">
+                {accounts.map((acct, i) => {
+                  const am = acct.metrics as Record<string, number | string>;
+                  return (
+                    <tr key={acct.id} className={`hover:bg-muted/30 ${i % 2 === 1 ? 'bg-muted/15' : ''}`}>
+                      <td className="px-3 py-2 text-foreground font-medium">{acct.label}</td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{String(am.industry || '—')}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground tabular-nums">{num(am.touches as number)}</td>
+                      <td className="px-3 py-2 text-right text-foreground tabular-nums">{num(am.mqls as number)}</td>
+                      <td className="px-3 py-2 text-right text-foreground tabular-nums">{num(am.saos as number)}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground tabular-nums">{formatCurrency(num(am.pipeline as number))}</td>
                       <td className="px-3 py-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          acct.faScore === 'FA-A' ? 'bg-green-500/15 text-green-500' :
-                          acct.faScore === 'FA-B' ? 'bg-yellow-500/15 text-yellow-500' :
-                          acct.faScore === 'FA-C' ? 'bg-red-500/15 text-red-400' :
+                          am.stage === 'Opportunity' ? 'bg-green-500/15 text-green-500' :
+                          am.stage === 'SAO' ? 'bg-blue-500/15 text-blue-500' :
+                          am.stage === 'MQL' ? 'bg-purple-500/15 text-purple-500' :
                           'bg-muted text-muted-foreground'
-                        }`}>{acct.faScore}</span>
+                        }`}>
+                          {String(am.stage || 'Engaged')}
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                          backgroundColor: `${STAGE_COLORS[acct.topStage] || '#94a3b8'}20`,
-                          color: STAGE_COLORS[acct.topStage] || '#94a3b8',
-                        }}>{acct.topStage}</span>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground text-xs">{acct.country}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
-      )}
-
-      {subTab === 'stages' && (
-        <>
-          <Card title="Opportunity Stage Distribution">
-            <div className="space-y-3">
-              {STAGE_ORDER.filter((s) => num(sm.stageDistribution[s]) > 0).map((stage) => {
-                const count = num(sm.stageDistribution[stage]);
-                const pctVal = sm.totalOpportunities > 0 ? (count / sm.totalOpportunities) * 100 : 0;
-                return (
-                  <div key={stage} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-32 text-right">{stage}</span>
-                    <div className="flex-1 h-6 bg-muted rounded-md overflow-hidden">
-                      <div
-                        className="h-full rounded-md flex items-center px-2"
-                        style={{ width: `${pctVal}%`, backgroundColor: STAGE_COLORS[stage] || '#94a3b8', minWidth: count > 0 ? '2rem' : 0 }}
-                      >
-                        <span className="text-[10px] font-semibold text-white">{count}</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground w-12 text-right">{pctRaw(pctVal)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <Stat label="Active Pipeline" value={String(sm.activePipelineCount)} sub="In-progress opps" color="#3B53FF" />
-            </Card>
-            <Card>
-              <Stat label="Closed Won" value={String(sm.closedWonCount)} sub={pctRaw(winRate) + ' win rate'} color="#22c55e" />
-            </Card>
-            <Card>
-              <Stat label="Closed Lost" value={String(sm.closedLostCount)} color="#ef4444" />
-            </Card>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </>
-      )}
-
-      {subTab === 'scores' && (
-        <>
-          <Card title="CAPdB FA Score Distribution">
-            <div className="space-y-3">
-              {['FA-A', 'FA-B', 'FA-C', 'Unknown'].filter((s) => num(sm.faScoreDistribution[s]) > 0).map((score) => {
-                const count = num(sm.faScoreDistribution[score]);
-                const pctVal = sm.totalOpportunities > 0 ? (count / sm.totalOpportunities) * 100 : 0;
-                return (
-                  <div key={score} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-20 text-right font-medium">{score}</span>
-                    <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden">
-                      <div
-                        className="h-full rounded-md flex items-center px-2"
-                        style={{ width: `${pctVal}%`, backgroundColor: FA_SCORE_COLORS[score], minWidth: '2rem' }}
-                      >
-                        <span className="text-xs font-semibold text-white">{count} opps</span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-muted-foreground w-12 text-right">{pctRaw(pctVal)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card title="Score Interpretation">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                <div className="font-medium text-green-500 mb-1">FA-A (Best Fit)</div>
-                <div className="text-xs text-muted-foreground">{fmtCompact(num(sm.faScoreDistribution['FA-A']))} opportunities from highest-scoring ICP accounts</div>
-              </div>
-              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                <div className="font-medium text-yellow-500 mb-1">FA-B (Good Fit)</div>
-                <div className="text-xs text-muted-foreground">{fmtCompact(num(sm.faScoreDistribution['FA-B']))} opportunities from mid-tier ICP accounts</div>
-              </div>
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <div className="font-medium text-red-400 mb-1">FA-C (Lower Fit)</div>
-                <div className="text-xs text-muted-foreground">{fmtCompact(num(sm.faScoreDistribution['FA-C']))} opportunities from lower-scoring accounts</div>
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-
-      {subTab === 'sources' && (
-        <>
-          <Card title="Lead Source Attribution">
-            <div className="space-y-2">
-              {Object.entries(sm.leadSourceDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .map(([source, count], i) => {
-                  const pctVal = sm.totalOpportunities > 0 ? (count / sm.totalOpportunities) * 100 : 0;
-                  return (
-                    <div key={source} className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-36 text-right truncate" title={source}>{source}</span>
-                      <div className="flex-1 h-5 bg-muted rounded-md overflow-hidden">
-                        <div
-                          className="h-full rounded-md"
-                          style={{ width: `${pctVal}%`, backgroundColor: THEME_COLORS[i % THEME_COLORS.length], minWidth: count > 0 ? '0.5rem' : 0 }}
-                        />
-                      </div>
-                      <span className="text-xs text-foreground tabular-nums w-10 text-right">{count}</span>
-                      <span className="text-[10px] text-muted-foreground w-12 text-right">{pctRaw(pctVal)}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          </Card>
-
-          <Card title="Top 10 Opportunity Owners">
-            <div className="space-y-2">
-              {Object.entries(sm.ownerDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 10)
-                .map(([owner, count], i) => {
-                  const pctVal = sm.totalOpportunities > 0 ? (count / sm.totalOpportunities) * 100 : 0;
-                  return (
-                    <div key={owner} className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-36 text-right truncate" title={owner}>{owner}</span>
-                      <div className="flex-1 h-5 bg-muted rounded-md overflow-hidden">
-                        <div
-                          className="h-full rounded-md"
-                          style={{ width: `${pctVal}%`, backgroundColor: CHANNEL_COLORS[i % CHANNEL_COLORS.length], minWidth: '0.5rem' }}
-                        />
-                      </div>
-                      <span className="text-xs text-foreground tabular-nums w-10 text-right">{count}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          </Card>
-        </>
-      )}
-
-      {subTab === 'geo' && (
-        <>
-          <Card title="Regional Distribution">
-            <StackedBar
-              segments={Object.entries(sm.regionDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .map(([label, value]) => ({
-                  label,
-                  value,
-                  color: REGION_COLORS[label] || '#94a3b8',
-                }))}
-            />
-          </Card>
-
-          <Card title="Country Breakdown">
-            <div className="space-y-2">
-              {Object.entries(sm.countryDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .map(([country, count], i) => {
-                  const pctVal = sm.totalOpportunities > 0 ? (count / sm.totalOpportunities) * 100 : 0;
-                  return (
-                    <div key={country} className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-40 text-right truncate">{country}</span>
-                      <div className="flex-1 h-5 bg-muted rounded-md overflow-hidden">
-                        <div
-                          className="h-full rounded-md"
-                          style={{ width: `${pctVal}%`, backgroundColor: THEME_COLORS[i % THEME_COLORS.length], minWidth: count > 0 ? '0.5rem' : 0 }}
-                        />
-                      </div>
-                      <span className="text-xs text-foreground tabular-nums w-10 text-right">{count}</span>
-                      <span className="text-[10px] text-muted-foreground w-12 text-right">{pctRaw(pctVal)}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          </Card>
-        </>
-      )}
-
-      {subTab === 'untouched' && (
-        <>
-          <Card>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <Stat label="Untouched ICP Accounts" value={fmtCompact(sm.untouchedAccounts)} color="#ef4444" />
-              <Stat label="Engaged ICP Accounts" value={fmtCompact(sm.totalAccounts)} color="#22c55e" />
-              <Stat label="Penetration Rate" value={pctRaw(penetrationRate)} sub="Engaged / Total ICP" color="#3B53FF" />
-            </div>
-          </Card>
-
-          <Card title="Untouched Accounts by Type">
-            <StackedBar
-              segments={Object.entries(sm.untouchedAccountTypeDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .map(([label, value], i) => ({
-                  label,
-                  value,
-                  color: THEME_COLORS[i % THEME_COLORS.length],
-                }))}
-            />
-          </Card>
-
-          <Card title="Untouched vs Engaged Breakdown">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-24 text-right">Engaged</span>
-                <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden">
-                  <div className="h-full rounded-md flex items-center px-2" style={{ width: `${penetrationRate}%`, backgroundColor: '#22c55e' }}>
-                    <span className="text-xs font-semibold text-white">{sm.totalAccounts} accounts</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-24 text-right">Untouched</span>
-                <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden">
-                  <div className="h-full rounded-md flex items-center px-2" style={{ width: `${100 - penetrationRate}%`, backgroundColor: '#ef4444' }}>
-                    <span className="text-xs font-semibold text-white">{sm.untouchedAccounts} accounts</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </>
+        </Card>
       )}
     </div>
   );
