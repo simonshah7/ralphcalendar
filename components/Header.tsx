@@ -69,6 +69,8 @@ export function Header({
 
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const activeTab = tabRefs.current[currentView];
@@ -83,29 +85,43 @@ export function Header({
     }
   }, [currentView]);
 
-  const [seedMenuOpen, setSeedMenuOpen] = useState(false);
+  // Close mobile menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    }
+    if (mobileMenuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu on view change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [currentView]);
 
   return (
-    <header className="bg-card/80 backdrop-blur-xl border-b border-card-border px-5 py-2.5 sticky top-0 z-40">
+    <header className="bg-card/80 backdrop-blur-xl border-b border-card-border px-3 sm:px-5 py-2.5 sticky top-0 z-40">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-2 sm:gap-5 min-w-0">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
             <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
               </svg>
             </div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
+            <h1 className="text-base font-semibold tracking-tight text-foreground hidden sm:block">
               CampaignOS
             </h1>
           </div>
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-card-border" />
+          {/* Divider - hidden on mobile */}
+          <div className="w-px h-6 bg-card-border hidden md:block" />
 
-          {/* View Tabs with sliding indicator */}
-          <div className="relative flex bg-muted rounded-lg p-0.5">
+          {/* View Tabs - hidden on mobile, shown on md+ */}
+          <div className="relative hidden md:flex bg-muted rounded-lg p-0.5">
             <motion.div
               className="absolute top-0.5 bottom-0.5 bg-card rounded-md shadow-sm"
               animate={{
@@ -126,27 +142,46 @@ export function Header({
                 }`}
               >
                 {VIEW_ICONS[view.key]}
-                {view.label}
+                <span className="hidden lg:inline">{view.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Workspace Switcher */}
-          <WorkspaceSwitcher
-            calendars={calendars}
-            currentCalendar={currentCalendar}
-            onSelect={onCalendarSelect}
-            onCreateNew={onCreateCalendar}
-          />
+          {/* Mobile View Selector - visible on mobile only */}
+          <div className="flex md:hidden bg-muted rounded-lg p-0.5">
+            {views.map((view) => (
+              <button
+                key={view.key}
+                onClick={() => onViewChange(view.key)}
+                className={`relative z-10 flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
+                  currentView === view.key
+                    ? 'text-foreground bg-card shadow-sm'
+                    : 'text-muted-foreground'
+                }`}
+                title={view.label}
+              >
+                {VIEW_ICONS[view.key]}
+              </button>
+            ))}
+          </div>
+
+          {/* Workspace Switcher - hidden on small mobile */}
+          <div className="hidden sm:block">
+            <WorkspaceSwitcher
+              calendars={calendars}
+              currentCalendar={currentCalendar}
+              onSelect={onCalendarSelect}
+              onCreateNew={onCreateCalendar}
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Seed Data Menu */}
+        {/* Desktop Actions - hidden on mobile */}
+        <div className="hidden lg:flex items-center gap-2">
           {onSeedData && <SeedDataMenu onAction={onSeedData} isLoading={isSeedingData} />}
 
           <ThemeToggle />
 
-          {/* AI Brief Generator */}
           {onOpenBriefGenerator && (
             <button
               onClick={onOpenBriefGenerator}
@@ -161,7 +196,6 @@ export function Header({
             </button>
           )}
 
-          {/* AI Copilot */}
           {onToggleCopilot && (
             <button
               onClick={onToggleCopilot}
@@ -176,7 +210,6 @@ export function Header({
             </button>
           )}
 
-          {/* Export Button */}
           <button
             onClick={onExport}
             disabled={!currentCalendar}
@@ -188,7 +221,6 @@ export function Header({
             Export
           </button>
 
-          {/* New Activity Button */}
           <button
             onClick={onCreateActivity}
             disabled={!currentCalendar}
@@ -200,7 +232,106 @@ export function Header({
             New Activity
           </button>
         </div>
+
+        {/* Mobile actions: New Activity + Hamburger */}
+        <div className="flex lg:hidden items-center gap-1.5">
+          <ThemeToggle />
+          <button
+            onClick={onCreateActivity}
+            disabled={!currentCalendar}
+            className="p-2 text-white bg-accent-purple-btn rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            title="New Activity"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            ref={mobileMenuRef}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="lg:hidden overflow-hidden border-t border-card-border mt-2.5 pt-2.5"
+          >
+            <div className="space-y-2 pb-2">
+              {/* Workspace Switcher for small mobile */}
+              <div className="sm:hidden">
+                <WorkspaceSwitcher
+                  calendars={calendars}
+                  currentCalendar={currentCalendar}
+                  onSelect={(cal) => { onCalendarSelect(cal); setMobileMenuOpen(false); }}
+                  onCreateNew={() => { onCreateCalendar(); setMobileMenuOpen(false); }}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {onSeedData && (
+                  <SeedDataMenu onAction={(action) => { onSeedData(action); setMobileMenuOpen(false); }} isLoading={isSeedingData} />
+                )}
+
+                {onOpenBriefGenerator && (
+                  <button
+                    onClick={() => { onOpenBriefGenerator(); setMobileMenuOpen(false); }}
+                    disabled={!currentCalendar}
+                    className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 flex items-center gap-1.5 justify-center"
+                  >
+                    <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Brief
+                  </button>
+                )}
+
+                {onToggleCopilot && (
+                  <button
+                    onClick={() => { onToggleCopilot(); setMobileMenuOpen(false); }}
+                    disabled={!currentCalendar}
+                    className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 flex items-center gap-1.5 justify-center"
+                  >
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    Copilot
+                  </button>
+                )}
+
+                <button
+                  onClick={() => { onExport(); setMobileMenuOpen(false); }}
+                  disabled={!currentCalendar}
+                  className="flex items-center gap-1.5 justify-center px-3 py-2 text-sm font-medium text-muted-foreground bg-muted rounded-lg hover:text-foreground transition-colors disabled:opacity-40"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Export
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

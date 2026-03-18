@@ -165,7 +165,7 @@ export function AIBriefGenerator({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-      <div className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col border border-card-border">
+      <div className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-2 sm:mx-4 max-h-[90vh] flex flex-col border border-card-border">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-card-border">
           <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export function AIBriefGenerator({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm">
               {error}
@@ -217,7 +217,7 @@ export function AIBriefGenerator({
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                     Budget
@@ -254,7 +254,7 @@ export function AIBriefGenerator({
                 <div />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                     Start Date *
@@ -335,8 +335,8 @@ export function AIBriefGenerator({
                       />
                       <div className="flex-1 space-y-3">
                         {/* Title row */}
-                        <div className="grid grid-cols-12 gap-3">
-                          <div className="col-span-6">
+                        <div className="grid grid-cols-12 gap-2 sm:gap-3">
+                          <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               Title
                             </label>
@@ -347,7 +347,7 @@ export function AIBriefGenerator({
                               className="w-full px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple"
                             />
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-6 sm:col-span-3">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               Swimlane
                             </label>
@@ -366,7 +366,7 @@ export function AIBriefGenerator({
                                 ))}
                             </select>
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-6 sm:col-span-3">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               Est. Cost
                             </label>
@@ -382,8 +382,8 @@ export function AIBriefGenerator({
                         </div>
 
                         {/* Dates and description */}
-                        <div className="grid grid-cols-12 gap-3">
-                          <div className="col-span-3">
+                        <div className="grid grid-cols-12 gap-2 sm:gap-3">
+                          <div className="col-span-6 sm:col-span-3">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               Start
                             </label>
@@ -394,7 +394,7 @@ export function AIBriefGenerator({
                               className="w-full px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple"
                             />
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-6 sm:col-span-3">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               End
                             </label>
@@ -405,7 +405,7 @@ export function AIBriefGenerator({
                               className="w-full px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple"
                             />
                           </div>
-                          <div className="col-span-6">
+                          <div className="col-span-12 sm:col-span-6">
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
                               Description
                             </label>
@@ -427,7 +427,7 @@ export function AIBriefGenerator({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-card-border flex justify-between items-center">
+        <div className="px-4 sm:px-6 py-3 border-t border-card-border flex flex-col-reverse sm:flex-row justify-between items-center gap-2">
           {step === 'input' ? (
             <>
               <div />

@@ -151,6 +151,23 @@ body {
   transition-property: none !important;
 }
 
+/* Mobile touch targets - ensure minimum 44px tap targets */
+@media (max-width: 640px) {
+  button, a, select, input[type="date"], input[type="checkbox"] {
+    min-height: 36px;
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Better scrolling on mobile */
+  .overflow-auto, .overflow-y-auto, .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Subtle noise texture for depth */
 .texture-noise::before {
   content: '';

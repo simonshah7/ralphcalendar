@@ -189,14 +189,14 @@ function KpiCard({
 }) {
   const colors = kpiColors[label] || { bg: 'bg-muted', text: 'text-muted-foreground' };
   return (
-    <div className="bg-card border border-card-border rounded-lg p-4 flex flex-col gap-1.5 min-w-0">
+    <div className="bg-card border border-card-border rounded-lg p-3 sm:p-4 flex flex-col gap-1 sm:gap-1.5 min-w-0">
       <div className="flex items-center gap-2.5 text-muted-foreground text-xs font-medium uppercase tracking-wide">
         <span className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${colors.bg} ${colors.text}`}>
           {icon}
         </span>
         <span className="truncate">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-foreground truncate">{value}</div>
+      <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</div>
       {sub && <div className="text-xs text-muted-foreground truncate">{sub}</div>}
       {trend && (
         <div
@@ -599,7 +599,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
   // ── Render ──────────────────────────────────────────
 
   return (
-    <div className="p-4 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto overflow-y-auto">
       {/* Tab Switcher */}
       <div className="flex items-center gap-1 border-b border-card-border pb-0">
         <button
@@ -699,9 +699,9 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
       </div>
 
       {/* Middle row: Budget by Campaign + Region Donut + Status Pipeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Budget by Campaign */}
-        <div className="lg:col-span-2 bg-card border border-card-border rounded-lg p-4">
+        <div className="lg:col-span-2 bg-card border border-card-border rounded-lg p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-foreground mb-3">Budget by Campaign</h3>
           <div className="space-y-3">
             {campaignRows.map((row) => (
@@ -826,7 +826,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
 
       {/* Campaign Performance Table */}
       <div className="bg-card border border-card-border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-card-border flex items-center justify-between">
+        <div className="px-3 sm:px-4 py-3 border-b border-card-border flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Campaign Performance</h3>
           <ColumnToggle visibleColumns={visibleColumns} onToggle={toggleColumn} />
         </div>

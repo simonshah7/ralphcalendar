@@ -258,9 +258,9 @@ export function ActivityModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="relative bg-card rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto border border-card-border"
+            className="relative bg-card rounded-2xl shadow-xl max-w-4xl w-full mx-2 sm:mx-4 max-h-[95vh] overflow-y-auto border border-card-border"
           >
-            <div className="sticky top-0 bg-card border-b border-card-border px-6 py-3.5 flex items-center justify-between z-10 rounded-t-2xl">
+            <div className="sticky top-0 bg-card border-b border-card-border px-4 sm:px-6 py-3.5 flex items-center justify-between z-10 rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity ? 'bg-warm-soft' : 'bg-accent-soft'}`}>
                   {activity ? (
@@ -285,7 +285,7 @@ export function ActivityModal({
             </div>
 
             {/* Tab Navigation */}
-            <div className="px-6 pt-3 flex gap-1 border-b border-card-border">
+            <div className="px-4 sm:px-6 pt-3 flex gap-1 border-b border-card-border overflow-x-auto">
               {(['details', 'metrics', 'documents'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -313,11 +313,11 @@ export function ActivityModal({
               ))}
             </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 space-y-4">
           {activeTab === 'details' && (
-          <div className="grid grid-cols-12 gap-4">
+          <div className="grid grid-cols-12 gap-3 sm:gap-4">
             {/* Title */}
-            <div className="col-span-8">
+            <div className="col-span-12 sm:col-span-8">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Title *
               </label>
@@ -331,7 +331,7 @@ export function ActivityModal({
             </div>
 
             {/* Campaign */}
-            <div className="col-span-4">
+            <div className="col-span-12 sm:col-span-4">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Campaign
               </label>
@@ -345,7 +345,7 @@ export function ActivityModal({
             </div>
 
             {/* Dates, Status, Swimlane */}
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Start Date *
               </label>
@@ -358,7 +358,7 @@ export function ActivityModal({
               {errors.startDate && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.startDate}</p>}
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 End Date *
               </label>
@@ -371,7 +371,7 @@ export function ActivityModal({
               {errors.endDate && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.endDate}</p>}
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Status *
               </label>
@@ -385,7 +385,7 @@ export function ActivityModal({
               {errors.statusId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.statusId}</p>}
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Swimlane *
               </label>
@@ -400,7 +400,7 @@ export function ActivityModal({
             </div>
 
             {/* Currency & Region */}
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Currency
               </label>
@@ -417,7 +417,7 @@ export function ActivityModal({
               </select>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Region
               </label>
@@ -434,7 +434,7 @@ export function ActivityModal({
               </select>
             </div>
 
-            <div className="col-span-6">
+            <div className="col-span-12 sm:col-span-6">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Tags (comma-separated)
               </label>
@@ -448,7 +448,7 @@ export function ActivityModal({
             </div>
 
             {/* Description & Color */}
-            <div className="col-span-8">
+            <div className="col-span-12 sm:col-span-8">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Description
               </label>
@@ -460,7 +460,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-4">
+            <div className="col-span-12 sm:col-span-4">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Color Override
               </label>
@@ -494,12 +494,12 @@ export function ActivityModal({
 
           {/* === BUDGET & METRICS TAB === */}
           {activeTab === 'metrics' && (
-          <div className="grid grid-cols-12 gap-4">
+          <div className="grid grid-cols-12 gap-3 sm:gap-4">
             <div className="col-span-12">
               <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Cost Tracking</h3>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Planned Cost
               </label>
@@ -513,7 +513,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Actual Cost
               </label>
@@ -527,7 +527,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Variance
               </label>
@@ -544,7 +544,7 @@ export function ActivityModal({
               </div>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Currency
               </label>
@@ -557,7 +557,7 @@ export function ActivityModal({
               <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">SAO Tracking</h3>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Expected SAOs
               </label>
@@ -571,7 +571,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Target SAOs
               </label>
@@ -585,7 +585,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Actual SAOs
               </label>
@@ -599,7 +599,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 SAO Attainment
               </label>
@@ -618,7 +618,7 @@ export function ActivityModal({
               <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Pipeline & Revenue</h3>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Pipeline Value ({formData.currency})
               </label>
@@ -632,7 +632,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Revenue Generated
               </label>
@@ -646,7 +646,7 @@ export function ActivityModal({
               />
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Cost per SAO
               </label>
@@ -657,7 +657,7 @@ export function ActivityModal({
               </div>
             </div>
 
-            <div className="col-span-3">
+            <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Pipeline ROI
               </label>
@@ -751,7 +751,7 @@ export function ActivityModal({
             </div>
           )}
 
-          <div className="flex justify-between pt-3 border-t border-card-border">
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-3 border-t border-card-border">
             <div>
               {activity && onDelete && (
                 <>

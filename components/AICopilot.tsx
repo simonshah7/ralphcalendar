@@ -148,7 +148,7 @@ export function AICopilot({ calendarId, isOpen, onClose }: AICopilotProps) {
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 z-50 h-full w-[400px] max-w-full bg-card border-l border-card-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 z-50 h-full w-full sm:w-[400px] sm:max-w-full bg-card border-l border-card-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

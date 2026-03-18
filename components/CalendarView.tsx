@@ -66,7 +66,7 @@ export function CalendarView({
   return (
     <div className="flex-1 flex flex-col bg-card overflow-hidden">
       {/* Calendar Controls */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-card-border bg-surface">
+      <div className="flex items-center justify-between px-2 sm:px-4 py-2.5 border-b border-card-border bg-surface">
         <div className="flex items-center gap-1.5">
           <button
             onClick={navigatePrev}
@@ -76,7 +76,7 @@ export function CalendarView({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-foreground min-w-[200px] text-center">
+          <h2 className="text-sm sm:text-lg font-semibold text-foreground min-w-[120px] sm:min-w-[200px] text-center">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <button
@@ -103,9 +103,10 @@ export function CalendarView({
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
             <div
               key={day}
-              className="py-2 text-center text-sm font-medium text-muted-foreground"
+              className="py-1.5 sm:py-2 text-center text-xs sm:text-sm font-medium text-muted-foreground"
             >
-              {day}
+              <span className="sm:hidden">{day.charAt(0)}</span>
+              <span className="hidden sm:inline">{day}</span>
             </div>
           ))}
         </div>
@@ -121,7 +122,7 @@ export function CalendarView({
                 return (
                   <div
                     key={dayIndex}
-                    className={`min-h-[100px] border-r border-card-border/30 p-1.5 cursor-pointer transition-colors hover:bg-accent-soft/30 ${
+                    className={`min-h-[60px] sm:min-h-[100px] border-r border-card-border/30 p-1 sm:p-1.5 cursor-pointer transition-colors hover:bg-accent-soft/30 ${
                       !isCurrentMonth(date) ? 'bg-muted/30' : ''
                     }`}
                     onClick={() => onDateClick(dateStr)}
@@ -138,10 +139,10 @@ export function CalendarView({
                       {date.getDate()}
                     </div>
                     <div className="space-y-0.5">
-                      {dayActivities.slice(0, 3).map((activity) => (
+                      {dayActivities.slice(0, 2).map((activity) => (
                         <div
                           key={activity.id}
-                          className="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                          className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
                           style={getActivityStyle(activity)}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -151,15 +152,15 @@ export function CalendarView({
                           {activity.title}
                         </div>
                       ))}
-                      {dayActivities.length > 3 && (
+                      {dayActivities.length > 2 && (
                         <div
-                          className="text-xs text-accent-purple px-1 cursor-pointer hover:underline"
+                          className="text-[10px] sm:text-xs text-accent-purple px-1 cursor-pointer hover:underline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onActivityClick(dayActivities[3]);
+                            onActivityClick(dayActivities[2]);
                           }}
                         >
-                          +{dayActivities.length - 3} more
+                          +{dayActivities.length - 2} more
                         </div>
                       )}
                     </div>
