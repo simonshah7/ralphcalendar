@@ -15,7 +15,9 @@ import { AICopilot } from '@/components/AICopilot';
 import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
 import { VoiceAgent } from '@/components/VoiceAgent';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
+import { EventsListView } from '@/components/EventsListView';
 import type { EventListItem } from '@/components/EventsListView';
+import { EventDetailView } from '@/components/EventDetailView';
 import type { VoiceAgentCallbacks, CalendarContext } from '@/hooks/useVoiceAgent';
 import { exportToPNG, exportToCSV } from '@/lib/export';
 
