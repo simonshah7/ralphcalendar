@@ -35,7 +35,7 @@ export function ActivityBar({
   onClone,
   onEdit,
 }: ActivityBarProps) {
-  const bgColor = activity.color || status?.color || '#2563EB';
+  const bgColor = activity.color || status?.color || '#3B53FF';
   const textColor = getContrastTextColor(bgColor);
   const isLight = textColor === '#000000';
   const config = STYLE_CONFIG[cardStyle];

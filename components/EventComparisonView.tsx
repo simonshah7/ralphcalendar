@@ -386,8 +386,8 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                 if (count === 0) return null;
                 const pct = (count / data.comparisons.length) * 100;
                 const colors: Record<string, string> = {
-                  invest: '#22c55e', maintain: '#3b82f6', reduce: '#f59e0b',
-                  new: '#a855f7', cut: '#ef4444', retired: '#6b7280',
+                  invest: '#006170', maintain: '#3B53FF', reduce: '#FFA943',
+                  new: '#7A00C1', cut: '#FF715A', retired: '#D6E4EA',
                 };
                 return (
                   <div
@@ -407,7 +407,7 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                 return (
                   <span key={rec} className="flex items-center gap-1">
                     <span className={`inline-block w-2 h-2 rounded-full ${style.bg}`} style={{
-                      backgroundColor: rec === 'invest' ? '#22c55e' : rec === 'maintain' ? '#3b82f6' : rec === 'reduce' ? '#f59e0b' : rec === 'new' ? '#a855f7' : rec === 'cut' ? '#ef4444' : '#6b7280'
+                      backgroundColor: rec === 'invest' ? '#006170' : rec === 'maintain' ? '#3B53FF' : rec === 'reduce' ? '#FFA943' : rec === 'new' ? '#7A00C1' : rec === 'cut' ? '#FF715A' : '#D6E4EA'
                     }} />
                     <span className={style.text}>{style.label}</span>
                     <span className="text-muted-foreground">({count})</span>

@@ -295,7 +295,7 @@ export function TableView({
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <span
               className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: status?.color || '#888' }}
+              style={{ backgroundColor: status?.color || '#D6E4EA' }}
             />
             <select
               value={activity.statusId || ''}
