@@ -58,6 +58,12 @@ export default function Home() {
   const fetchCalendars = async () => {
     try {
       const response = await fetch('/api/calendars');
+      if (!response.ok) {
+        console.error('Failed to fetch calendars:', response.status);
+        setCalendars([]);
+        setIsLoading(false);
+        return;
+      }
       const data = await response.json();
       setCalendars(data);
       if (data.length > 0 && !currentCalendar) {
@@ -67,6 +73,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Failed to fetch calendars:', error);
+      setCalendars([]);
       setIsLoading(false);
     }
   };
@@ -74,6 +81,10 @@ export default function Home() {
   const fetchCalendarData = async (calendarId: string) => {
     try {
       const response = await fetch(`/api/calendars/${calendarId}`);
+      if (!response.ok) {
+        console.error('Failed to fetch calendar data:', response.status);
+        return;
+      }
       const data = await response.json();
       setCurrentCalendar(data);
     } catch (error) {
