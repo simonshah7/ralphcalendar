@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "drizzle-kit push && next build",
+    "build": "drizzle-kit push --force && next build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit push --force"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.79.0",
