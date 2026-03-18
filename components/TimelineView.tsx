@@ -6,11 +6,21 @@ import { addDays, getDaysBetween, getContrastTextColor, formatCurrency } from '@
 import { SwimlaneSidebar } from './SwimlaneSidebar';
 import { useActivityLayout, useTimelineDrag, TimelineHeader, ActivityBar } from './timeline';
 
+export interface TimelineEvent {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  statusId: string | null;
+  color?: string | null;
+}
+
 interface TimelineViewProps {
   activities: Activity[];
   swimlanes: Swimlane[];
   statuses: Status[];
   campaigns: Campaign[];
+  events?: TimelineEvent[];
   onActivityClick: (activity: Activity) => void;
   onActivityCreate: (swimlaneId: string, startDate: string, endDate: string, defaults?: Partial<Activity>, silent?: boolean) => void;
   onActivityUpdate: (id: string, updates: Partial<Activity>) => Promise<void>;
@@ -18,6 +28,7 @@ interface TimelineViewProps {
   onEditSwimlane: (id: string, name: string) => void;
   onDeleteSwimlane: (id: string) => void;
   onReorderSwimlanes: (swimlaneId: string, newIndex: number) => void;
+  onEventClick?: (eventId: string) => void;
 }
 
 type ZoomLevel = 'year' | 'quarter' | 'month';
@@ -54,6 +65,7 @@ export function TimelineView({
   swimlanes,
   statuses,
   campaigns,
+  events: timelineEvents = [],
   onActivityClick,
   onActivityCreate,
   onActivityUpdate,
@@ -61,6 +73,7 @@ export function TimelineView({
   onEditSwimlane,
   onDeleteSwimlane,
   onReorderSwimlanes,
+  onEventClick,
 }: TimelineViewProps) {
   // --- View state ---
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('quarter');
@@ -488,6 +501,7 @@ export function TimelineView({
           onEditSwimlane={onEditSwimlane}
           onDeleteSwimlane={onDeleteSwimlane}
           onReorderSwimlanes={onReorderSwimlanes}
+          eventsRowHeight={timelineEvents.length > 0 ? rowHeight + 12 : 0}
         />
 
         <div
@@ -509,6 +523,48 @@ export function TimelineView({
           <div className="relative" style={{ width: `${totalWidth}px` }}>
             {renderTodayLine()}
             {renderDragSelection()}
+
+            {/* Events Row */}
+            {timelineEvents.length > 0 && (
+              <div
+                className="relative border-b-2 border-accent/20 bg-accent/5"
+                style={{ height: `${rowHeight + 12}px` }}
+              >
+                {timelineEvents.map((evt) => {
+                  const startX = getXFromDate(evt.startDate);
+                  const endX = getXFromDate(evt.endDate);
+                  const width = endX - startX + config.dayWidth;
+                  const status = statuses.find((s) => s.id === evt.statusId);
+                  const color = evt.color || status?.color || '#7C3AED';
+
+                  return (
+                    <div
+                      key={evt.id}
+                      className="absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-white/20"
+                      style={{
+                        left: `${startX}px`,
+                        width: `${Math.max(width, config.dayWidth)}px`,
+                        top: '6px',
+                        height: `${rowHeight - 4}px`,
+                        backgroundColor: color,
+                        opacity: 0.9,
+                      }}
+                      onClick={() => onEventClick?.(evt.id)}
+                      title={`Event: ${evt.title}\n${evt.startDate} - ${evt.endDate}`}
+                    >
+                      <div className="px-2 py-1 flex items-center gap-1.5 h-full">
+                        <svg className="w-3 h-3 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                        </svg>
+                        <span className="text-white text-[10px] font-medium truncate" style={{ color: 'white' }}>
+                          {evt.title}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {swimlanes.map((swimlane, index) => {
               const slData = swimlaneData[swimlane.id] || { activities: [], totalHeight: rowHeight };

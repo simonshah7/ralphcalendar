@@ -14,9 +14,12 @@ import { ExportModal } from '@/components/ExportModal';
 import { AICopilot } from '@/components/AICopilot';
 import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
-import { exportToPNG, exportToCSV } from '@/lib/export';
+import { EventsListView, EventListItem } from '@/components/EventsListView';
+import { EventDetailView } from '@/components/EventDetailView';
+import * as htmlToImage from 'html-to-image';
+import PptxGenJS from 'pptxgenjs';
 
-type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard';
+type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
 
 interface CalendarData extends Calendar {
   statuses: Status[];
@@ -48,6 +51,11 @@ export default function Home() {
     endDate?: string;
     defaults?: Partial<Activity>;
   }>({});
+
+  // Event management state
+  const [eventsList, setEventsList] = useState<EventListItem[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showEventCreate, setShowEventCreate] = useState(false);
 
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -87,12 +95,25 @@ export default function Home() {
       }
       const data = await response.json();
       setCurrentCalendar(data);
+      fetchEvents(calendarId);
     } catch (error) {
       console.error('Failed to fetch calendar data:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const fetchEvents = useCallback(async (calendarId: string) => {
+    try {
+      const res = await fetch(`/api/events?calendarId=${calendarId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEventsList(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    }
+  }, []);
 
   const handleCreateCalendar = async (name: string) => {
     const response = await fetch('/api/calendars', {
@@ -273,6 +294,36 @@ export default function Home() {
     setShowBriefGenerator(false);
   };
 
+  const handleCreateEvent = async () => {
+    if (!currentCalendar) return;
+    // Create a new event with defaults and navigate to its detail view
+    const today = new Date().toISOString().split('T')[0];
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const endDate = nextWeek.toISOString().split('T')[0];
+
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          calendarId: currentCalendar.id,
+          title: 'New Event',
+          startDate: today,
+          endDate,
+          statusId: currentCalendar.statuses[0]?.id || null,
+        }),
+      });
+      if (res.ok) {
+        const newEvent = await res.json();
+        fetchEvents(currentCalendar.id);
+        setSelectedEventId(newEvent.id);
+      }
+    } catch (error) {
+      console.error('Failed to create event:', error);
+    }
+  };
+
   const handleDateClick = (date: string) => {
     setEditingActivity(null);
     setActivityDefaults({ startDate: date, endDate: date });
@@ -410,11 +461,12 @@ export default function Home() {
         calendars={calendars}
         currentCalendar={currentCalendar}
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={(view: ViewType) => { setCurrentView(view); setSelectedEventId(null); }}
         onCalendarSelect={(calendar) => {
           setSearchQuery('');
           setSelectedCampaignId(null);
           setSelectedStatusId(null);
+          setSelectedEventId(null);
           fetchCalendarData(calendar.id);
         }}
         onCreateCalendar={() => setShowCreateCalendar(true)}
@@ -489,6 +541,7 @@ export default function Home() {
                 swimlanes={currentCalendar.swimlanes}
                 statuses={currentCalendar.statuses}
                 campaigns={currentCalendar.campaigns}
+                events={eventsList.map((e) => ({ id: e.id, title: e.title, startDate: e.startDate, endDate: e.endDate, statusId: e.statusId, color: null }))}
                 onActivityClick={handleActivityClick}
                 onActivityCreate={handleActivityCreate}
                 onActivityUpdate={handleActivityUpdate}
@@ -496,6 +549,7 @@ export default function Home() {
                 onEditSwimlane={handleEditSwimlane}
                 onDeleteSwimlane={handleDeleteSwimlane}
                 onReorderSwimlanes={handleReorderSwimlanes}
+                onEventClick={(id) => { setCurrentView('events'); setSelectedEventId(id); }}
               />
             )}
 
@@ -526,6 +580,27 @@ export default function Home() {
                 swimlanes={currentCalendar.swimlanes}
                 statuses={currentCalendar.statuses}
                 calendarId={currentCalendar.id}
+              />
+            )}
+
+            {currentView === 'events' && currentCalendar && !selectedEventId && (
+              <EventsListView
+                events={eventsList}
+                statuses={currentCalendar.statuses}
+                campaigns={currentCalendar.campaigns}
+                onEventClick={(id) => setSelectedEventId(id)}
+                onCreateEvent={handleCreateEvent}
+              />
+            )}
+
+            {currentView === 'events' && currentCalendar && selectedEventId && (
+              <EventDetailView
+                eventId={selectedEventId}
+                statuses={currentCalendar.statuses}
+                campaigns={currentCalendar.campaigns}
+                allEvents={eventsList.map((e) => ({ id: e.id, title: e.title, seriesName: e.seriesName }))}
+                onBack={() => setSelectedEventId(null)}
+                onRefreshEvents={() => fetchEvents(currentCalendar.id)}
               />
             )}
           </>

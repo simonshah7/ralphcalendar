@@ -12,6 +12,13 @@ import {
   activityComments,
   activityHistory,
   calendarPermissions,
+  events,
+  subEvents,
+  eventAttendees,
+  subEventAttendees,
+  checklistItems,
+  campaignEvents,
+  adminSettings,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -24,6 +31,13 @@ function dateOffset(days: number): string {
 
 async function clearAllData() {
   // Delete in order respecting foreign keys
+  await db.delete(subEventAttendees);
+  await db.delete(subEvents);
+  await db.delete(eventAttendees);
+  await db.delete(checklistItems);
+  await db.delete(campaignEvents);
+  await db.delete(events);
+  await db.delete(adminSettings);
   await db.delete(activityHistory);
   await db.delete(activityComments);
   await db.delete(activities);
@@ -404,6 +418,193 @@ async function seedData() {
       recurrenceFrequency: act.recurrenceFrequency || 'none',
     });
   }
+
+  // ─── Events ─────────────────────────────────────────────
+  // Create realistic events with sub-events, attendees, and checklists
+
+  const [eventReInvent] = await db.insert(events).values({
+    calendarId: calendar.id,
+    title: 'AWS Re:Invent 2026',
+    seriesName: 'AWS Re:Invent',
+    startDate: dateOffset(15),
+    endDate: dateOffset(18),
+    location: 'Las Vegas, NV',
+    venue: 'The Venetian Expo',
+    statusId: statusCommitted.id,
+    totalPasses: 12,
+    description: 'Annual AWS conference. Premier sponsor with booth, workshop, and executive dinner.',
+    cost: '85000',
+    actualCost: '72000',
+    currency: 'US$',
+    region: 'US',
+    expectedSaos: '120',
+    actualSaos: '95',
+    pipelineGenerated: '520000',
+    revenueGenerated: '0',
+  }).returning();
+
+  const [eventGartner] = await db.insert(events).values({
+    calendarId: calendar.id,
+    title: 'Gartner IT Symposium 2026',
+    seriesName: 'Gartner IT Symposium',
+    startDate: dateOffset(35),
+    endDate: dateOffset(38),
+    location: 'Orlando, FL',
+    venue: 'Orange County Convention Center',
+    statusId: statusNegotiating.id,
+    totalPasses: 8,
+    description: 'Analyst relations event. Speaking slot and executive roundtable.',
+    cost: '55000',
+    actualCost: '0',
+    currency: 'US$',
+    region: 'US',
+    expectedSaos: '60',
+    actualSaos: '0',
+    pipelineGenerated: '0',
+    revenueGenerated: '0',
+  }).returning();
+
+  const [eventLondonDinner] = await db.insert(events).values({
+    calendarId: calendar.id,
+    title: 'London Enterprise Dinner Q2',
+    seriesName: 'Enterprise Dinner',
+    startDate: dateOffset(25),
+    endDate: dateOffset(25),
+    location: 'London, UK',
+    venue: 'The Savoy Hotel',
+    statusId: statusCommitted.id,
+    totalPasses: 0,
+    description: 'Exclusive dinner for 25 enterprise prospects in financial services.',
+    cost: '18000',
+    actualCost: '16500',
+    currency: 'UK£',
+    region: 'EMEA',
+    expectedSaos: '25',
+    actualSaos: '18',
+    pipelineGenerated: '320000',
+    revenueGenerated: '85000',
+  }).returning();
+
+  const [eventKubeCon] = await db.insert(events).values({
+    calendarId: calendar.id,
+    title: 'KubeCon NA 2026',
+    seriesName: 'KubeCon',
+    startDate: dateOffset(50),
+    endDate: dateOffset(53),
+    location: 'Salt Lake City, UT',
+    venue: 'Salt Palace Convention Center',
+    statusId: statusConsidering.id,
+    totalPasses: 6,
+    description: 'Cloud native conference. Evaluating booth + demo station.',
+    cost: '40000',
+    actualCost: '0',
+    currency: 'US$',
+    region: 'US',
+    expectedSaos: '45',
+    actualSaos: '0',
+    pipelineGenerated: '0',
+    revenueGenerated: '0',
+  }).returning();
+
+  // Prior year event for YoY comparison
+  const [priorReInvent] = await db.insert(events).values({
+    calendarId: calendar.id,
+    title: 'AWS Re:Invent 2025',
+    seriesName: 'AWS Re:Invent',
+    startDate: '2025-12-01',
+    endDate: '2025-12-04',
+    location: 'Las Vegas, NV',
+    venue: 'The Venetian Expo',
+    statusId: statusCommitted.id,
+    totalPasses: 10,
+    description: 'Prior year Re:Invent for comparison.',
+    cost: '70000',
+    actualCost: '68000',
+    currency: 'US$',
+    region: 'US',
+    expectedSaos: '100',
+    actualSaos: '88',
+    pipelineGenerated: '420000',
+    revenueGenerated: '110000',
+  }).returning();
+
+  // Link Re:Invent 2026 to its prior year
+  await db.update(events).set({ priorEventId: priorReInvent.id }).where(eq(events.id, eventReInvent.id));
+
+  // ─── Sub-Events ────────────────────────────────────────
+  await db.insert(subEvents).values([
+    { eventId: eventReInvent.id, title: 'Booth Setup & Demo Stations', type: 'booth', startDatetime: `${dateOffset(15)}T08:00`, endDatetime: `${dateOffset(18)}T18:00`, location: 'Expo Hall B, Booth #1247', sortOrder: 0 },
+    { eventId: eventReInvent.id, title: 'Workshop: Cloud Migration Masterclass', type: 'workshop', startDatetime: `${dateOffset(16)}T10:00`, endDatetime: `${dateOffset(16)}T12:00`, location: 'Room 304A', description: '2-hour hands-on workshop. Target 60 attendees.', sortOrder: 1 },
+    { eventId: eventReInvent.id, title: 'Executive Dinner', type: 'dinner', startDatetime: `${dateOffset(16)}T19:00`, endDatetime: `${dateOffset(16)}T22:00`, location: 'Tao Restaurant, The Venetian', description: 'Private dinner for 20 VIP prospects and key customers.', sortOrder: 2 },
+    { eventId: eventReInvent.id, title: '1:1 Customer Meetings', type: '1:1', startDatetime: `${dateOffset(17)}T09:00`, endDatetime: `${dateOffset(17)}T17:00`, location: 'Meeting Suite 12', sortOrder: 3 },
+    { eventId: eventReInvent.id, title: 'Team Debrief', type: 'meeting', startDatetime: `${dateOffset(18)}T16:00`, endDatetime: `${dateOffset(18)}T17:00`, location: 'Hotel Lobby Bar', sortOrder: 4 },
+    { eventId: eventGartner.id, title: 'Speaking Session: Future of Data Analytics', type: 'speaking', startDatetime: `${dateOffset(36)}T14:00`, endDatetime: `${dateOffset(36)}T14:45`, location: 'Main Stage Hall C', sortOrder: 0 },
+    { eventId: eventGartner.id, title: 'Executive Roundtable', type: 'roundtable', startDatetime: `${dateOffset(37)}T10:00`, endDatetime: `${dateOffset(37)}T12:00`, location: 'VIP Suite 4', description: 'Roundtable with 15 CIOs on data strategy.', sortOrder: 1 },
+    { eventId: eventLondonDinner.id, title: 'Cocktail Reception', type: 'reception', startDatetime: `${dateOffset(25)}T18:30`, endDatetime: `${dateOffset(25)}T19:30`, location: 'The Savoy, Thames Foyer', sortOrder: 0 },
+    { eventId: eventLondonDinner.id, title: 'Seated Dinner & Keynote', type: 'dinner', startDatetime: `${dateOffset(25)}T19:30`, endDatetime: `${dateOffset(25)}T22:00`, location: 'The Savoy, Lancaster Room', sortOrder: 1 },
+  ]);
+
+  // ─── Event Attendees ───────────────────────────────────
+  await db.insert(eventAttendees).values([
+    { eventId: eventReInvent.id, name: 'Sarah Chen', email: 'sarah.chen@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
+    { eventId: eventReInvent.id, name: 'Mike Rodriguez', email: 'mike.r@redwood.io', attendeeType: 'internal' as const, role: 'staffing booth', hasPass: true, travelStatus: 'booked' },
+    { eventId: eventReInvent.id, name: 'Emily Park', email: 'emily.p@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
+    { eventId: eventReInvent.id, name: 'James Liu', email: 'james.l@redwood.io', attendeeType: 'internal' as const, role: 'staffing booth', hasPass: true, travelStatus: 'booked' },
+    { eventId: eventReInvent.id, name: 'Rachel Green', email: 'rachel.g@redwood.io', attendeeType: 'internal' as const, role: 'attending', hasPass: true, travelStatus: 'not_booked' },
+    { eventId: eventReInvent.id, name: 'David Kim', email: 'david.k@acmecorp.com', company: 'Acme Corp', attendeeType: 'customer' as const, role: '1:1 meeting', hasPass: false, travelStatus: 'confirmed' },
+    { eventId: eventReInvent.id, name: 'Lisa Wang', email: 'lisa.w@globaltech.io', company: 'GlobalTech', attendeeType: 'customer' as const, role: 'dinner guest', hasPass: false, travelStatus: 'confirmed' },
+    { eventId: eventReInvent.id, name: 'Tom Bradley', email: 'tom.b@finserv.com', company: 'FinServ Inc', attendeeType: 'customer' as const, role: '1:1 meeting', hasPass: false, travelStatus: 'booked' },
+    { eventId: eventGartner.id, name: 'Sarah Chen', email: 'sarah.chen@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'not_booked' },
+    { eventId: eventGartner.id, name: 'Alex Thompson', email: 'alex.t@redwood.io', attendeeType: 'internal' as const, role: 'attending', hasPass: true, travelStatus: 'not_booked' },
+    { eventId: eventLondonDinner.id, name: 'James Liu', email: 'james.l@redwood.io', attendeeType: 'internal' as const, role: 'hosting', hasPass: false, travelStatus: 'confirmed' },
+    { eventId: eventLondonDinner.id, name: 'Nigel Thornton', email: 'n.thornton@barclays.co.uk', company: 'Barclays', attendeeType: 'customer' as const, role: 'guest', hasPass: false },
+    { eventId: eventLondonDinner.id, name: 'Sophie Martin', email: 's.martin@hsbc.com', company: 'HSBC', attendeeType: 'customer' as const, role: 'guest', hasPass: false },
+  ]);
+
+  // ─── Checklist Items ───────────────────────────────────
+  await db.insert(checklistItems).values([
+    // Re:Invent
+    { eventId: eventReInvent.id, title: 'Slides finalized for workshop', category: 'content', isDone: true, dueDate: dateOffset(5), sortOrder: 0 },
+    { eventId: eventReInvent.id, title: 'Demo environment prepared', category: 'content', isDone: true, dueDate: dateOffset(8), sortOrder: 1 },
+    { eventId: eventReInvent.id, title: 'Talk track document approved', category: 'content', isDone: false, dueDate: dateOffset(10), sortOrder: 2 },
+    { eventId: eventReInvent.id, title: 'Flights booked for all attendees', category: 'logistics', isDone: true, dueDate: dateOffset(-5), sortOrder: 3 },
+    { eventId: eventReInvent.id, title: 'Hotels confirmed', category: 'logistics', isDone: true, dueDate: dateOffset(-3), sortOrder: 4 },
+    { eventId: eventReInvent.id, title: 'Ground transport arranged', category: 'logistics', isDone: false, dueDate: dateOffset(10), sortOrder: 5 },
+    { eventId: eventReInvent.id, title: 'Booth materials shipped', category: 'materials', isDone: true, dueDate: dateOffset(3), sortOrder: 6 },
+    { eventId: eventReInvent.id, title: 'Swag ordered (500 units)', category: 'materials', isDone: true, dueDate: dateOffset(-10), sortOrder: 7 },
+    { eventId: eventReInvent.id, title: 'All passes allocated', category: 'registrations', isDone: false, dueDate: dateOffset(5), sortOrder: 8 },
+    { eventId: eventReInvent.id, title: 'Badge info submitted', category: 'registrations', isDone: true, dueDate: dateOffset(-2), sortOrder: 9 },
+    { eventId: eventReInvent.id, title: 'Slack channel created (#reinvent-2026)', category: 'comms', isDone: true, dueDate: dateOffset(-15), sortOrder: 10 },
+    { eventId: eventReInvent.id, title: 'Logistics deck shared with team', category: 'comms', isDone: false, dueDate: dateOffset(12), sortOrder: 11 },
+    // Gartner
+    { eventId: eventGartner.id, title: 'Speaker bio submitted', category: 'content', isDone: true, sortOrder: 0 },
+    { eventId: eventGartner.id, title: 'Presentation deck ready', category: 'content', isDone: false, dueDate: dateOffset(25), sortOrder: 1 },
+    { eventId: eventGartner.id, title: 'Roundtable agenda finalized', category: 'content', isDone: false, dueDate: dateOffset(28), sortOrder: 2 },
+    { eventId: eventGartner.id, title: 'Hotel booked', category: 'logistics', isDone: false, dueDate: dateOffset(20), sortOrder: 3 },
+    // London Dinner
+    { eventId: eventLondonDinner.id, title: 'Venue confirmed and deposit paid', category: 'logistics', isDone: true, sortOrder: 0 },
+    { eventId: eventLondonDinner.id, title: 'Menu selected', category: 'logistics', isDone: true, sortOrder: 1 },
+    { eventId: eventLondonDinner.id, title: 'Invitations sent', category: 'comms', isDone: true, sortOrder: 2 },
+    { eventId: eventLondonDinner.id, title: 'Keynote speaker confirmed', category: 'content', isDone: true, sortOrder: 3 },
+    { eventId: eventLondonDinner.id, title: 'Place cards and seating chart', category: 'materials', isDone: false, dueDate: dateOffset(20), sortOrder: 4 },
+  ]);
+
+  // ─── Campaign-Event Links ──────────────────────────────
+  await db.insert(campaignEvents).values([
+    { campaignId: createdCampaigns['Brand Awareness Q2'], eventId: eventReInvent.id },
+    { campaignId: createdCampaigns['Enterprise ABM Program'], eventId: eventReInvent.id },
+    { campaignId: createdCampaigns['Brand Awareness Q2'], eventId: eventGartner.id },
+    { campaignId: createdCampaigns['Enterprise ABM Program'], eventId: eventLondonDinner.id },
+    { campaignId: createdCampaigns['Spring Product Launch'], eventId: eventKubeCon.id },
+  ]);
+
+  // ─── Prior Year Attendees (for YoY comparison) ─────────
+  await db.insert(eventAttendees).values([
+    { eventId: priorReInvent.id, name: 'Sarah Chen', email: 'sarah.chen@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
+    { eventId: priorReInvent.id, name: 'Mike Rodriguez', email: 'mike.r@redwood.io', attendeeType: 'internal' as const, role: 'staffing booth', hasPass: true, travelStatus: 'confirmed' },
+    { eventId: priorReInvent.id, name: 'Emily Park', email: 'emily.p@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
+    { eventId: priorReInvent.id, name: 'David Kim', email: 'david.k@acmecorp.com', company: 'Acme Corp', attendeeType: 'customer' as const, role: '1:1 meeting', hasPass: false, travelStatus: 'confirmed' },
+  ]);
 
   return calendar.id;
 }
