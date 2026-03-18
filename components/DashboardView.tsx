@@ -3,13 +3,17 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Activity, Campaign, Swimlane, Status } from '@/db/schema';
 import { formatCurrency } from '@/lib/utils';
+import { EventComparisonView } from './EventComparisonView';
 
 interface DashboardViewProps {
   activities: Activity[];
   campaigns: Campaign[];
   swimlanes: Swimlane[];
   statuses: Status[];
+  calendarId?: string;
 }
+
+type DashboardTab = 'overview' | 'yoy-comparison';
 
 type SortField =
   | 'name'
@@ -282,7 +286,7 @@ function ColumnToggle({
 
 // ─── Main Component ─────────────────────────────────────
 
-export function DashboardView({ activities, campaigns, swimlanes, statuses }: DashboardViewProps) {
+export function DashboardView({ activities, campaigns, swimlanes, statuses, calendarId }: DashboardViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [visibleColumns, setVisibleColumns] = useState<Set<SortField>>(
@@ -594,6 +598,42 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses }: Da
 
   return (
     <div className="p-4 space-y-6 max-w-[1400px] mx-auto">
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-1 border-b border-card-border pb-0">
+        <button
+          onClick={() => setDashboardTab('overview')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
+            dashboardTab === 'overview'
+              ? 'border-accent text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setDashboardTab('yoy-comparison')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
+            dashboardTab === 'yoy-comparison'
+              ? 'border-accent text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          YoY Event Comparison
+        </button>
+      </div>
+
+      {/* YoY Comparison Tab */}
+      {dashboardTab === 'yoy-comparison' && calendarId && (
+        <EventComparisonView calendarId={calendarId} />
+      )}
+      {dashboardTab === 'yoy-comparison' && !calendarId && (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          Calendar context required for event comparison.
+        </div>
+      )}
+
+      {/* Overview Tab */}
+      {dashboardTab === 'overview' && <>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard
@@ -936,6 +976,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses }: Da
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }

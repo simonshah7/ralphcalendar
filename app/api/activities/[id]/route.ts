@@ -99,7 +99,7 @@ export async function PUT(
       if (cost < 0) {
         return NextResponse.json({ error: 'Cost must be >= 0' }, { status: 400 });
       }
-      updates.cost = Number(cost);
+      updates.cost = String(cost);
     }
 
     if (currency !== undefined) {
@@ -123,7 +123,7 @@ export async function PUT(
       if (actualCost < 0) {
         return NextResponse.json({ error: 'Actual cost must be >= 0' }, { status: 400 });
       }
-      updates.actualCost = Number(actualCost);
+      updates.actualCost = String(actualCost);
     }
     if (expectedSaos !== undefined) updates.expectedSaos = String(expectedSaos);
     if (targetSaos !== undefined) updates.targetSaos = String(targetSaos);

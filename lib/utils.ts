@@ -27,6 +27,8 @@ export function formatCurrency(amount: number | string, currency: string = 'US$'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: isoCode,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(num);
 }
 

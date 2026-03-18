@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { CURRENCIES, REGIONS, formatCurrency } from '@/lib/utils';
 import { CampaignDropdown } from './CampaignDropdown';
 import { StatusDropdown } from './StatusDropdown';
 import { SwimlaneDropdown } from './SwimlaneDropdown';
@@ -652,7 +652,7 @@ export function ActivityModal({
               </label>
               <div className="px-3 py-1.5 border border-card-border rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
                 {formData.actualSaos > 0 && formData.actualCost > 0
-                  ? `${formData.currency}${(formData.actualCost / formData.actualSaos).toFixed(0)}`
+                  ? formatCurrency(formData.actualCost / formData.actualSaos, formData.currency)
                   : '--'}
               </div>
             </div>
@@ -743,6 +743,12 @@ export function ActivityModal({
               </p>
             )}
           </div>
+          )}
+
+          {errors.form && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.form}</p>
+            </div>
           )}
 
           <div className="flex justify-between pt-3 border-t border-card-border">

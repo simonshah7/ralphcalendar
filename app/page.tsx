@@ -547,6 +547,7 @@ export default function Home() {
                 campaigns={currentCalendar.campaigns}
                 swimlanes={currentCalendar.swimlanes}
                 statuses={currentCalendar.statuses}
+                calendarId={currentCalendar.id}
               />
             )}
           </>
