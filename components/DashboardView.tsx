@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { Activity, Campaign, Swimlane, Status } from '@/db/schema';
 import { formatCurrency } from '@/lib/utils';
 import { EventComparisonView } from './EventComparisonView';
@@ -44,7 +44,135 @@ function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+// ─── SVG Icons (clean, flat style) ──────────────────────
+
+function IconDollar({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 1v14M11 4.5C11 3.12 9.66 2 8 2S5 3.12 5 4.5 6.34 7 8 7s3 1.12 3 2.5S9.66 12 8 12s-3-1.12-3-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconClipboard({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="2" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M6 2V1.5A.5.5 0 016.5 1h3a.5.5 0 01.5.5V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M5.5 6h5M5.5 8.5h5M5.5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function IconReceipt({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 2.5A.5.5 0 013.5 2h9a.5.5 0 01.5.5V14l-2-1.5L9 14l-2-1.5L5 14l-2-1.5V2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M5.5 5.5h5M5.5 8h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function IconGauge({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 14A6 6 0 118 2a6 6 0 010 12z" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M8 5v3l2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconTarget({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/>
+      <circle cx="8" cy="8" r="0.75" fill="currentColor"/>
+    </svg>
+  );
+}
+
+function IconTrendUp({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 12l4-4 2.5 2.5L14 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 4h4v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconChevronUp({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 7.5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconChevronDown({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconColumns({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+      <rect x="10" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+
+function IconAlertTriangle({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7.134 2.5a1 1 0 011.732 0l5.196 9A1 1 0 0113.196 13H2.804a1 1 0 01-.866-1.5l5.196-9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M8 6v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="8" cy="11" r="0.5" fill="currentColor"/>
+    </svg>
+  );
+}
+
+function IconAlertCircle({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M7 4.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="7" cy="9.5" r="0.5" fill="currentColor"/>
+    </svg>
+  );
+}
+
+function IconX({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M5 5l4 4M9 5l-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 // ─── KPI Card ───────────────────────────────────────────
+
+const kpiColors: Record<string, { bg: string; text: string }> = {
+  'Total Budget': { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+  'Planned Cost': { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+  'Actual Cost': { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400' },
+  'Budget Utilization': { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
+  'SAOs': { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
+  'Pipeline ROI': { bg: 'bg-cyan-500/10', text: 'text-cyan-600 dark:text-cyan-400' },
+};
 
 function KpiCard({
   icon,
@@ -53,25 +181,103 @@ function KpiCard({
   sub,
   trend,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
   trend?: { label: string; positive: boolean } | null;
 }) {
+  const colors = kpiColors[label] || { bg: 'bg-muted', text: 'text-muted-foreground' };
   return (
-    <div className="bg-card border border-card-border rounded-lg p-4 flex flex-col gap-1 min-w-0">
-      <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium uppercase tracking-wide">
-        <span className="text-sm">{icon}</span>
+    <div className="bg-card border border-card-border rounded-lg p-4 flex flex-col gap-1.5 min-w-0">
+      <div className="flex items-center gap-2.5 text-muted-foreground text-xs font-medium uppercase tracking-wide">
+        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-md ${colors.bg} ${colors.text}`}>
+          {icon}
+        </span>
         <span className="truncate">{label}</span>
       </div>
       <div className="text-2xl font-bold text-foreground truncate">{value}</div>
       {sub && <div className="text-xs text-muted-foreground truncate">{sub}</div>}
       {trend && (
         <div
-          className={`text-xs font-medium ${trend.positive ? 'text-green-500' : 'text-red-500'}`}
+          className={`text-xs font-medium flex items-center gap-1 ${trend.positive ? 'text-green-500' : 'text-red-500'}`}
         >
-          {trend.positive ? '\u25B2' : '\u25BC'} {trend.label}
+          {trend.positive ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
+          {trend.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Column Visibility Dropdown ─────────────────────────
+
+const ALL_COLUMNS: { field: SortField; label: string }[] = [
+  { field: 'name', label: 'Campaign' },
+  { field: 'budget', label: 'Budget' },
+  { field: 'planned', label: 'Planned' },
+  { field: 'actual', label: 'Actual' },
+  { field: 'variance', label: 'Variance' },
+  { field: 'expectedSaos', label: 'Exp. SAOs' },
+  { field: 'actualSaos', label: 'Act. SAOs' },
+  { field: 'pipeline', label: 'Pipeline' },
+  { field: 'roi', label: 'ROI' },
+];
+
+function ColumnToggle({
+  visibleColumns,
+  onToggle,
+}: {
+  visibleColumns: Set<SortField>;
+  onToggle: (field: SortField) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-card-border rounded-md hover:bg-muted/50 transition-colors"
+      >
+        <IconColumns className="w-3.5 h-3.5" />
+        Columns
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-card-border rounded-lg shadow-lg z-20 py-1">
+          {ALL_COLUMNS.map((col) => {
+            const visible = visibleColumns.has(col.field);
+            const isName = col.field === 'name';
+            return (
+              <button
+                key={col.field}
+                onClick={() => { if (!isName) onToggle(col.field); }}
+                disabled={isName}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
+                  isName
+                    ? 'text-muted-foreground/50 cursor-default'
+                    : 'text-foreground hover:bg-muted/50 cursor-pointer'
+                }`}
+              >
+                <span className={`inline-flex items-center justify-center w-4 h-4 rounded border ${
+                  visible
+                    ? 'bg-accent-purple border-accent-purple text-white'
+                    : 'border-card-border'
+                }`}>
+                  {visible && <IconCheck className="w-3 h-3" />}
+                </span>
+                {col.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -83,7 +289,25 @@ function KpiCard({
 export function DashboardView({ activities, campaigns, swimlanes, statuses, calendarId }: DashboardViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('overview');
+  const [visibleColumns, setVisibleColumns] = useState<Set<SortField>>(
+    () => new Set(ALL_COLUMNS.map((c) => c.field)),
+  );
+
+  function toggleColumn(field: SortField) {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) {
+        next.delete(field);
+        if (sortField === field) {
+          setSortField('name');
+          setSortDir('asc');
+        }
+      } else {
+        next.add(field);
+      }
+      return next;
+    });
+  }
 
   // ── Aggregate metrics ───────────────────────────────
 
@@ -338,15 +562,20 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
   }
 
   function SortHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
+    if (!visibleColumns.has(field)) return null;
     const active = sortField === field;
     return (
       <th
-        className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none"
+        className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none whitespace-nowrap"
         onClick={() => handleSort(field)}
       >
         <span className="inline-flex items-center gap-1">
           {children}
-          {active && <span>{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>}
+          <span className={`inline-flex flex-col -space-y-1 ${active ? '' : 'opacity-0 group-hover:opacity-30'}`}>
+            {active ? (
+              sortDir === 'asc' ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />
+            ) : null}
+          </span>
         </span>
       </th>
     );
@@ -361,6 +590,9 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
       .join(', ');
     return `conic-gradient(${stops})`;
   }, [regionData]);
+
+  // helper to check column visibility for table cells
+  const col = (field: SortField) => visibleColumns.has(field);
 
   // ── Render ──────────────────────────────────────────
 
@@ -405,19 +637,19 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard
-          icon={'\uD83D\uDCB0'}
+          icon={<IconDollar />}
           label="Total Budget"
           value={formatCurrency(metrics.totalBudget)}
           trend={null}
         />
         <KpiCard
-          icon={'\uD83D\uDCCB'}
+          icon={<IconClipboard />}
           label="Planned Cost"
           value={formatCurrency(metrics.totalPlanned)}
           sub={`${pct(metrics.totalBudget > 0 ? metrics.totalPlanned / metrics.totalBudget : 0)} of budget`}
         />
         <KpiCard
-          icon={'\uD83D\uDCB3'}
+          icon={<IconReceipt />}
           label="Actual Cost"
           value={formatCurrency(metrics.totalActual)}
           trend={
@@ -430,7 +662,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
           }
         />
         <KpiCard
-          icon={'\uD83D\uDCC8'}
+          icon={<IconGauge />}
           label="Budget Utilization"
           value={pct(metrics.budgetUtil)}
           trend={{
@@ -439,7 +671,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
           }}
         />
         <KpiCard
-          icon={'\uD83C\uDFAF'}
+          icon={<IconTarget />}
           label="SAOs"
           value={fmtCompact(metrics.totalActualSaos)}
           sub={`${fmtCompact(metrics.totalExpectedSaos)} expected`}
@@ -453,7 +685,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
           }
         />
         <KpiCard
-          icon={'\uD83D\uDE80'}
+          icon={<IconTrendUp />}
           label="Pipeline ROI"
           value={`${metrics.pipelineRoi.toFixed(1)}x`}
           sub={`${formatCurrency(metrics.totalPipeline)} pipeline`}
@@ -555,7 +787,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
           <div className="bg-card border border-card-border rounded-lg p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">Status Pipeline</h3>
             {/* Stacked bar */}
-            <div className="h-6 rounded overflow-hidden flex bg-muted mb-3">
+            <div className="h-6 rounded-md overflow-hidden flex bg-muted mb-3">
               {statusPipeline.map((sp) =>
                 sp.cost > 0 ? (
                   <div
@@ -592,8 +824,9 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
 
       {/* Campaign Performance Table */}
       <div className="bg-card border border-card-border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-card-border">
+        <div className="px-4 py-3 border-b border-card-border flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Campaign Performance</h3>
+          <ColumnToggle visibleColumns={visibleColumns} onToggle={toggleColumn} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -611,71 +844,105 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
               </tr>
             </thead>
             <tbody className="divide-y divide-card-border">
-              {sortedRows.map((row) => (
-                <tr key={row.name} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 text-foreground font-medium truncate max-w-[180px]">
-                    {row.name}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {formatCurrency(row.budget)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {formatCurrency(row.planned)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {formatCurrency(row.actual)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 tabular-nums font-medium ${row.variance >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                  >
-                    {row.variance >= 0 ? '+' : ''}
-                    {formatCurrency(row.variance)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {row.expectedSaos}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {row.actualSaos}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {formatCurrency(row.pipeline)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                    {row.roi.toFixed(1)}x
-                  </td>
+              {sortedRows.map((row, idx) => (
+                <tr key={row.name} className={`hover:bg-muted/30 transition-colors ${idx % 2 === 1 ? 'bg-muted/15' : ''}`}>
+                  {col('name') && (
+                    <td className="px-3 py-2.5 text-foreground font-medium truncate max-w-[180px]">
+                      {row.name}
+                    </td>
+                  )}
+                  {col('budget') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {formatCurrency(row.budget)}
+                    </td>
+                  )}
+                  {col('planned') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {formatCurrency(row.planned)}
+                    </td>
+                  )}
+                  {col('actual') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {formatCurrency(row.actual)}
+                    </td>
+                  )}
+                  {col('variance') && (
+                    <td
+                      className={`px-3 py-2.5 tabular-nums font-medium ${row.variance >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                    >
+                      {row.variance >= 0 ? '+' : ''}
+                      {formatCurrency(row.variance)}
+                    </td>
+                  )}
+                  {col('expectedSaos') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {row.expectedSaos}
+                    </td>
+                  )}
+                  {col('actualSaos') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {row.actualSaos}
+                    </td>
+                  )}
+                  {col('pipeline') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {formatCurrency(row.pipeline)}
+                    </td>
+                  )}
+                  {col('roi') && (
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                      {row.roi.toFixed(1)}x
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-muted/50 font-semibold">
               <tr>
-                <td className="px-3 py-2 text-foreground">Total</td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {formatCurrency(metrics.totalBudget)}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {formatCurrency(metrics.totalPlanned)}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {formatCurrency(metrics.totalActual)}
-                </td>
-                <td
-                  className={`px-3 py-2 tabular-nums ${metrics.totalBudget - metrics.totalActual >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                >
-                  {metrics.totalBudget - metrics.totalActual >= 0 ? '+' : ''}
-                  {formatCurrency(metrics.totalBudget - metrics.totalActual)}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {metrics.totalExpectedSaos}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {metrics.totalActualSaos}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {formatCurrency(metrics.totalPipeline)}
-                </td>
-                <td className="px-3 py-2 text-foreground tabular-nums">
-                  {metrics.pipelineRoi.toFixed(1)}x
-                </td>
+                {col('name') && <td className="px-3 py-2.5 text-foreground">Total</td>}
+                {col('budget') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {formatCurrency(metrics.totalBudget)}
+                  </td>
+                )}
+                {col('planned') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {formatCurrency(metrics.totalPlanned)}
+                  </td>
+                )}
+                {col('actual') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {formatCurrency(metrics.totalActual)}
+                  </td>
+                )}
+                {col('variance') && (
+                  <td
+                    className={`px-3 py-2.5 tabular-nums ${metrics.totalBudget - metrics.totalActual >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {metrics.totalBudget - metrics.totalActual >= 0 ? '+' : ''}
+                    {formatCurrency(metrics.totalBudget - metrics.totalActual)}
+                  </td>
+                )}
+                {col('expectedSaos') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {metrics.totalExpectedSaos}
+                  </td>
+                )}
+                {col('actualSaos') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {metrics.totalActualSaos}
+                  </td>
+                )}
+                {col('pipeline') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {formatCurrency(metrics.totalPipeline)}
+                  </td>
+                )}
+                {col('roi') && (
+                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                    {metrics.pipelineRoi.toFixed(1)}x
+                  </td>
+                )}
               </tr>
             </tfoot>
           </table>
@@ -686,7 +953,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
       {alerts.length > 0 && (
         <div className="bg-card border border-card-border rounded-lg p-4">
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <span className="text-amber-500">{'\u26A0'}</span>
+            <IconAlertTriangle className="w-4 h-4 text-amber-500" />
             Activities Needing Attention
             <span className="text-xs font-normal text-muted-foreground">({alerts.length})</span>
           </h3>
@@ -694,14 +961,14 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
             {alerts.map((alert, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2 text-xs p-2 rounded ${
+                className={`flex items-start gap-2 text-xs p-2.5 rounded-md ${
                   alert.type === 'error'
                     ? 'bg-red-500/10 text-red-400'
                     : 'bg-amber-500/10 text-amber-400'
                 }`}
               >
                 <span className="flex-shrink-0 mt-0.5">
-                  {alert.type === 'error' ? '\u2716' : '\u25CF'}
+                  {alert.type === 'error' ? <IconX className="w-3.5 h-3.5" /> : <IconAlertCircle className="w-3.5 h-3.5" />}
                 </span>
                 <span>{alert.message}</span>
               </div>
