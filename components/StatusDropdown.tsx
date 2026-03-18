@@ -12,7 +12,7 @@ interface StatusDropdownProps {
     onStatusesChange: () => void;
 }
 
-const DEFAULT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#6B7280'];
+const DEFAULT_COLORS = ['#3B53FF', '#006170', '#FFA943', '#FF715A', '#7A00C1', '#50A0FF', '#34E5E2', '#D6E4EA'];
 
 export function StatusDropdown({
     statuses,

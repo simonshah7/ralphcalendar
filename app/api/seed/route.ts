@@ -68,15 +68,15 @@ async function seedData() {
   // ─── Statuses ─────────────────────────────────────────────
   const [statusConsidering] = await db
     .insert(statuses)
-    .values({ calendarId: calendar.id, name: 'Considering', color: '#2563EB', sortOrder: 0 })
+    .values({ calendarId: calendar.id, name: 'Considering', color: '#3B53FF', sortOrder: 0 })
     .returning();
   const [statusNegotiating] = await db
     .insert(statuses)
-    .values({ calendarId: calendar.id, name: 'Negotiating', color: '#D97706', sortOrder: 1 })
+    .values({ calendarId: calendar.id, name: 'Negotiating', color: '#FFA943', sortOrder: 1 })
     .returning();
   const [statusCommitted] = await db
     .insert(statuses)
-    .values({ calendarId: calendar.id, name: 'Committed', color: '#047857', sortOrder: 2 })
+    .values({ calendarId: calendar.id, name: 'Committed', color: '#006170', sortOrder: 2 })
     .returning();
 
   // ─── Swimlanes (Marketing Channels) ──────────────────────
@@ -144,7 +144,7 @@ async function seedData() {
       expectedSaos: '150', targetSaos: '200', actualSaos: '135',
       pipelineGenerated: '450000', revenueGenerated: '125000',
       description: 'Branded and non-branded search campaigns targeting product launch keywords.',
-      tags: 'search,google,paid', color: '#EF4444',
+      tags: 'search,google,paid', color: '#FF715A',
       vendorId: createdVendors['Google Ads'], typeId: createdTypes['Ad Campaign'],
     },
     {
@@ -155,7 +155,7 @@ async function seedData() {
       expectedSaos: '45', targetSaos: '60', actualSaos: '38',
       pipelineGenerated: '320000', revenueGenerated: '85000',
       description: 'Targeted ABM campaigns reaching decision-makers at enterprise accounts.',
-      tags: 'linkedin,abm,enterprise', color: '#3B82F6',
+      tags: 'linkedin,abm,enterprise', color: '#3B53FF',
       vendorId: createdVendors['LinkedIn Marketing'], typeId: createdTypes['Ad Campaign'],
     },
     {
@@ -166,7 +166,7 @@ async function seedData() {
       expectedSaos: '80', targetSaos: '100', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Retargeting website visitors and lookalike audiences across Facebook and Instagram.',
-      tags: 'meta,retargeting,awareness', color: '#8B5CF6',
+      tags: 'meta,retargeting,awareness', color: '#7A00C1',
       vendorId: createdVendors['Meta Business'], typeId: createdTypes['Ad Campaign'],
     },
     {
@@ -177,7 +177,7 @@ async function seedData() {
       expectedSaos: '90', targetSaos: '120', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Programmatic display ads across premium publisher network for summer promotion.',
-      tags: 'display,programmatic,summer', color: '#F59E0B',
+      tags: 'display,programmatic,summer', color: '#FFA943',
       vendorId: createdVendors['Google Ads'], typeId: createdTypes['Ad Campaign'],
     },
 
@@ -190,7 +190,7 @@ async function seedData() {
       expectedSaos: '30', targetSaos: '40', actualSaos: '28',
       pipelineGenerated: '95000', revenueGenerated: '22000',
       description: 'Multi-platform social media campaign across LinkedIn, Twitter/X, and Instagram for product launch.',
-      tags: 'social,launch,multi-platform', color: '#06B6D4',
+      tags: 'social,launch,multi-platform', color: '#34E5E2',
       typeId: createdTypes['Social Post'],
     },
     {
@@ -201,7 +201,7 @@ async function seedData() {
       expectedSaos: '15', targetSaos: '20', actualSaos: '12',
       pipelineGenerated: '55000', revenueGenerated: '0',
       description: 'Weekly thought leadership posts from exec team on LinkedIn with engagement strategy.',
-      tags: 'linkedin,thought-leadership,organic', color: '#10B981',
+      tags: 'linkedin,thought-leadership,organic', color: '#006170',
       typeId: createdTypes['Social Post'],
     },
     {
@@ -212,7 +212,7 @@ async function seedData() {
       expectedSaos: '10', targetSaos: '15', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Short-form video testimonials from top customers for social distribution.',
-      tags: 'video,testimonial,social', color: '#EC4899',
+      tags: 'video,testimonial,social', color: '#50A0FF',
       typeId: createdTypes['Video'],
     },
 
@@ -225,7 +225,7 @@ async function seedData() {
       expectedSaos: '60', targetSaos: '75', actualSaos: '52',
       pipelineGenerated: '180000', revenueGenerated: '45000',
       description: '5-part email nurture sequence for launch leads with progressive profiling.',
-      tags: 'email,nurture,launch', color: '#F97316',
+      tags: 'email,nurture,launch', color: '#FFA943',
       vendorId: createdVendors['HubSpot'], typeId: createdTypes['Email Blast'],
     },
     {
@@ -236,7 +236,7 @@ async function seedData() {
       expectedSaos: '25', targetSaos: '30', actualSaos: '8',
       pipelineGenerated: '42000', revenueGenerated: '12000',
       description: 'Monthly newsletter featuring product updates, case studies, and industry insights.',
-      tags: 'newsletter,monthly,awareness', color: '#6366F1',
+      tags: 'newsletter,monthly,awareness', color: '#3B53FF',
       vendorId: createdVendors['HubSpot'], typeId: createdTypes['Email Blast'],
       recurrenceFrequency: 'monthly',
     },
@@ -248,7 +248,7 @@ async function seedData() {
       expectedSaos: '20', targetSaos: '30', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Targeted re-engagement campaign for churned customers with personalized offers.',
-      tags: 'email,retention,winback', color: '#14B8A6',
+      tags: 'email,retention,winback', color: '#006170',
       vendorId: createdVendors['HubSpot'], typeId: createdTypes['Email Blast'],
     },
 
@@ -261,7 +261,7 @@ async function seedData() {
       expectedSaos: '75', targetSaos: '100', actualSaos: '68',
       pipelineGenerated: '280000', revenueGenerated: '72000',
       description: 'Live product demo webinar with Q&A. Target 500+ registrations.',
-      tags: 'webinar,launch,live-demo', color: '#8B5CF6',
+      tags: 'webinar,launch,live-demo', color: '#7A00C1',
       typeId: createdTypes['Webinar'],
     },
     {
@@ -272,7 +272,7 @@ async function seedData() {
       expectedSaos: '120', targetSaos: '150', actualSaos: '95',
       pipelineGenerated: '520000', revenueGenerated: '0',
       description: 'Booth + speaking slot at SaaS Connect. Premier sponsor package.',
-      tags: 'conference,speaking,booth', color: '#DC2626',
+      tags: 'conference,speaking,booth', color: '#FF715A',
       vendorId: createdVendors['Eventbrite'], typeId: createdTypes['Conference'],
     },
     {
@@ -283,7 +283,7 @@ async function seedData() {
       expectedSaos: '25', targetSaos: '30', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Exclusive dinner event for 30 enterprise prospects in London financial district.',
-      tags: 'event,abm,london,dinner', color: '#7C3AED',
+      tags: 'event,abm,london,dinner', color: '#7A00C1',
       typeId: createdTypes['Conference'],
     },
     {
@@ -294,7 +294,7 @@ async function seedData() {
       expectedSaos: '60', targetSaos: '80', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: '4-part webinar series covering use cases and best practices.',
-      tags: 'webinar,series,summer', color: '#F59E0B',
+      tags: 'webinar,series,summer', color: '#FFA943',
       typeId: createdTypes['Webinar'],
     },
 
@@ -307,7 +307,7 @@ async function seedData() {
       expectedSaos: '20', targetSaos: '25', actualSaos: '18',
       pipelineGenerated: '65000', revenueGenerated: '15000',
       description: '6-part blog series building up to and following the product launch.',
-      tags: 'blog,content,seo,launch', color: '#10B981',
+      tags: 'blog,content,seo,launch', color: '#006170',
       typeId: createdTypes['Blog Post'],
     },
     {
@@ -318,7 +318,7 @@ async function seedData() {
       expectedSaos: '15', targetSaos: '20', actualSaos: '10',
       pipelineGenerated: '120000', revenueGenerated: '35000',
       description: '3 in-depth enterprise case studies with video components.',
-      tags: 'case-study,enterprise,content', color: '#0EA5E9',
+      tags: 'case-study,enterprise,content', color: '#50A0FF',
       typeId: createdTypes['Case Study'],
     },
     {
@@ -329,7 +329,7 @@ async function seedData() {
       expectedSaos: '30', targetSaos: '45', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Refresh and optimize top 20 landing pages and blog posts for SEO performance.',
-      tags: 'seo,optimization,content', color: '#84CC16',
+      tags: 'seo,optimization,content', color: '#34E5E2',
       typeId: createdTypes['Blog Post'],
     },
     {
@@ -340,7 +340,7 @@ async function seedData() {
       expectedSaos: '40', targetSaos: '50', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Interactive ROI calculator for website to capture and qualify leads.',
-      tags: 'tool,interactive,lead-gen', color: '#F43F5E',
+      tags: 'tool,interactive,lead-gen', color: '#FF715A',
     },
 
     // ── Partner Marketing ──
@@ -352,7 +352,7 @@ async function seedData() {
       expectedSaos: '50', targetSaos: '65', actualSaos: '42',
       pipelineGenerated: '350000', revenueGenerated: '95000',
       description: 'Joint webinar + co-branded whitepaper with Salesforce integration team.',
-      tags: 'partner,salesforce,co-marketing', color: '#0284C7',
+      tags: 'partner,salesforce,co-marketing', color: '#50A0FF',
       vendorId: createdVendors['Salesforce'], typeId: createdTypes['Webinar'],
     },
     {
@@ -363,7 +363,7 @@ async function seedData() {
       expectedSaos: '35', targetSaos: '50', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'Launch structured referral program with partner enablement materials.',
-      tags: 'partner,referral,program', color: '#A855F7',
+      tags: 'partner,referral,program', color: '#7A00C1',
     },
     {
       title: 'APAC Channel Partner Event',
@@ -373,7 +373,7 @@ async function seedData() {
       expectedSaos: '40', targetSaos: '55', actualSaos: '0',
       pipelineGenerated: '0', revenueGenerated: '0',
       description: 'In-person partner summit in Singapore for APAC channel partners.',
-      tags: 'partner,event,apac', color: '#E11D48',
+      tags: 'partner,event,apac', color: '#FF715A',
       typeId: createdTypes['Conference'],
     },
   ];

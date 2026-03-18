@@ -75,9 +75,9 @@ export function getContrastTextColor(hexColor: string): string {
 }
 
 export const DEFAULT_STATUSES = [
-  { name: 'Considering', color: '#2563EB' },
-  { name: 'Negotiating', color: '#D97706' },
-  { name: 'Committed', color: '#047857' },
+  { name: 'Considering', color: '#3B53FF' },
+  { name: 'Negotiating', color: '#FFA943' },
+  { name: 'Committed', color: '#006170' },
 ];
 
 export const CURRENCIES = ['USD', 'GBP', 'EUR'] as const;

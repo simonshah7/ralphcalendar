@@ -49,7 +49,7 @@ export function CalendarView({
 
   const getActivityStyle = (activity: Activity) => {
     const status = statuses.find((s) => s.id === activity.statusId);
-    const bgColor = activity.color || status?.color || '#2563EB';
+    const bgColor = activity.color || status?.color || '#3B53FF';
     return {
       backgroundColor: bgColor,
       color: getContrastTextColor(bgColor),
