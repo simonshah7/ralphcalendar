@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db, activities, swimlanes } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, InferSelectModel } from 'drizzle-orm';
+
+type Activity = InferSelectModel<typeof activities>;
+type Swimlane = InferSelectModel<typeof swimlanes>;
 import { formatCurrency } from '@/lib/utils';
 
 interface PlannedActivity {
@@ -140,8 +143,8 @@ export async function POST(request: Request) {
     }
 
     // Fetch existing swimlanes and activities for context
-    const existingSwimlanes = await db.select().from(swimlanes).where(eq(swimlanes.calendarId, calendarId));
-    const existingActivities = await db.select().from(activities).where(eq(activities.calendarId, calendarId));
+    const existingSwimlanes: Swimlane[] = await db.select().from(swimlanes).where(eq(swimlanes.calendarId, calendarId));
+    const existingActivities: Activity[] = await db.select().from(activities).where(eq(activities.calendarId, calendarId));
 
     // Build swimlane name list for suggestions
     const swimlaneNames = existingSwimlanes.map((s) => s.name);

@@ -12,7 +12,7 @@ import { ActivityModal, ActivityFormData } from '@/components/ActivityModal';
 import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
 import { AICopilot } from '@/components/AICopilot';
-import { AIBriefGenerator } from '@/components/AIBriefGenerator';
+import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
 import * as htmlToImage from 'html-to-image';
 import PptxGenJS from 'pptxgenjs';
@@ -209,6 +209,49 @@ export default function Home() {
       setActivityDefaults({ swimlaneId, startDate, endDate, defaults });
       setShowActivityModal(true);
     }
+  };
+
+  const handleApplyBrief = async (generatedActivities: GeneratedActivity[]) => {
+    if (!currentCalendar) return;
+    const defaultSwimlaneId = currentCalendar.swimlanes[0]?.id;
+    const defaultStatusId = currentCalendar.statuses[0]?.id || '';
+    if (!defaultSwimlaneId) return;
+
+    for (const ga of generatedActivities) {
+      // Try to match swimlane suggestion to an existing swimlane
+      const matchedSwimlane = currentCalendar.swimlanes.find(
+        (s) => s.name.toLowerCase() === ga.swimlaneSuggestion.toLowerCase()
+      );
+      const swimlaneId = matchedSwimlane?.id || defaultSwimlaneId;
+
+      const activityData: ActivityFormData = {
+        title: ga.title,
+        startDate: ga.startDate,
+        endDate: ga.endDate,
+        statusId: defaultStatusId,
+        swimlaneId,
+        campaignId: null,
+        description: ga.description,
+        cost: ga.estimatedCost,
+        actualCost: 0,
+        currency: 'US$',
+        region: 'US',
+        tags: '',
+        color: '',
+        expectedSaos: 0,
+        actualSaos: 0,
+        pipelineGenerated: 0,
+        revenueGenerated: 0,
+        attachments: [],
+      };
+
+      try {
+        await handleActivitySubmit(activityData);
+      } catch (error) {
+        console.error('Failed to create brief activity:', error);
+      }
+    }
+    setShowBriefGenerator(false);
   };
 
   const handleDateClick = (date: string) => {

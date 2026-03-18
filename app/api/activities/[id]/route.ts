@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, InferSelectModel } from 'drizzle-orm';
 import { CURRENCIES, REGIONS } from '@/lib/utils';
+
+type Activity = InferSelectModel<typeof activities>;
+type Status = InferSelectModel<typeof statuses>;
+type Swimlane = InferSelectModel<typeof swimlanes>;
 
 // Type-safe includes check for readonly arrays
 function isValidCurrency(value: string): boolean {
@@ -50,7 +54,7 @@ export async function PUT(
 
     if (swimlaneId !== undefined) {
       // Verify swimlane exists
-      const [swimlane] = await db.select().from(swimlanes).where(eq(swimlanes.id, swimlaneId));
+      const [swimlane]: Swimlane[] = await db.select().from(swimlanes).where(eq(swimlanes.id, swimlaneId));
       if (!swimlane) {
         return NextResponse.json({ error: 'Swimlane not found' }, { status: 400 });
       }
@@ -58,7 +62,7 @@ export async function PUT(
     }
     if (statusId !== undefined) {
       // Verify status exists
-      const [status] = await db.select().from(statuses).where(eq(statuses.id, statusId));
+      const [status]: Status[] = await db.select().from(statuses).where(eq(statuses.id, statusId));
       if (!status) {
         return NextResponse.json({ error: 'Status not found' }, { status: 400 });
       }
@@ -78,7 +82,7 @@ export async function PUT(
 
     // Validate date range - fetch current activity to compare against when only one date changes
     if (startDate !== undefined || endDate !== undefined) {
-      const [currentActivity] = await db.select().from(activities).where(eq(activities.id, id));
+      const [currentActivity]: Activity[] = await db.select().from(activities).where(eq(activities.id, id));
       if (currentActivity) {
         const finalStartDate = startDate ?? currentActivity.startDate;
         const finalEndDate = endDate ?? currentActivity.endDate;

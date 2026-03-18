@@ -273,6 +273,7 @@ export function ActivityModal({
             </div>
 
           <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          {activeTab === 'details' && (
           <div className="grid grid-cols-12 gap-4">
             {/* Title */}
             <div className="col-span-8">

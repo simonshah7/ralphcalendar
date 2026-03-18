@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db, calendars, statuses, swimlanes, campaigns, activities } from '@/db';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, InferSelectModel } from 'drizzle-orm';
+
+type Calendar = InferSelectModel<typeof calendars>;
+type Status = InferSelectModel<typeof statuses>;
+type Swimlane = InferSelectModel<typeof swimlanes>;
+type Campaign = InferSelectModel<typeof campaigns>;
+type Activity = InferSelectModel<typeof activities>;
 import { DEFAULT_STATUSES } from '@/lib/utils';
 
 export async function GET(
@@ -10,13 +16,13 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const [calendar] = await db.select().from(calendars).where(eq(calendars.id, id));
+    const [calendar]: Calendar[] = await db.select().from(calendars).where(eq(calendars.id, id));
 
     if (!calendar) {
       return NextResponse.json({ error: 'Calendar not found' }, { status: 404 });
     }
 
-    let calendarStatuses = await db
+    let calendarStatuses: Status[] = await db
       .select()
       .from(statuses)
       .where(eq(statuses.calendarId, id))
@@ -33,13 +39,13 @@ export async function GET(
       calendarStatuses = await db.insert(statuses).values(statusValues).returning();
     }
 
-    const calendarSwimlanes = await db
+    const calendarSwimlanes: Swimlane[] = await db
       .select()
       .from(swimlanes)
       .where(eq(swimlanes.calendarId, id))
       .orderBy(asc(swimlanes.sortOrder));
-    const calendarCampaigns = await db.select().from(campaigns).where(eq(campaigns.calendarId, id));
-    const calendarActivities = await db.select().from(activities).where(eq(activities.calendarId, id));
+    const calendarCampaigns: Campaign[] = await db.select().from(campaigns).where(eq(campaigns.calendarId, id));
+    const calendarActivities: Activity[] = await db.select().from(activities).where(eq(activities.calendarId, id));
 
     return NextResponse.json({
       ...calendar,

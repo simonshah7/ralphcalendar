@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db, activities, campaigns, swimlanes } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, InferSelectModel } from 'drizzle-orm';
 import { formatCurrency } from '@/lib/utils';
+
+type Activity = InferSelectModel<typeof activities>;
+type Campaign = InferSelectModel<typeof campaigns>;
+type Swimlane = InferSelectModel<typeof swimlanes>;
 
 interface Insight {
   type: 'warning' | 'opportunity' | 'success';
@@ -19,9 +23,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'calendarId is required' }, { status: 400 });
     }
 
-    const allActivities = await db.select().from(activities).where(eq(activities.calendarId, calendarId));
-    const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.calendarId, calendarId));
-    const allSwimlanes = await db.select().from(swimlanes).where(eq(swimlanes.calendarId, calendarId));
+    const allActivities: Activity[] = await db.select().from(activities).where(eq(activities.calendarId, calendarId));
+    const allCampaigns: Campaign[] = await db.select().from(campaigns).where(eq(campaigns.calendarId, calendarId));
+    const allSwimlanes: Swimlane[] = await db.select().from(swimlanes).where(eq(swimlanes.calendarId, calendarId));
 
     const insights: Insight[] = [];
     const now = new Date();
