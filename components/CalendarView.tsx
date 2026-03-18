@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Activity, Status } from '@/db/schema';
-import { startOfMonth, endOfMonth, addDays, isSameDay } from '@/lib/utils';
+import { startOfMonth, endOfMonth, addDays, isSameDay, getContrastTextColor } from '@/lib/utils';
 
 interface CalendarViewProps {
   activities: Activity[];
@@ -51,8 +51,10 @@ export function CalendarView({
 
   const getActivityStyle = (activity: Activity) => {
     const status = statuses.find((s) => s.id === activity.statusId);
+    const bgColor = activity.color || status?.color || '#2563EB';
     return {
-      backgroundColor: activity.color || status?.color || '#3B82F6',
+      backgroundColor: bgColor,
+      color: getContrastTextColor(bgColor),
     };
   };
 
@@ -85,18 +87,18 @@ export function CalendarView({
             onClick={navigatePrev}
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
+          <h2 className="text-lg font-semibold text-foreground min-w-[200px] text-center">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <button
             onClick={navigateNext}
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -116,7 +118,7 @@ export function CalendarView({
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
             <div
               key={day}
-              className="py-2 text-center text-sm font-medium text-gray-500 dark:text-gray-400"
+              className="py-2 text-center text-sm font-medium text-muted-foreground"
             >
               {day}
             </div>
@@ -142,8 +144,8 @@ export function CalendarView({
                       className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${isToday(date)
                           ? 'bg-accent-purple text-white'
                           : isCurrentMonth(date)
-                            ? 'text-gray-900 dark:text-white'
-                            : 'text-gray-400 dark:text-gray-500'
+                            ? 'text-foreground'
+                            : 'text-muted-foreground'
                         }`}
                     >
                       {date.getDate()}
@@ -152,7 +154,7 @@ export function CalendarView({
                       {dayActivities.slice(0, 3).map((activity) => (
                         <div
                           key={activity.id}
-                          className="text-xs px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80"
+                          className="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
                           style={getActivityStyle(activity)}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -164,7 +166,7 @@ export function CalendarView({
                       ))}
                       {dayActivities.length > 3 && (
                         <div
-                          className="text-xs text-blue-600 dark:text-blue-400 px-1 cursor-pointer hover:underline"
+                          className="text-xs text-accent-purple px-1 cursor-pointer hover:underline"
                           onClick={(e) => {
                             e.stopPropagation();
                             // Open the first hidden activity to let users navigate

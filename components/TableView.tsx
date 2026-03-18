@@ -533,10 +533,10 @@ export function TableView({
                         disabled={isTitle}
                         className={`relative w-7 h-4 rounded-full transition-colors shrink-0 ${
                           isTitle
-                            ? 'bg-accent-purple/50 cursor-not-allowed'
+                            ? 'bg-accent-purple-btn/50 cursor-not-allowed'
                             : isHidden
-                              ? 'bg-gray-300 dark:bg-gray-600 cursor-pointer'
-                              : 'bg-accent-purple cursor-pointer'
+                              ? 'bg-muted-foreground/40 cursor-pointer'
+                              : 'bg-accent-purple-btn cursor-pointer'
                         }`}
                       >
                         <span

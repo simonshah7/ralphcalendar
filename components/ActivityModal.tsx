@@ -167,10 +167,10 @@ export function ActivityModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto border border-card-border">
         <div className="sticky top-0 bg-card border-b border-card-border px-6 py-3 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-bold text-foreground">
             {activity ? 'Edit Activity' : 'Create Activity'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -187,7 +187,7 @@ export function ActivityModal({
           <div className="grid grid-cols-12 gap-4">
             {/* Title */}
             <div className="col-span-8">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Title *
               </label>
               <input
@@ -196,12 +196,12 @@ export function ActivityModal({
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {errors.title && <p className="mt-0.5 text-xs text-red-600">{errors.title}</p>}
+              {errors.title && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.title}</p>}
             </div>
 
             {/* Campaign */}
             <div className="col-span-4">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Campaign
               </label>
               <CampaignDropdown
@@ -215,7 +215,7 @@ export function ActivityModal({
 
             {/* Dates, Status, Swimlane */}
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Start Date *
               </label>
               <input
@@ -224,11 +224,11 @@ export function ActivityModal({
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {errors.startDate && <p className="mt-0.5 text-xs text-red-600">{errors.startDate}</p>}
+              {errors.startDate && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.startDate}</p>}
             </div>
 
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 End Date *
               </label>
               <input
@@ -237,11 +237,11 @@ export function ActivityModal({
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 className="w-full px-3 py-1.5 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm"
               />
-              {errors.endDate && <p className="mt-0.5 text-xs text-red-600">{errors.endDate}</p>}
+              {errors.endDate && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.endDate}</p>}
             </div>
 
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Status *
               </label>
               <select
@@ -256,11 +256,11 @@ export function ActivityModal({
                   </option>
                 ))}
               </select>
-              {errors.statusId && <p className="mt-0.5 text-xs text-red-600">{errors.statusId}</p>}
+              {errors.statusId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.statusId}</p>}
             </div>
 
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Swimlane *
               </label>
               <select
@@ -275,12 +275,12 @@ export function ActivityModal({
                   </option>
                 ))}
               </select>
-              {errors.swimlaneId && <p className="mt-0.5 text-xs text-red-600">{errors.swimlaneId}</p>}
+              {errors.swimlaneId && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{errors.swimlaneId}</p>}
             </div>
 
             {/* Cost, Currency, Region, Tags */}
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Cost
               </label>
               <input
@@ -294,7 +294,7 @@ export function ActivityModal({
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Currency
               </label>
               <select
@@ -311,7 +311,7 @@ export function ActivityModal({
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Region
               </label>
               <select
@@ -328,7 +328,7 @@ export function ActivityModal({
             </div>
 
             <div className="col-span-5">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Tags (comma-separated)
               </label>
               <input
@@ -342,7 +342,7 @@ export function ActivityModal({
 
             {/* Description & Color */}
             <div className="col-span-8">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Description
               </label>
               <textarea
@@ -354,7 +354,7 @@ export function ActivityModal({
             </div>
 
             <div className="col-span-4">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 Color Override
               </label>
               <div className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export function ActivityModal({
                   type="color"
                   value={formData.color || '#3B82F6'}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                  className="w-8 h-8 rounded border border-card-border cursor-pointer"
                 />
                 <input
                   type="text"
@@ -375,7 +375,7 @@ export function ActivityModal({
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, color: '' })}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     Clear
                   </button>
@@ -390,7 +390,7 @@ export function ActivityModal({
                 <>
                   {showDeleteConfirm ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 dark:text-gray-300">Delete permanently?</span>
+                      <span className="text-xs text-foreground">Delete permanently?</span>
                       <button
                         type="button"
                         onClick={handleDelete}
@@ -402,7 +402,7 @@ export function ActivityModal({
                       <button
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
-                        className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 font-bold"
+                        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground font-bold"
                       >
                         NO
                       </button>
@@ -431,7 +431,7 @@ export function ActivityModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-1.5 text-xs font-bold text-white bg-accent-purple rounded hover:opacity-90 transition-opacity disabled:opacity-50 uppercase tracking-tight"
+                className="px-6 py-1.5 text-xs font-bold text-white bg-accent-purple-btn rounded hover:opacity-90 transition-opacity disabled:opacity-50 uppercase tracking-tight"
               >
                 {isSubmitting ? 'Saving...' : 'Save Activity'}
               </button>

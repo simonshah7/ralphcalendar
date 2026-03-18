@@ -189,19 +189,19 @@ export function SwimlaneSidebar({
               if (e.key === 'Escape') handleCancelAdd();
             }}
             placeholder="Swimlane name..."
-            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:ring-2 focus:ring-accent-purple focus:border-transparent"
           />
           <div className="flex gap-1 mt-1">
             <button
               onClick={handleAddNew}
               disabled={!newSwimlaneValue.trim()}
-              className="flex-1 px-2 py-1 text-xs bg-accent-purple text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-2 py-1 text-xs bg-accent-purple-btn text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add
             </button>
             <button
               onClick={handleCancelAdd}
-              className="flex-1 px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+              className="flex-1 px-2 py-1 text-xs bg-muted text-foreground rounded hover:opacity-80"
             >
               Cancel
             </button>
@@ -220,15 +220,15 @@ export function SwimlaneSidebar({
           onDrop={(e) => handleDrop(e, swimlane.id)}
           onDragEnd={handleDragEnd}
           className={`
-            px-2 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 group
+            px-2 border-b border-card-border/50 flex items-center gap-2 group
             ${draggedId === swimlane.id ? 'opacity-50' : ''}
-            ${dragOverId === swimlane.id ? 'bg-blue-100 dark:bg-blue-900/30 border-t-2 border-t-blue-500' : ''}
-            ${editingId === swimlane.id ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}
+            ${dragOverId === swimlane.id ? 'bg-accent-purple/10 border-t-2 border-t-accent-purple' : ''}
+            ${editingId === swimlane.id ? 'bg-muted' : ''}
           `}
           style={{ height: `${rowHeights[index]}px` }}
         >
           {/* Drag Handle */}
-          <div className="cursor-grab opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
+          <div className="cursor-grab opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground flex-shrink-0">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
             </svg>
@@ -246,13 +246,13 @@ export function SwimlaneSidebar({
                   if (e.key === 'Escape') handleCancelEdit();
                 }}
                 onBlur={handleSaveEdit}
-                className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-2 py-1 text-sm border border-card-border rounded bg-background text-foreground focus:ring-2 focus:ring-accent-purple focus:border-transparent"
               />
             </div>
           ) : (
             <>
               <span
-                className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                className="flex-1 text-sm font-medium text-foreground truncate cursor-pointer hover:text-accent-purple"
                 onDoubleClick={() => handleStartEdit(swimlane)}
                 title="Double-click to edit"
               >
@@ -263,7 +263,7 @@ export function SwimlaneSidebar({
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleStartEdit(swimlane)}
-                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                   title="Edit swimlane"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,7 +272,7 @@ export function SwimlaneSidebar({
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(swimlane.id)}
-                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
                   title="Delete swimlane"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,10 +288,10 @@ export function SwimlaneSidebar({
       {/* Empty State */}
       {swimlanes.length === 0 && !isAddingNew && (
         <div className="px-3 py-4 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">No swimlanes yet</p>
+          <p className="text-sm text-muted-foreground mb-2">No swimlanes yet</p>
           <button
             onClick={() => setIsAddingNew(true)}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-sm text-accent-purple hover:underline"
           >
             Add your first swimlane
           </button>
@@ -304,8 +304,8 @@ export function SwimlaneSidebar({
         onMouseDown={handleResizeMouseDown}
         className={`
           absolute top-0 right-0 w-1 h-full cursor-col-resize
-          hover:bg-blue-500 transition-colors
-          ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-400'}
+          hover:bg-accent-purple transition-colors
+          ${isResizing ? 'bg-accent-purple' : 'bg-transparent hover:bg-accent-purple/70'}
         `}
         title="Drag to resize"
       />

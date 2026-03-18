@@ -129,10 +129,10 @@ export function CampaignDropdown({
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex items-center justify-between px-3 py-2 border border-card-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent-purple"
             >
-                <span className={selectedCampaign ? 'text-foreground' : 'text-gray-500'}>
+                <span className={selectedCampaign ? 'text-foreground' : 'text-muted-foreground'}>
                     {selectedCampaign?.name || 'Select campaign'}
                 </span>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
@@ -204,7 +204,7 @@ export function CampaignDropdown({
                                         <button
                                             type="button"
                                             onClick={() => setEditingId(null)}
-                                            className="text-gray-400 hover:text-gray-600"
+                                            className="text-muted-foreground hover:text-foreground"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -218,7 +218,7 @@ export function CampaignDropdown({
                                             <button
                                                 type="button"
                                                 onClick={(e) => startEditing(e, campaign)}
-                                                className="p-1 text-gray-400 hover:text-accent-purple"
+                                                className="p-1 text-muted-foreground hover:text-accent-purple"
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -227,7 +227,7 @@ export function CampaignDropdown({
                                             <button
                                                 type="button"
                                                 onClick={(e) => handleDelete(e, campaign.id)}
-                                                className="p-1 text-gray-400 hover:text-red-500"
+                                                className="p-1 text-muted-foreground hover:text-red-500"
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -255,7 +255,7 @@ export function CampaignDropdown({
                     </div>
 
                     {error && (
-                        <div className="p-2 bg-red-50 text-red-600 text-xs text-center border-t border-red-100">
+                        <div className="p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs text-center border-t border-red-100 dark:border-red-800">
                             {error}
                         </div>
                     )}
@@ -279,7 +279,7 @@ export function CampaignDropdown({
                                     type="button"
                                     onClick={handleCreate}
                                     disabled={isSubmitting}
-                                    className="p-1.5 bg-accent-purple text-white rounded hover:bg-accent-purple/90 disabled:opacity-50"
+                                    className="p-1.5 bg-accent-purple-btn text-white rounded hover:opacity-90 disabled:opacity-50"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -288,7 +288,7 @@ export function CampaignDropdown({
                                 <button
                                     type="button"
                                     onClick={() => setIsAdding(false)}
-                                    className="p-1.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                                    className="p-1.5 bg-muted text-foreground rounded hover:opacity-80"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

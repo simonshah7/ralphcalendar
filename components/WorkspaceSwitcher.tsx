@@ -35,11 +35,11 @@ export function WorkspaceSwitcher({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
       >
-        <span className="font-medium text-gray-900 dark:text-white">
+        <span className="font-medium text-foreground">
           {currentCalendar?.name || 'Select Workspace'}
         </span>
         <svg
-          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
