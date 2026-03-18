@@ -439,8 +439,8 @@ function HomeInner() {
 
   const filteredActivities = useMemo(() => currentCalendar?.activities.filter((activity) => {
     if (searchQuery && !activity.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (selectedCampaignIds.length > 0 && !selectedCampaignIds.includes(activity.campaignId)) return false;
-    if (selectedStatusIds.length > 0 && !selectedStatusIds.includes(activity.statusId)) return false;
+    if (selectedCampaignIds.length > 0 && (!activity.campaignId || !selectedCampaignIds.includes(activity.campaignId))) return false;
+    if (selectedStatusIds.length > 0 && (!activity.statusId || !selectedStatusIds.includes(activity.statusId))) return false;
     return true;
   }) || [], [currentCalendar?.activities, searchQuery, selectedCampaignIds, selectedStatusIds]);
 
