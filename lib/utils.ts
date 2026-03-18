@@ -14,11 +14,19 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-export function formatCurrency(amount: number | string, currency: string = 'USD'): string {
+// Map display currency symbols to ISO codes for Intl.NumberFormat
+const CURRENCY_ISO_MAP: Record<string, string> = {
+  'US$': 'USD',
+  'UK£': 'GBP',
+  'EUR': 'EUR',
+};
+
+export function formatCurrency(amount: number | string, currency: string = 'US$'): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const isoCode = CURRENCY_ISO_MAP[currency] || 'USD';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
+    currency: isoCode,
   }).format(num);
 }
 
@@ -59,7 +67,7 @@ export const DEFAULT_STATUSES = [
   { name: 'Committed', color: '#10B981' },
 ];
 
-export const CURRENCIES = ['USD', 'GBP', 'EUR'] as const;
+export const CURRENCIES = ['US$', 'UK£', 'EUR'] as const;
 export const REGIONS = ['US', 'EMEA', 'ROW'] as const;
 
 export type Currency = (typeof CURRENCIES)[number];

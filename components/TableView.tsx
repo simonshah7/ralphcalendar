@@ -121,13 +121,13 @@ export function TableView({
         }
         break;
       case 'cost':
-        updates.cost = parseFloat(value || '0');
+        updates.cost = String(parseFloat(value || '0'));
         break;
       case 'currency':
-        updates.currency = value || 'USD';
+        updates.currency = (value || 'US$') as 'US$' | 'UK£' | 'EUR';
         break;
       case 'region':
-        updates.region = value || 'US';
+        updates.region = (value || 'US') as 'US' | 'EMEA' | 'ROW';
         break;
     }
 
@@ -253,7 +253,7 @@ export function TableView({
                 {/* Status */}
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <select
-                    value={activity.statusId}
+                    value={activity.statusId || ''}
                     onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
                     className="text-sm px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     style={{ borderLeftColor: status?.color, borderLeftWidth: '4px' }}
@@ -332,7 +332,7 @@ export function TableView({
                 {/* Currency */}
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <select
-                    value={activity.currency || 'USD'}
+                    value={activity.currency || 'US$'}
                     onChange={(e) => handleInlineEdit(activity.id, 'currency', e.target.value)}
                     className="text-sm px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
