@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Campaign } from '@/db/schema';
 
 interface CampaignDropdownProps {
@@ -95,18 +96,13 @@ export function CampaignDropdown({
 
     const handleDelete = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (!confirm('Are you sure you want to delete this campaign? All activities in this campaign will be set to "None".')) return;
-
+        if (!confirm('Delete this campaign? Activities will be set to "None".')) return;
         setIsSubmitting(true);
         setError(null);
         try {
-            const response = await fetch(`/api/campaigns/${id}`, {
-                method: 'DELETE',
-            });
+            const response = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Failed to delete campaign');
-            if (selectedCampaignId === id) {
-                onSelect(null);
-            }
+            if (selectedCampaignId === id) onSelect(null);
             onCampaignsChange();
         } catch (err) {
             setError('Failed to delete campaign');
@@ -127,54 +123,36 @@ export function CampaignDropdown({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 border border-card-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent-purple"
+                className="w-full flex items-center justify-between px-3 py-1.5 border border-card-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40 text-sm"
             >
-                <span className={selectedCampaign ? 'text-foreground' : 'text-gray-500'}>
+                <span className={selectedCampaign ? 'text-foreground' : 'text-muted-foreground'}>
                     {selectedCampaign?.name || 'Select campaign'}
                 </span>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
-            {isOpen && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-card rounded-lg shadow-xl border border-card-border z-50 flex flex-col max-h-80">
-                    <div className="p-2 border-b border-card-border">
-                        <input
-                            type="text"
-                            placeholder="Search or add..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-3 py-1.5 bg-background border border-card-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && searchQuery.trim() && !filteredCampaigns.some(c => c.name.toLowerCase() === searchQuery.toLowerCase())) {
-                                    setNewName(searchQuery);
-                                    handleCreate();
-                                }
-                            }}
-                        />
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onSelect(null);
-                                setIsOpen(false);
-                            }}
-                            className={`w-full px-4 py-2 text-left text-sm hover:bg-muted ${!selectedCampaignId ? 'bg-accent-purple/10 text-accent-purple font-medium' : 'text-foreground'}`}
-                        >
-                            None
-                        </button>
-
-                        {filteredCampaigns.map((campaign) => (
-                            <div
-                                key={campaign.id}
-                                className={`group flex items-center justify-between px-4 py-2 text-sm hover:bg-muted cursor-pointer ${selectedCampaignId === campaign.id ? 'bg-accent-purple/10 text-accent-purple font-medium' : 'text-foreground'}`}
-                                onClick={() => {
-                                    if (editingId !== campaign.id) {
-                                        onSelect(campaign.id);
-                                        setIsOpen(false);
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute top-full left-0 mt-1.5 w-full bg-card rounded-xl shadow-lg shadow-black/8 border border-card-border z-50 flex flex-col max-h-80"
+                    >
+                        <div className="p-2 border-b border-card-border">
+                            <input
+                                type="text"
+                                placeholder="Search or add..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full px-2.5 py-1.5 bg-muted border-none rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-accent/40 text-foreground placeholder:text-muted-foreground"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && searchQuery.trim() && !filteredCampaigns.some(c => c.name.toLowerCase() === searchQuery.toLowerCase())) {
+                                        setNewName(searchQuery);
+                                        handleCreate();
                                     }
                                 }}
                             >
@@ -204,7 +182,7 @@ export function CampaignDropdown({
                                         <button
                                             type="button"
                                             onClick={() => setEditingId(null)}
-                                            className="text-gray-400 hover:text-gray-600"
+                                            className="text-muted-foreground hover:text-foreground"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -218,7 +196,7 @@ export function CampaignDropdown({
                                             <button
                                                 type="button"
                                                 onClick={(e) => startEditing(e, campaign)}
-                                                className="p-1 text-gray-400 hover:text-accent-purple"
+                                                className="p-1 text-muted-foreground hover:text-accent-purple"
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -227,7 +205,7 @@ export function CampaignDropdown({
                                             <button
                                                 type="button"
                                                 onClick={(e) => handleDelete(e, campaign.id)}
-                                                className="p-1 text-gray-400 hover:text-red-500"
+                                                className="p-1 text-muted-foreground hover:text-red-500"
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -239,77 +217,142 @@ export function CampaignDropdown({
                             </div>
                         ))}
 
-                        {searchQuery && !filteredCampaigns.some(c => c.name.toLowerCase() === searchQuery.toLowerCase()) && (
+                        <div className="flex-1 overflow-y-auto py-1">
                             <button
                                 type="button"
-                                onClick={handleCreate}
-                                disabled={isSubmitting}
-                                className="w-full px-4 py-2 text-left text-sm text-accent-purple hover:bg-muted flex items-center gap-2"
+                                onClick={() => { onSelect(null); setIsOpen(false); }}
+                                className={`w-full px-3.5 py-2 text-left text-sm transition-colors ${
+                                    !selectedCampaignId ? 'bg-accent-soft text-accent font-medium' : 'text-foreground hover:bg-muted'
+                                }`}
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create "{searchQuery}"
+                                None
                             </button>
                         )}
                     </div>
 
                     {error && (
-                        <div className="p-2 bg-red-50 text-red-600 text-xs text-center border-t border-red-100">
+                        <div className="p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs text-center border-t border-red-100 dark:border-red-800">
                             {error}
                         </div>
                     )}
 
-                    <div className="p-2 border-t border-card-border bg-muted/30">
-                        {isAdding ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    placeholder="New campaign name"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    className="flex-1 px-3 py-1.5 bg-background border border-card-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent-purple"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleCreate();
-                                        if (e.key === 'Escape') setIsAdding(false);
+                            {filteredCampaigns.map((campaign) => (
+                                <div
+                                    key={campaign.id}
+                                    className={`group flex items-center justify-between px-3.5 py-2 text-sm cursor-pointer transition-colors ${
+                                        selectedCampaignId === campaign.id ? 'bg-accent-soft text-accent font-medium' : 'text-foreground hover:bg-muted'
+                                    }`}
+                                    onClick={() => {
+                                        if (editingId !== campaign.id) { onSelect(campaign.id); setIsOpen(false); }
                                     }}
-                                />
+                                >
+                                    {editingId === campaign.id ? (
+                                        <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                className="flex-1 px-2 py-1 bg-background border border-accent/40 rounded-md text-sm focus:outline-none"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleUpdate(campaign.id);
+                                                    if (e.key === 'Escape') setEditingId(null);
+                                                }}
+                                            />
+                                            <button type="button" onClick={() => handleUpdate(campaign.id)} disabled={isSubmitting} className="text-accent hover:text-accent-hover">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="truncate flex-1">{campaign.name}</span>
+                                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button type="button" onClick={(e) => startEditing(e, campaign)} className="p-1 text-muted-foreground hover:text-accent rounded transition-colors">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                                    </svg>
+                                                </button>
+                                                <button type="button" onClick={(e) => handleDelete(e, campaign.id)} className="p-1 text-muted-foreground hover:text-danger rounded transition-colors">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+
+                            {searchQuery && !filteredCampaigns.some(c => c.name.toLowerCase() === searchQuery.toLowerCase()) && (
                                 <button
                                     type="button"
                                     onClick={handleCreate}
                                     disabled={isSubmitting}
-                                    className="p-1.5 bg-accent-purple text-white rounded hover:bg-accent-purple/90 disabled:opacity-50"
+                                    className="p-1.5 bg-accent-purple-btn text-white rounded hover:opacity-90 disabled:opacity-50"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
+                                    Create &ldquo;{searchQuery}&rdquo;
                                 </button>
+                            )}
+                        </div>
+
+                        {error && (
+                            <div className="p-2 bg-danger-soft text-danger text-xs text-center border-t border-card-border">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="p-2 border-t border-card-border">
+                            {isAdding ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="New campaign name"
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        className="flex-1 px-2.5 py-1.5 bg-muted border-none rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-accent/40"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleCreate();
+                                            if (e.key === 'Escape') setIsAdding(false);
+                                        }}
+                                    />
+                                    <button type="button" onClick={handleCreate} disabled={isSubmitting} className="p-1.5 bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" onClick={() => setIsAdding(false)} className="p-1.5 bg-muted text-muted-foreground rounded-md hover:bg-card-hover transition-colors">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
                                 <button
                                     type="button"
                                     onClick={() => setIsAdding(false)}
-                                    className="p-1.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                                    className="p-1.5 bg-muted text-foreground rounded hover:opacity-80"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
+                                    New Campaign
                                 </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => setIsAdding(true)}
-                                className="w-full py-1.5 text-sm font-medium text-foreground hover:bg-muted rounded border border-dashed border-card-border flex items-center justify-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Add New Campaign
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

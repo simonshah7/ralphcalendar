@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => void;
+  onExport: (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv' | 'pptx') => void;
   currentView: 'timeline' | 'calendar' | 'table';
 }
 
@@ -17,9 +18,7 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
   const [startDate, setStartDate] = useState(firstOfMonth.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(lastOfMonth.toISOString().split('T')[0]);
   const [exportType, setExportType] = useState<'timeline' | 'calendar' | 'table'>(currentView);
-  const [exportFormat, setExportFormat] = useState<'png' | 'csv'>('png');
-
-  if (!isOpen) return null;
+  const [exportFormat, setExportFormat] = useState<'png' | 'csv' | 'pptx'>('png');
 
   const setQuickRange = (range: 'month' | 'quarter' | 'year' | 'all') => {
     const now = new Date();
@@ -55,10 +54,9 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
     onClose();
   };
 
-  // When export type changes to something other than table, reset format to png
   const handleTypeChange = (type: 'timeline' | 'calendar' | 'table') => {
     setExportType(type);
-    if (type !== 'table' && exportFormat === 'csv') {
+    if (type !== 'table' && (exportFormat === 'csv')) {
       setExportFormat('png');
     }
   };
@@ -66,15 +64,15 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="relative bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-card-border">
+        <h2 className="text-xl font-semibold text-foreground mb-4">
           Export Data
         </h2>
 
         <div className="space-y-6">
           {/* Export View */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Select View to Export
             </label>
             <div className="flex gap-2">
@@ -83,27 +81,26 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
                   key={type}
                   onClick={() => handleTypeChange(type)}
                   className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${exportType === type
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-accent-purple-btn text-white'
+                      : 'bg-muted text-foreground hover:opacity-80'
                     }`}
                 >
                   {type}
                 </button>
               ))}
             </div>
-          </div>
 
           {/* Export Format */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Select Format
             </label>
             <div className="flex gap-2">
               <button
                 onClick={() => setExportFormat('png')}
                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${exportFormat === 'png'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-accent-purple-btn text-white'
+                    : 'bg-muted text-foreground hover:opacity-80'
                   }`}
               >
                 PNG Image
@@ -112,17 +109,17 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
                 onClick={() => setExportFormat('csv')}
                 disabled={exportType !== 'table'}
                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${exportFormat === 'csv'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-accent-purple-btn text-white'
                     : exportType !== 'table'
-                      ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                      : 'bg-muted text-foreground hover:opacity-80'
                   }`}
               >
                 CSV Spreadsheet
               </button>
             </div>
             {exportType !== 'table' && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground">
                 CSV export is only available for Table view.
               </p>
             )}
@@ -130,31 +127,31 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
 
           {/* Quick Selects */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Quick Range
             </label>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setQuickRange('month')}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
                 This Month
               </button>
               <button
                 onClick={() => setQuickRange('quarter')}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                This Quarter
+                Cancel
               </button>
               <button
                 onClick={() => setQuickRange('year')}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                This Year
+                Export {exportFormat.toUpperCase()}
               </button>
               <button
                 onClick={() => setQuickRange('all')}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
                 All Time
               </button>
@@ -164,25 +161,25 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 From
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-card-border rounded-lg bg-background text-foreground"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 To
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-card-border rounded-lg bg-background text-foreground"
               />
             </div>
           </div>
@@ -191,13 +188,13 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
         <div className="flex justify-end gap-3 mt-8">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleExport}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 text-sm font-medium text-white bg-accent-purple-btn rounded-lg hover:opacity-90 transition-colors"
           >
             Export {exportFormat.toUpperCase()}
           </button>
@@ -206,4 +203,3 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
     </div>
   );
 }
-
