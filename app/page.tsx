@@ -562,6 +562,7 @@ export default function Home() {
                 swimlanes={currentCalendar.swimlanes}
                 statuses={currentCalendar.statuses}
                 campaigns={currentCalendar.campaigns}
+                events={eventsList.map((e) => ({ id: e.id, title: e.title, startDate: e.startDate, endDate: e.endDate, statusId: e.statusId, color: null }))}
                 onActivityClick={handleActivityClick}
                 onActivityCreate={handleActivityCreate}
                 onActivityUpdate={handleActivityUpdate}
@@ -569,6 +570,7 @@ export default function Home() {
                 onEditSwimlane={handleEditSwimlane}
                 onDeleteSwimlane={handleDeleteSwimlane}
                 onReorderSwimlanes={handleReorderSwimlanes}
+                onEventClick={(id) => { setCurrentView('events'); setSelectedEventId(id); }}
               />
             )}
 

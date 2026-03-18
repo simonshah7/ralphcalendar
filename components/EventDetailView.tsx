@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// framer-motion available if needed for animations
 import { Status, Campaign } from '@/db/schema';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PptxGenJS from 'pptxgenjs';
