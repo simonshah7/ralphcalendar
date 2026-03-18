@@ -518,7 +518,7 @@ export function TableView({
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
-                  className={`text-left px-4 py-2.5 select-none transition-colors ${
+                  className={`${col.id === 'cost' ? 'text-right' : 'text-left'} px-4 py-2.5 select-none transition-colors ${
                     dragOverColId === col.id ? 'bg-accent-purple/10' : ''
                   } ${draggedColId === col.id ? 'opacity-40' : ''}`}
                   style={{ minWidth: col.minWidth }}
@@ -636,14 +636,14 @@ export function TableView({
                   </select>
                 </td>
 
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={activity.cost || '0'}
                     onChange={(e) => handleInlineEdit(activity.id, 'cost', e.target.value)}
-                    className={`text-sm w-24 ${inputClass} border-transparent bg-transparent hover:bg-muted tabular-nums`}
+                    className={`text-sm w-24 text-right ${inputClass} border-transparent bg-transparent hover:bg-muted tabular-nums`}
                   />
                 </td>
 
