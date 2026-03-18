@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
 import { addDays, getDaysBetween, getContrastTextColor, formatCurrency } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
+import { useActivityLayout, useTimelineDrag, TimelineHeader, ActivityBar } from './timeline';
 
 interface TimelineViewProps {
   activities: Activity[];
@@ -21,14 +21,13 @@ interface TimelineViewProps {
 }
 
 type ZoomLevel = 'year' | 'quarter' | 'month';
+type CardStyle = 'small' | 'medium' | 'large';
 
 const ZOOM_CONFIG: Record<ZoomLevel, { daysVisible: number; dayWidth: number }> = {
   year: { daysVisible: 365, dayWidth: 4 },
   quarter: { daysVisible: 90, dayWidth: 24 },
   month: { daysVisible: 30, dayWidth: 30 },
 };
-
-type CardStyle = 'small' | 'medium' | 'large';
 
 const STYLE_CONFIG: Record<CardStyle, { rowHeight: number; fontSize: string; padding: string }> = {
   small: { rowHeight: 40, fontSize: 'text-[10px]', padding: 'py-0.5' },
@@ -63,27 +62,137 @@ export function TimelineView({
   onDeleteSwimlane,
   onReorderSwimlanes,
 }: TimelineViewProps) {
+  // --- View state ---
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('quarter');
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; swimlaneId: string } | null>(null);
-  const [dragCurrent, setDragCurrent] = useState<number | null>(null);
-  const [resizing, setResizing] = useState<{ activityId: string; edge: 'start' | 'end'; initialDate: string } | null>(null);
-  const [moving, setMoving] = useState<{ activityId: string; initialX: number; initialStartDate: string; initialSwimlaneId: string } | null>(null);
-  const [tempActivity, setTempActivity] = useState<{ id: string; startDate: string; endDate: string; swimlaneId: string } | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
-
   const [cardStyle, setCardStyle] = useState<CardStyle>('medium');
   const [visibleFields, setVisibleFields] = useState<string[]>(['status', 'campaign']);
   const [showSettings, setShowSettings] = useState(false);
 
+  // --- Refs ---
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
+  // --- Derived values ---
+  const config = ZOOM_CONFIG[zoomLevel];
+  const totalWidth = config.daysVisible * config.dayWidth;
+  const rowHeight = STYLE_CONFIG[cardStyle].rowHeight;
+  const swimlaneIds = useMemo(() => swimlanes.map((s) => s.id), [swimlanes]);
+
+  // --- Layout computation (decoupled from drag state) ---
+  const baseLayout = useActivityLayout(activities, swimlaneIds, rowHeight);
+
+  // --- Drag interaction ---
+  const {
+    dragState,
+    tempActivity,
+    handleEmptyMouseDown,
+    handleActivityMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useTimelineDrag({
+    activities,
+    swimlanes,
+    swimlaneData: baseLayout,
+    dayWidth: config.dayWidth,
+    rowHeight,
+    headerHeight: HEADER_HEIGHT,
+    startDate,
+    timelineRef,
+    onActivityCreate,
+    onActivityUpdate,
+  });
+
+  // --- Compute display layout: base layout + drag overlay ---
+  const swimlaneData = useMemo(() => {
+    if (!tempActivity) return baseLayout;
+
+    // Only recompute the affected swimlanes during drag
+    const result = { ...baseLayout };
+    const affectedIds = new Set<string>();
+
+    // Find which swimlane the activity was in (base) and where it's moving to
+    for (const [slId, data] of Object.entries(baseLayout)) {
+      if (data.activities.some((a) => a.id === tempActivity.id)) {
+        affectedIds.add(slId);
+      }
+    }
+    affectedIds.add(tempActivity.swimlaneId);
+
+    for (const slId of affectedIds) {
+      let slActivities = baseLayout[slId]?.activities || [];
+
+      // Apply temp overrides
+      slActivities = slActivities
+        .filter((a) => {
+          if (a.id !== tempActivity.id) return true;
+          // If activity is being moved to a different swimlane, remove from original
+          return tempActivity.swimlaneId === slId;
+        })
+        .map((a) => {
+          if (a.id === tempActivity.id) {
+            return { ...a, startDate: tempActivity.startDate, endDate: tempActivity.endDate, swimlaneId: tempActivity.swimlaneId };
+          }
+          return a;
+        });
+
+      // If activity is being moved to this swimlane from elsewhere, add it
+      if (tempActivity.swimlaneId === slId && !slActivities.some((a) => a.id === tempActivity.id)) {
+        const origActivity = activities.find((a) => a.id === tempActivity.id);
+        if (origActivity) {
+          slActivities.push({
+            ...origActivity,
+            ...tempActivity,
+            level: 0,
+          } as any);
+        }
+      }
+
+      // Recompute levels for affected swimlanes
+      const sorted = [...slActivities].sort((a, b) => {
+        const aStart = new Date(a.id === tempActivity.id ? tempActivity.startDate : a.startDate).getTime();
+        const bStart = new Date(b.id === tempActivity.id ? tempActivity.startDate : b.startDate).getTime();
+        return aStart - bStart;
+      });
+
+      const levels: { end: number }[][] = [];
+      const withLevels = sorted.map((activity) => {
+        const sd = activity.id === tempActivity.id ? tempActivity.startDate : activity.startDate;
+        const ed = activity.id === tempActivity.id ? tempActivity.endDate : activity.endDate;
+        const start = new Date(sd).getTime();
+        const end = new Date(ed).getTime();
+        let levelFound = -1;
+        for (let i = 0; i < levels.length; i++) {
+          if (!levels[i].some((l) => start <= l.end)) {
+            levelFound = i;
+            break;
+          }
+        }
+        if (levelFound === -1) {
+          levelFound = levels.length;
+          levels.push([{ end }]);
+        } else {
+          levels[levelFound].push({ end });
+        }
+        return { ...activity, level: levelFound };
+      });
+
+      result[slId] = {
+        activities: withLevels,
+        maxLevel: levels.length > 0 ? levels.length - 1 : 0,
+        totalHeight: Math.max(1, levels.length) * rowHeight,
+      };
+    }
+
+    return result;
+  }, [baseLayout, tempActivity, activities, rowHeight]);
+
+  // --- Settings persistence ---
   useEffect(() => {
     const saved = localStorage.getItem('timeline_view_settings');
     if (saved) {
@@ -111,113 +220,19 @@ export function TimelineView({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const rowHeight = STYLE_CONFIG[cardStyle].rowHeight;
-
-  const handleSidebarWidthChange = useCallback((width: number) => {
-    setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width)));
-  }, []);
-
-  const config = ZOOM_CONFIG[zoomLevel];
-  const totalWidth = config.daysVisible * config.dayWidth;
-
-  const getDateFromX = useCallback((x: number): Date => {
-    const dayOffset = Math.floor(x / config.dayWidth);
-    return addDays(startDate, dayOffset);
-  }, [config.dayWidth, startDate]);
-
+  // --- Coordinate helpers ---
   const getXFromDate = useCallback((date: Date | string): number => {
     const d = new Date(date);
     const daysDiff = getDaysBetween(startDate, d) - 1;
     return daysDiff * config.dayWidth;
   }, [config.dayWidth, startDate]);
 
-  const getSwimlaneActivitiesWithLevels = (swimlaneId: string) => {
-    const rawActivities = activities.filter((a) => {
-      const isTemp = tempActivity && tempActivity.id === a.id;
-      const currentSwimlaneId = isTemp ? tempActivity.swimlaneId : a.swimlaneId;
-      return currentSwimlaneId === swimlaneId;
-    });
-
-    if (isDragging && dragStart && dragStart.swimlaneId === swimlaneId && dragCurrent !== null) {
-      const minX = Math.min(dragStart.x, dragCurrent);
-      const maxX = Math.max(dragStart.x, dragCurrent);
-      const start = getDateFromX(minX).toISOString().split('T')[0];
-      const end = getDateFromX(maxX).toISOString().split('T')[0];
-
-      if (!rawActivities.find(a => a.id === 'temp-new')) {
-        rawActivities.push({
-          id: 'temp-new',
-          title: 'New Activity',
-          startDate: start,
-          endDate: end,
-          swimlaneId: swimlaneId,
-          statusId: '',
-          campaignId: '',
-          color: null,
-          cost: null,
-          currency: 'US$',
-          region: null,
-          tags: null,
-          description: null,
-          calendarId: '',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Activity);
-      }
-    }
-
-    const sorted = [...rawActivities].sort((a, b) => {
-      const aStart = new Date(tempActivity?.id === a.id ? tempActivity.startDate : a.startDate).getTime();
-      const bStart = new Date(tempActivity?.id === b.id ? tempActivity.startDate : b.startDate).getTime();
-      if (aStart !== bStart) return aStart - bStart;
-      const aEnd = new Date(tempActivity?.id === a.id ? tempActivity.endDate : a.endDate).getTime();
-      const bEnd = new Date(tempActivity?.id === b.id ? tempActivity.endDate : b.endDate).getTime();
-      return (bEnd - bStart) - (aEnd - aStart);
-    });
-
-    const activitiesWithLevels: (Activity & { level: number })[] = [];
-    const levels: { end: number }[][] = [];
-
-    sorted.forEach(activity => {
-      const isTemp = tempActivity && tempActivity.id === activity.id;
-      const start = new Date(isTemp ? tempActivity.startDate : activity.startDate).getTime();
-      const end = new Date(isTemp ? tempActivity.endDate : activity.endDate).getTime();
-
-      let levelFound = -1;
-      for (let i = 0; i < levels.length; i++) {
-        const hasOverlap = levels[i].some(l => start <= l.end);
-        if (!hasOverlap) {
-          levelFound = i;
-          break;
-        }
-      }
-
-      if (levelFound === -1) {
-        levelFound = levels.length;
-        levels.push([{ end }]);
-      } else {
-        levels[levelFound].push({ end });
-      }
-
-      activitiesWithLevels.push({ ...activity, level: levelFound });
-    });
-
-    return {
-      activities: activitiesWithLevels,
-      maxLevel: levels.length > 0 ? levels.length - 1 : 0,
-      totalHeight: Math.max(1, levels.length) * rowHeight
-    };
-  };
-
-  const swimlaneData = useMemo(() => swimlanes.reduce((acc, s) => {
-    acc[s.id] = getSwimlaneActivitiesWithLevels(s.id);
-    return acc;
-  }, {} as Record<string, { activities: (Activity & { level: number })[], maxLevel: number, totalHeight: number }>), [swimlanes, activities, tempActivity, isDragging, dragStart, dragCurrent, rowHeight, getDateFromX]);
-
-  const getActivityStyle = (activity: Activity & { level?: number }) => {
+  const getActivityStyle = useCallback((activity: Activity & { level?: number }) => {
     const isTemp = tempActivity && tempActivity.id === activity.id;
-    const start = getXFromDate(isTemp ? tempActivity.startDate : activity.startDate);
-    const end = getXFromDate(isTemp ? tempActivity.endDate : activity.endDate);
+    const sd = isTemp ? tempActivity.startDate : activity.startDate;
+    const ed = isTemp ? tempActivity.endDate : activity.endDate;
+    const start = getXFromDate(sd);
+    const end = getXFromDate(ed);
     const width = end - start + config.dayWidth;
     const status = statuses.find((s) => s.id === activity.statusId);
     const color = activity.color || status?.color || '#2563EB';
@@ -232,260 +247,23 @@ export function TimelineView({
       opacity: isTemp ? 0.7 : 1,
       zIndex: isTemp ? 20 : 1,
     };
-  };
+  }, [config.dayWidth, getXFromDate, rowHeight, statuses, tempActivity]);
 
-  const handleMouseDown = (e: React.MouseEvent, swimlaneId: string) => {
-    if ((e.target as HTMLElement).closest('.activity-bar')) return;
-    const rect = timelineRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = e.clientX - rect.left + (timelineRef.current?.scrollLeft || 0);
-    setDragStart({ x, swimlaneId });
-    setDragCurrent(x);
-    setIsDragging(true);
-  };
+  const handleSidebarWidthChange = useCallback((width: number) => {
+    setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width)));
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = timelineRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = e.clientX - rect.left + (timelineRef.current?.scrollLeft || 0);
-
-    if (isDragging && dragStart) {
-      setDragCurrent(x);
-    }
-
-    if (resizing) {
-      const activity = activities.find((a) => a.id === resizing.activityId);
-      if (!activity) return;
-      const newDate = getDateFromX(x).toISOString().split('T')[0];
-      if (resizing.edge === 'end') {
-        if (newDate >= activity.startDate) {
-          setTempActivity({ id: activity.id, startDate: activity.startDate, endDate: newDate, swimlaneId: activity.swimlaneId });
-        }
-      } else {
-        if (newDate <= activity.endDate) {
-          setTempActivity({ id: activity.id, startDate: newDate, endDate: activity.endDate, swimlaneId: activity.swimlaneId });
-        }
-      }
-    }
-
-    if (moving) {
-      const activity = activities.find((a) => a.id === moving.activityId);
-      if (!activity) return;
-      const deltaX = x - moving.initialX;
-      const deltaDays = Math.round(deltaX / config.dayWidth);
-      const initialStart = new Date(moving.initialStartDate);
-      const newStart = addDays(initialStart, deltaDays);
-      const duration = getDaysBetween(activity.startDate, activity.endDate);
-      const newEnd = addDays(newStart, duration - 1);
-
-      const y = e.clientY - rect.top + (timelineRef.current?.scrollTop || 0) - HEADER_HEIGHT;
-      let cumulativeHeight = 0;
-      let swimlaneIndex = 0;
-      for (let i = 0; i < swimlanes.length; i++) {
-        const slHeight = swimlaneData[swimlanes[i].id]?.totalHeight || rowHeight;
-        if (y < cumulativeHeight + slHeight) {
-          swimlaneIndex = i;
-          break;
-        }
-        cumulativeHeight += slHeight;
-        swimlaneIndex = i;
-      }
-      swimlaneIndex = Math.max(0, Math.min(swimlanes.length - 1, swimlaneIndex));
-      const currentSwimlaneId = swimlanes[swimlaneIndex].id;
-
-      setTempActivity({
-        id: activity.id,
-        startDate: newStart.toISOString().split('T')[0],
-        endDate: newEnd.toISOString().split('T')[0],
-        swimlaneId: currentSwimlaneId
-      });
-    }
-  };
-
-  const handleMouseUp = useCallback(() => {
-    if (isDragging && dragStart && dragCurrent !== null) {
-      const minX = Math.min(dragStart.x, dragCurrent);
-      const maxX = Math.max(dragStart.x, dragCurrent);
-      if (maxX - minX > 10) {
-        const startDateStr = getDateFromX(minX).toISOString().split('T')[0];
-        const endDateStr = getDateFromX(maxX).toISOString().split('T')[0];
-        onActivityCreate(dragStart.swimlaneId, startDateStr, endDateStr, {}, true);
-      }
-    }
-
-    if (tempActivity) {
-      onActivityUpdate(tempActivity.id, {
-        startDate: tempActivity.startDate,
-        endDate: tempActivity.endDate,
-        swimlaneId: tempActivity.swimlaneId
-      });
-    }
-
-    setIsDragging(false);
-    setDragStart(null);
-    setDragCurrent(null);
-    setResizing(null);
-    setMoving(null);
-    setTempActivity(null);
-  }, [isDragging, dragStart, dragCurrent, tempActivity, getDateFromX, onActivityCreate, onActivityUpdate]);
-
-  const handleActivityMouseDown = (e: React.MouseEvent, activity: Activity) => {
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const relativeX = e.clientX - rect.left;
-    const width = rect.width;
-
-    if (relativeX < 10) {
-      setResizing({ activityId: activity.id, edge: 'start', initialDate: activity.startDate });
-    } else if (relativeX > width - 10) {
-      setResizing({ activityId: activity.id, edge: 'end', initialDate: activity.endDate });
-    } else {
-      const timelineRect = timelineRef.current?.getBoundingClientRect();
-      if (timelineRect) {
-        const x = e.clientX - timelineRect.left + (timelineRef.current?.scrollLeft || 0);
-        setMoving({ activityId: activity.id, initialX: x, initialStartDate: activity.startDate, initialSwimlaneId: activity.swimlaneId });
-      }
-    }
-  };
-
-  const handleCloneActivity = (e: React.MouseEvent, activity: Activity) => {
+  const handleCloneActivity = useCallback((e: React.MouseEvent, activity: Activity) => {
     e.stopPropagation();
     const { id, calendarId, ...rest } = activity;
     onActivityCreate(activity.swimlaneId, activity.startDate, activity.endDate, rest);
-  };
+  }, [onActivityCreate]);
 
-  const handleSwimlaneChange = async (activityId: string, newSwimlaneId: string) => {
+  const handleSwimlaneChange = useCallback(async (activityId: string, newSwimlaneId: string) => {
     await onActivityUpdate(activityId, { swimlaneId: newSwimlaneId });
-  };
+  }, [onActivityUpdate]);
 
-  const renderTimeHeader = () => {
-    const headers: React.ReactElement[] = [];
-    const subHeaders: React.ReactElement[] = [];
-    let currentDate = new Date(startDate);
-
-    if (zoomLevel === 'year') {
-      for (let i = 0; i < 12; i++) {
-        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
-        const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-        const width = daysInMonth * config.dayWidth;
-        headers.push(
-          <div
-            key={`month-${i}`}
-            className="flex-shrink-0 border-r border-card-border text-center text-xs font-medium text-muted-foreground py-2"
-            style={{ width: `${width}px` }}
-          >
-            {monthStart.toLocaleDateString('en-US', { month: 'short' })}
-          </div>
-        );
-      }
-    } else if (zoomLevel === 'quarter') {
-      for (let i = 0; i < 3; i++) {
-        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
-        const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-        const width = daysInMonth * config.dayWidth;
-
-        headers.push(
-          <div
-            key={`month-${i}`}
-            className="flex-shrink-0 border-r border-card-border text-center text-xs font-semibold text-foreground py-2"
-            style={{ width: `${width}px` }}
-          >
-            {monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </div>
-        );
-
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dayDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), d);
-          const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
-          subHeaders.push(
-            <div
-              key={`day-${i}-${d}`}
-              className={`flex-shrink-0 border-r border-card-border/40 text-center text-[10px] py-1 ${
-                isWeekend ? 'bg-muted/60 text-muted-foreground/60' : 'text-muted-foreground'
-              }`}
-              style={{ width: `${config.dayWidth}px` }}
-            >
-              {d}
-            </div>
-          );
-        }
-      }
-    } else {
-      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-      headers.push(
-        <div
-          key="month"
-          className="flex-shrink-0 text-center text-xs font-semibold text-foreground py-2"
-          style={{ width: `${totalWidth}px` }}
-        >
-          {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </div>
-      );
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-        const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
-        const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
-        subHeaders.push(
-          <div
-            key={`day-${d}`}
-            className={`flex-shrink-0 border-r border-card-border/50 text-center text-xs py-1 ${isWeekend ? 'bg-muted text-muted-foreground' : 'text-muted-foreground'
-              }`}
-            style={{ width: `${config.dayWidth}px` }}
-          >
-            <div className="leading-tight">{dayName}</div>
-            <div className="font-medium">{d}</div>
-          </div>
-        );
-      }
-    }
-
-    return (
-      <div className="border-b border-card-border bg-surface">
-        <div className="flex">{headers}</div>
-        {subHeaders.length > 0 && <div className="flex">{subHeaders}</div>}
-      </div>
-    );
-  };
-
-  const renderTodayLine = () => {
-    const today = new Date();
-    const x = getXFromDate(today);
-    if (x < 0 || x > totalWidth) return null;
-
-    return (
-      <div
-        className="absolute top-0 bottom-0 w-0.5 bg-today-line z-10 pointer-events-none"
-        style={{ left: `${x}px` }}
-      >
-        <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 bg-today-line rounded-full" />
-      </div>
-    );
-  };
-
-  const renderDragSelection = () => {
-    if (!isDragging || !dragStart || dragCurrent === null) return null;
-    const swimlaneIndex = swimlanes.findIndex((s) => s.id === dragStart.swimlaneId);
-    if (swimlaneIndex === -1) return null;
-    const minX = Math.min(dragStart.x, dragCurrent);
-    const maxX = Math.max(dragStart.x, dragCurrent);
-    const data = swimlaneData[dragStart.swimlaneId];
-    if (!data) return null;
-
-    return (
-      <div
-        className="absolute bg-accent/15 border-2 border-accent/40 rounded-lg pointer-events-none"
-        style={{
-          left: `${minX}px`,
-          top: `${swimlanes.slice(0, swimlaneIndex).reduce((sum, s) => sum + swimlaneData[s.id].totalHeight, 0) + (data.maxLevel * rowHeight) + 4}px`,
-          width: `${maxX - minX}px`,
-          height: `${rowHeight - 8}px`,
-          zIndex: 30,
-        }}
-      />
-    );
-  };
-
+  // --- Navigation ---
   const navigatePrev = () => {
     const days = zoomLevel === 'year' ? 365 : zoomLevel === 'quarter' ? 90 : 30;
     setStartDate(addDays(startDate, -days));
@@ -501,11 +279,47 @@ export function TimelineView({
     setStartDate(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
-  useEffect(() => {
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseUp]);
+  // --- Today line ---
+  const renderTodayLine = () => {
+    const today = new Date();
+    const x = getXFromDate(today);
+    if (x < 0 || x > totalWidth) return null;
 
+    return (
+      <div
+        className="absolute top-0 bottom-0 w-0.5 bg-today-line z-10 pointer-events-none"
+        style={{ left: `${x}px` }}
+      >
+        <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 bg-today-line rounded-full" />
+      </div>
+    );
+  };
+
+  // --- Drag selection preview ---
+  const renderDragSelection = () => {
+    if (!dragState.isDragging || !dragState.dragStart || dragState.dragCurrent === null) return null;
+    const swimlaneIndex = swimlanes.findIndex((s) => s.id === dragState.dragStart!.swimlaneId);
+    if (swimlaneIndex === -1) return null;
+    const minX = Math.min(dragState.dragStart.x, dragState.dragCurrent);
+    const maxX = Math.max(dragState.dragStart.x, dragState.dragCurrent);
+    const data = swimlaneData[dragState.dragStart.swimlaneId];
+    if (!data) return null;
+
+    return (
+      <div
+        className="absolute bg-accent/15 border-2 border-accent/40 rounded-lg pointer-events-none"
+        style={{
+          left: `${minX}px`,
+          top: `${swimlanes.slice(0, swimlaneIndex).reduce((sum, s) => sum + (swimlaneData[s.id]?.totalHeight || rowHeight), 0) + (data.maxLevel * rowHeight) + 4}px`,
+          width: `${maxX - minX}px`,
+          height: `${rowHeight - 8}px`,
+          zIndex: 30,
+        }}
+      />
+    );
+  };
+
+  // --- Empty state ---
   if (swimlanes.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -524,24 +338,15 @@ export function TimelineView({
       {/* Timeline Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-2 sm:px-4 py-2 border-b border-card-border bg-surface">
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={navigatePrev}
-            className="p-1.5 rounded hover:bg-muted"
-          >
+          <button onClick={navigatePrev} className="p-1.5 rounded hover:bg-muted">
             <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <button
-            onClick={navigateToday}
-            className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors"
-          >
+          <button onClick={navigateToday} className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors">
             Today
           </button>
-          <button
-            onClick={navigateNext}
-            className="p-1.5 rounded hover:bg-muted"
-          >
+          <button onClick={navigateNext} className="p-1.5 rounded hover:bg-muted">
             <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -549,7 +354,6 @@ export function TimelineView({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Activity Creation Hint */}
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -557,7 +361,6 @@ export function TimelineView({
             <span>Drag on timeline to create activity</span>
           </div>
 
-          {/* Zoom Controls */}
           <div className="flex bg-muted rounded-md p-0.5">
             {(['year', 'quarter', 'month'] as ZoomLevel[]).map((level) => (
               <button
@@ -581,7 +384,7 @@ export function TimelineView({
             className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showSettings
               ? 'bg-accent-purple-btn text-white'
               : 'bg-muted text-foreground hover:opacity-80'
-              }`}
+            }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -604,7 +407,7 @@ export function TimelineView({
                         className={`px-2 py-1 text-xs rounded capitalize ${cardStyle === style
                           ? 'bg-card text-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground'
-                          }`}
+                        }`}
                       >
                         {style}
                       </button>
@@ -677,7 +480,7 @@ export function TimelineView({
       <div className="flex-1 flex overflow-hidden" ref={containerRef}>
         <SwimlaneSidebar
           swimlanes={swimlanes}
-          rowHeights={swimlanes.map(s => swimlaneData[s.id].totalHeight)}
+          rowHeights={swimlanes.map((s) => swimlaneData[s.id]?.totalHeight || rowHeight)}
           headerHeight={HEADER_HEIGHT}
           sidebarWidth={sidebarWidth}
           onSidebarWidthChange={handleSidebarWidthChange}
@@ -695,7 +498,12 @@ export function TimelineView({
           onMouseLeave={handleMouseUp}
         >
           <div style={{ width: `${totalWidth}px`, height: `${HEADER_HEIGHT}px` }}>
-            {renderTimeHeader()}
+            <TimelineHeader
+              startDate={startDate}
+              zoomLevel={zoomLevel}
+              dayWidth={config.dayWidth}
+              totalWidth={totalWidth}
+            />
           </div>
 
           <div className="relative" style={{ width: `${totalWidth}px` }}>
@@ -703,17 +511,18 @@ export function TimelineView({
             {renderDragSelection()}
 
             {swimlanes.map((swimlane, index) => {
-              const { activities: swimlaneActivities, totalHeight } = swimlaneData[swimlane.id];
-              const isEmpty = swimlaneActivities.length === 0 && (!isDragging || dragStart?.swimlaneId !== swimlane.id);
+              const slData = swimlaneData[swimlane.id] || { activities: [], totalHeight: rowHeight };
+              const { activities: swimlaneActivities, totalHeight } = slData;
+              const isEmpty = swimlaneActivities.length === 0 && (!dragState.isDragging || dragState.dragStart?.swimlaneId !== swimlane.id);
 
               return (
                 <div
                   key={swimlane.id}
                   className={`relative border-b border-card-border/30 ${
                     index % 2 === 0 ? 'bg-card' : 'bg-surface/30'
-                  } ${isDragging && dragStart?.swimlaneId === swimlane.id ? 'bg-accent/5' : ''}`}
+                  } ${dragState.isDragging && dragState.dragStart?.swimlaneId === swimlane.id ? 'bg-accent/5' : ''}`}
                   style={{ height: `${totalHeight}px` }}
-                  onMouseDown={(e) => handleMouseDown(e, swimlane.id)}
+                  onMouseDown={(e) => handleEmptyMouseDown(e, swimlane.id)}
                   onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -721,7 +530,7 @@ export function TimelineView({
                     if (activityId) handleSwimlaneChange(activityId, swimlane.id);
                   }}
                 >
-                  {isEmpty && !isDragging && (
+                  {isEmpty && !dragState.isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <span className="text-xs text-muted-foreground/50">
                         Click and drag to create an activity
@@ -730,107 +539,26 @@ export function TimelineView({
                   )}
 
                   {swimlaneActivities.map((activity) => {
-                    const style = getActivityStyle(activity);
-                    const status = statuses.find(s => s.id === activity.statusId);
-                    const campaign = campaigns.find(c => c.id === activity.campaignId);
-                    const cardConfig = STYLE_CONFIG[cardStyle];
+                    const status = statuses.find((s) => s.id === activity.statusId);
+                    const campaign = campaigns.find((c) => c.id === activity.campaignId);
 
                     return (
-                      <div
+                      <ActivityBar
                         key={activity.id}
-                        className="activity-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden group border border-white/15"
-                        style={style}
+                        activity={activity}
+                        status={status}
+                        campaign={campaign}
+                        style={getActivityStyle(activity)}
+                        cardStyle={cardStyle}
+                        visibleFields={visibleFields}
                         onDoubleClick={() => onActivityClick(activity)}
                         onMouseDown={(e) => handleActivityMouseDown(e, activity)}
-                        title={`${activity.title}\n${activity.startDate} - ${activity.endDate}`}
-                      >
-                        {/* Resize handles */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
-                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
-
-                        {/* Actions */}
-                        <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-20">
-                          <button
-                            className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
-                            onClick={(e) => handleCloneActivity(e, activity)}
-                            title="Clone"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-                            </svg>
-                          </button>
-                          <button
-                            className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onActivityClick(activity);
-                            }}
-                            title="Edit"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                            </svg>
-                          </button>
-                        </div>
-
-                        {/* Content */}
-                        {(() => {
-                          const bgColor = activity.color || status?.color || '#2563EB';
-                          const textColor = getContrastTextColor(bgColor);
-                          const isLight = textColor === '#000000';
-                          return (
-                            <div className={`h-full flex flex-col px-2 ${STYLE_CONFIG[cardStyle].padding} pointer-events-none`}>
-                              <div className={`font-bold truncate ${STYLE_CONFIG[cardStyle].fontSize} pr-6`} style={{ color: textColor }}>
-                                {activity.title}
-                              </div>
-
-                              {cardStyle !== 'small' && (
-                                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 overflow-hidden">
-                                  {visibleFields.includes('status') && status && (
-                                    <span className={`text-[10px] ${isLight ? 'bg-black/10' : 'bg-white/20'} px-1 rounded truncate max-w-full`} style={{ color: textColor }}>
-                                      {status.name}
-                                    </span>
-                                  )}
-                                  {visibleFields.includes('campaign') && campaign && (
-                                    <span className="text-[10px] italic truncate" style={{ color: textColor, opacity: 0.8 }}>
-                                      {campaign.name}
-                                    </span>
-                                  )}
-                                  {visibleFields.includes('cost') && activity.cost !== null && (
-                                    <span className="text-[10px] font-medium" style={{ color: textColor }}>
-                                      {formatCurrency(activity.cost, activity.currency || 'US$')}
-                                    </span>
-                                  )}
-                                  {visibleFields.includes('region') && activity.region && (
-                                    <span className="text-[10px]" style={{ color: textColor, opacity: 0.8 }}>
-                                      {activity.region}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-
-                              {cardStyle === 'large' && (
-                                <>
-                                  {visibleFields.includes('tags') && activity.tags && (
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {activity.tags.split(',').map((tag, i) => (
-                                        <span key={i} className={`text-[9px] ${isLight ? 'bg-black/10 border-black/20' : 'bg-white/10 border-white/20'} px-1 rounded border`} style={{ color: textColor }}>
-                                          {tag.trim()}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {visibleFields.includes('description') && activity.description && (
-                                    <div className="text-[10px] line-clamp-2 mt-1 italic leading-tight" style={{ color: textColor, opacity: 0.9 }}>
-                                      {activity.description}
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
+                        onClone={(e) => handleCloneActivity(e, activity)}
+                        onEdit={(e) => {
+                          e.stopPropagation();
+                          onActivityClick(activity);
+                        }}
+                      />
                     );
                   })}
                 </div>

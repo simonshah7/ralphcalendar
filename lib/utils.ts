@@ -14,23 +14,20 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-// Map display currency symbols to ISO codes for Intl.NumberFormat
-const CURRENCY_ISO_MAP: Record<string, string> = {
-  'US$': 'USD',
-  'UK£': 'GBP',
-  'EUR': 'EUR',
-};
-
-export function formatCurrency(amount: number | string, currency: string = 'US$'): string {
+export function formatCurrency(amount: number | string, currency: string = 'USD'): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  const isoCode = CURRENCY_ISO_MAP[currency] || 'USD';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: isoCode,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    currency: currency || 'USD',
   }).format(num);
 }
+
+// Display labels for currency codes
+export const CURRENCY_LABELS: Record<string, string> = {
+  'USD': 'USD ($)',
+  'GBP': 'GBP (£)',
+  'EUR': 'EUR (€)',
+};
 
 export function getDaysBetween(start: Date | string, end: Date | string): number {
   const startDate = new Date(start);
@@ -83,7 +80,7 @@ export const DEFAULT_STATUSES = [
   { name: 'Committed', color: '#047857' },
 ];
 
-export const CURRENCIES = ['US$', 'UK£', 'EUR'] as const;
+export const CURRENCIES = ['USD', 'GBP', 'EUR'] as const;
 export const REGIONS = ['US', 'EMEA', 'ROW'] as const;
 
 export type Currency = (typeof CURRENCIES)[number];

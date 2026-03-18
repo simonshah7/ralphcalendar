@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { CURRENCIES, REGIONS, CURRENCY_LABELS } from '@/lib/utils';
 
 interface TableViewProps {
   activities: Activity[];
@@ -246,7 +246,7 @@ export function TableView({
       case 'campaignId': updates.campaignId = value; break;
       case 'startDate': case 'endDate': if (value) (updates as Record<string, string>)[field] = value; break;
       case 'cost': updates.cost = String(parseFloat(value || '0')); break;
-      case 'currency': updates.currency = (value || 'US$') as 'US$' | 'UK£' | 'EUR'; break;
+      case 'currency': updates.currency = (value || 'USD') as 'USD' | 'GBP' | 'EUR'; break;
       case 'region': updates.region = (value || 'US') as 'US' | 'EMEA' | 'ROW'; break;
     }
     if (Object.keys(updates).length > 0) await onActivityUpdate(activityId, updates);
@@ -388,7 +388,7 @@ export function TableView({
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <select
-              value={activity.currency || 'US$'}
+              value={activity.currency || 'USD'}
               onChange={(e) => handleInlineEdit(activity.id, 'currency', e.target.value)}
               className="text-sm bg-transparent text-foreground outline-none cursor-pointer"
             >
@@ -649,7 +649,7 @@ export function TableView({
 
                 <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <select
-                    value={activity.currency || 'US$'}
+                    value={activity.currency || 'USD'}
                     onChange={(e) => handleInlineEdit(activity.id, 'currency', e.target.value)}
                     className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
                   >

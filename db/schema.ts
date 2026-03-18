@@ -6,9 +6,26 @@ import {
   numeric,
   boolean,
   timestamp,
+  date,
   uuid,
   jsonb,
 } from 'drizzle-orm/pg-core';
+
+// ─── JSONB Shape Interfaces ──────────────────────────────
+
+export interface ActivityDependency {
+  activityId: string;
+  type: 'blocks' | 'blocked_by' | 'related';
+}
+
+export interface ActivityAttachment {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
 
 // ─── Enums ───────────────────────────────────────────────
 
@@ -18,7 +35,7 @@ export const campaignStatusEnum = pgEnum('campaign_status', [
   'Committed',
 ]);
 
-export const currencyEnum = pgEnum('currency', ['US$', 'UK£', 'EUR']);
+export const currencyEnum = pgEnum('currency', ['USD', 'GBP', 'EUR']);
 
 export const regionEnum = pgEnum('region', ['US', 'EMEA', 'ROW']);
 
@@ -128,33 +145,32 @@ export const activities = pgTable('activities', {
   typeId: uuid('type_id').references(() => activityTypes.id),
   vendorId: uuid('vendor_id').references(() => vendors.id),
   title: text('title').notNull(),
-  startDate: text('start_date').notNull(),
-  endDate: text('end_date').notNull(),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
   status: campaignStatusEnum('status').notNull().default('Considering'),
   description: text('description').default(''),
   tags: text('tags').default(''),
   cost: numeric('cost').default('0'),
   actualCost: numeric('actual_cost').default('0'),
-  currency: currencyEnum('currency').default('US$'),
+  currency: currencyEnum('currency').default('USD'),
   region: regionEnum('region').default('US'),
   expectedSaos: numeric('expected_saos').default('0'),
   targetSaos: numeric('target_saos').default('0'),
   actualSaos: numeric('actual_saos').default('0'),
   pipelineGenerated: numeric('pipeline_generated').default('0'),
   revenueGenerated: numeric('revenue_generated').default('0'),
-  dependencies: jsonb('dependencies').default([]),
-  attachments: jsonb('attachments').default([]),
+  dependencies: jsonb('dependencies').$type<ActivityDependency[]>().default([]),
+  attachments: jsonb('attachments').$type<ActivityAttachment[]>().default([]),
   color: text('color'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   recurrenceFrequency: text('recurrence_frequency').notNull().default('none'),
-  recurrenceEndDate: text('recurrence_end_date'),
+  recurrenceEndDate: date('recurrence_end_date', { mode: 'string' }),
   recurrenceCount: numeric('recurrence_count'),
   parentActivityId: uuid('parent_activity_id'),
   isRecurrenceParent: boolean('is_recurrence_parent').notNull().default(false),
   slackChannel: text('slack_channel'),
   outline: text('outline'),
-  inlineComments: jsonb('inline_comments').default([]),
 });
 
 export const activityComments = pgTable('activity_comments', {
