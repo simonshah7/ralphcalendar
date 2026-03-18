@@ -9,7 +9,7 @@ test.describe('UJ-1: First-Time Setup', () => {
   });
 
   test('UJ-1.1: Shows welcome screen when no calendars exist', async ({ page }) => {
-    await expect(page.getByText('Welcome to CampaignOS')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Welcome to LaunchGrid')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: 'Create Your First Calendar' })).toBeVisible();
   });
 
@@ -22,7 +22,7 @@ test.describe('UJ-1: First-Time Setup', () => {
     await page.getByPlaceholder('My Marketing Calendar').fill('Q3 Marketing Plan');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
 
-    await expect(page.getByText('Welcome to CampaignOS')).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Welcome to LaunchGrid')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('UJ-1.3: Default statuses are created for new calendar', async ({ page }) => {

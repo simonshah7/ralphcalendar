@@ -1,14 +1,14 @@
 import { Page, expect } from '@playwright/test';
 
 /**
- * Shared helpers for CampaignOS E2E tests.
+ * Shared helpers for LaunchGrid E2E tests.
  * These use the API directly to set up test state quickly.
  */
 
 /** Wait for the app to finish loading (spinner disappears) */
 export async function waitForAppLoad(page: Page) {
-  // Wait for the loading spinner to disappear or CampaignOS text to appear
-  await page.waitForSelector('text=CampaignOS', { timeout: 15000 });
+  // Wait for the loading spinner to disappear or LaunchGrid text to appear
+  await page.waitForSelector('text=LaunchGrid', { timeout: 15000 });
   // Small delay for any additional data fetching
   await page.waitForTimeout(500);
 }

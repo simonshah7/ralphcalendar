@@ -83,7 +83,7 @@ You have none of these yet. The drag operations already use a `tempActivity` sta
 
 ### `campaignStatus` naming ("Considering, Negotiating, Committed feels off") — Disagree
 
-ChatGPT says these sound like "deal stage language" and suggests "Planned, In Progress, At Risk, Complete." But this misunderstands the product. CampaignOS appears to be for planning marketing sponsorships and buys — contexts where "Considering" (evaluating the opportunity), "Negotiating" (working terms), and "Committed" (deal signed) are exactly the right vocabulary. These are campaign *commitment stages*, not execution stages.
+ChatGPT says these sound like "deal stage language" and suggests "Planned, In Progress, At Risk, Complete." But this misunderstands the product. LaunchGrid appears to be for planning marketing sponsorships and buys — contexts where "Considering" (evaluating the opportunity), "Negotiating" (working terms), and "Committed" (deal signed) are exactly the right vocabulary. These are campaign *commitment stages*, not execution stages.
 
 If Redwood's marketing team uses these terms, keep them. The statuses are per-calendar and user-customizable anyway, so this is a non-issue at the schema level.
 

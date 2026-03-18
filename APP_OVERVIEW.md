@@ -1,8 +1,8 @@
-# CampaignOS — Application Overview
+# LaunchGrid — Application Overview
 
 ## What It Is
 
-CampaignOS is a marketing campaign planning and timeline visualization tool. It replaces spreadsheet-based campaign planning with an interactive, timeline-first interface where marketing teams can plan, organize, and track campaigns across channels, regions, and time periods.
+LaunchGrid is a marketing campaign planning and timeline visualization tool. It replaces spreadsheet-based campaign planning with an interactive, timeline-first interface where marketing teams can plan, organize, and track campaigns across channels, regions, and time periods.
 
 **Target users:** Marketing Managers, Campaign Coordinators, Marketing Directors, Agency Partners.
 

@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     const campaignNames = (context?.campaigns || []).map((c: { name: string }) => c.name).join(', ');
     const activityCount = context?.activityCount || 0;
 
-    const systemPrompt = `You are a voice assistant for CampaignOS, a marketing campaign planning application. The user speaks commands and you respond concisely (1-2 sentences max) since your response will be spoken aloud.
+    const systemPrompt = `You are a voice assistant for LaunchGrid, a marketing campaign planning application. The user speaks commands and you respond concisely (1-2 sentences max) since your response will be spoken aloud.
 
 Today's date is ${new Date().toISOString().split('T')[0]}.
 

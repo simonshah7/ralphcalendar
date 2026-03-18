@@ -1,15 +1,15 @@
-# CampaignOS Spec Certification
+# LaunchGrid Spec Certification
 
 > **Version:** 1.0
 > **Date:** 2026-03-18
-> **Application:** CampaignOS — Marketing Campaign Planning & Timeline Visualization Tool
+> **Application:** LaunchGrid — Marketing Campaign Planning & Timeline Visualization Tool
 > **Status:** MVP Certification
 
 ---
 
 ## 1. Product Vision
 
-CampaignOS enables marketing teams to visually plan, organize, and track campaigns across channels, regions, and time periods — replacing spreadsheets with an interactive timeline-first tool that provides clarity at a glance.
+LaunchGrid enables marketing teams to visually plan, organize, and track campaigns across channels, regions, and time periods — replacing spreadsheets with an interactive timeline-first tool that provides clarity at a glance.
 
 ---
 
@@ -276,4 +276,4 @@ The following Playwright E2E tests verify each user journey against the acceptan
 
 ---
 
-*This document serves as the formal specification certification for CampaignOS MVP. All acceptance criteria must be verified via automated E2E tests before production release.*
+*This document serves as the formal specification certification for LaunchGrid MVP. All acceptance criteria must be verified via automated E2E tests before production release.*

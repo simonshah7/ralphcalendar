@@ -113,13 +113,9 @@ export function Header({
         <div className="flex items-center gap-2 sm:gap-5 min-w-0">
           {/* Logo */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-              </svg>
-            </div>
+            <img src="/launchgrid-logo.png" alt="LaunchGrid" className="h-8 w-auto" />
             <h1 className="text-base font-semibold tracking-tight text-foreground hidden sm:block">
-              CampaignOS
+              LaunchGrid
             </h1>
           </div>
 

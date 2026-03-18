@@ -1,8 +1,8 @@
-# CampaignOS — Event & Campaign Management Design
+# LaunchGrid — Event & Campaign Management Design
 
 ## Design Context
 
-This document captures the design decisions for extending CampaignOS from a timeline-based marketing calendar into a full event and campaign management platform. It is informed by discovery conversations with the campaign management team.
+This document captures the design decisions for extending LaunchGrid from a timeline-based marketing calendar into a full event and campaign management platform. It is informed by discovery conversations with the campaign management team.
 
 ---
 
@@ -116,7 +116,7 @@ Individual calendar entries for each sub-event, not just the top-level event.
 **Implementation approach:**
 - Google Calendar API integration
 - Campaign manager triggers "send invites" per sub-event
-- Calendar events include: title, time, location, description with links back to CampaignOS
+- Calendar events include: title, time, location, description with links back to LaunchGrid
 
 ### Google Sites: Event Listing Portal
 

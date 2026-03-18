@@ -1,4 +1,4 @@
-# CampaignOS - Build Specification
+# LaunchGrid - Build Specification
 
 ## IMPORTANT: Read This First
 This is an iterative build. On each run:
@@ -12,7 +12,7 @@ This is an iterative build. On each run:
 
 ## Project Overview
 
-**App Name:** CampaignOS
+**App Name:** LaunchGrid
 **Purpose:** Marketing campaign planning tool with timeline visualization
 **Target:** Marketing teams managing campaigns across channels
 
@@ -126,7 +126,7 @@ created_at  TIMESTAMP DEFAULT NOW()
 
 ### Header (Always Visible)
 ```
-[Logo: CampaignOS] [Timeline|Calendar|Table tabs] [Workspace Dropdown ▼] [Export btn] [+ New Activity btn]
+[Logo: LaunchGrid] [Timeline|Calendar|Table tabs] [Workspace Dropdown ▼] [Export btn] [+ New Activity btn]
 ```
 
 ### Below Header
@@ -271,7 +271,7 @@ Calendar Name: [________________]
 ## First-Time Experience
 
 When app loads with no calendars:
-1. Show empty state: "Welcome to CampaignOS"
+1. Show empty state: "Welcome to LaunchGrid"
 2. Prominent button: [Create Your First Calendar]
 3. On click → Create Calendar modal
 4. After creation → User lands on empty Timeline view

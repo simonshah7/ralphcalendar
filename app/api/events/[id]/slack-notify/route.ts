@@ -69,7 +69,7 @@ export async function POST(
       };
     } else {
       slackMessage = {
-        text: message || `Update from CampaignOS: ${event.title}`,
+        text: message || `Update from LaunchGrid: ${event.title}`,
       };
     }
 
