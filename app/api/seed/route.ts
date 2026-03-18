@@ -18,6 +18,7 @@ import {
   subEventAttendees,
   checklistItems,
   campaignEvents,
+  campaignReportData,
   adminSettings,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -31,6 +32,7 @@ function dateOffset(days: number): string {
 
 async function clearAllData() {
   // Delete in order respecting foreign keys
+  await db.delete(campaignReportData);
   await db.delete(subEventAttendees);
   await db.delete(subEvents);
   await db.delete(eventAttendees);
@@ -605,6 +607,271 @@ async function seedData() {
     { eventId: priorReInvent.id, name: 'Emily Park', email: 'emily.p@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
     { eventId: priorReInvent.id, name: 'David Kim', email: 'david.k@acmecorp.com', company: 'Acme Corp', attendeeType: 'customer' as const, role: '1:1 meeting', hasPass: false, travelStatus: 'confirmed' },
   ]);
+
+  // ─── Campaign Report Data (Multi-Source Reporting) ──────
+  const periodStart = dateOffset(-90);
+  const periodEnd = dateOffset(0);
+
+  // ── Marketo Theme Performance ──
+  const themeData = [
+    {
+      label: 'False Confidence in the Close',
+      metrics: { impressions: 142000, clicks: 4260, mqls: 186, saos: 42, pipeline: 1680000, spend: 28500 },
+    },
+    {
+      label: 'What Tools Won\'t Fix',
+      metrics: { impressions: 118000, clicks: 3780, mqls: 152, saos: 35, pipeline: 1225000, spend: 22000 },
+    },
+    {
+      label: 'Close on Command',
+      metrics: { impressions: 165000, clicks: 5610, mqls: 218, saos: 51, pipeline: 2142000, spend: 34000 },
+    },
+    {
+      label: 'Manual by Default',
+      metrics: { impressions: 98000, clicks: 2940, mqls: 128, saos: 28, pipeline: 980000, spend: 18500 },
+    },
+    {
+      label: 'If You Could Automate Anything',
+      metrics: { impressions: 135000, clicks: 4725, mqls: 195, saos: 47, pipeline: 1880000, spend: 31000 },
+    },
+  ];
+
+  for (const theme of themeData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'marketo_theme',
+      category: 'theme',
+      label: theme.label,
+      periodStart,
+      periodEnd,
+      metrics: theme.metrics,
+    });
+  }
+
+  // ── Marketo Channel Performance ──
+  const channelData = [
+    {
+      label: 'Blogs',
+      metrics: { published: 24, views: 48200, engagements: 6746, mqls: 142, saos: 32, spend: 14400 },
+    },
+    {
+      label: 'Articles',
+      metrics: { published: 12, views: 28500, engagements: 4560, mqls: 98, saos: 22, spend: 18000 },
+    },
+    {
+      label: 'Downloadables',
+      metrics: { published: 8, views: 15800, engagements: 5530, mqls: 210, saos: 48, spend: 24000 },
+    },
+    {
+      label: 'Emails',
+      metrics: { published: 36, views: 125000, engagements: 31250, mqls: 385, saos: 86, spend: 8500 },
+    },
+  ];
+
+  for (const channel of channelData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'marketo_channel',
+      category: 'channel',
+      label: channel.label,
+      periodStart,
+      periodEnd,
+      metrics: channel.metrics,
+    });
+  }
+
+  // ── Hero Asset Performance ──
+  const heroAssetData = [
+    {
+      label: 'SSON Research Report',
+      category: 'research',
+      metrics: { pageViews: 12400, downloads: 3100, completions: 2480, mqls: 186, saos: 42, pipeline: 1890000 },
+    },
+    {
+      label: 'Financial Drag Analyzer',
+      category: 'tool',
+      metrics: { pageViews: 8600, downloads: 4300, completions: 3440, mqls: 245, saos: 58, pipeline: 2320000 },
+    },
+    {
+      label: 'Journal Entry Index Tool',
+      category: 'tool',
+      metrics: { pageViews: 6200, downloads: 2790, completions: 2232, mqls: 156, saos: 36, pipeline: 1260000 },
+    },
+    {
+      label: 'FA Maturity Assessment',
+      category: 'assessment',
+      metrics: { pageViews: 9800, downloads: 5880, completions: 4116, mqls: 312, saos: 72, pipeline: 3240000 },
+    },
+  ];
+
+  for (const asset of heroAssetData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'hero_asset',
+      category: asset.category,
+      label: asset.label,
+      periodStart,
+      periodEnd,
+      metrics: asset.metrics,
+    });
+  }
+
+  // ── LinkedIn / Superads Campaign Performance ──
+  const linkedInData = [
+    {
+      label: 'Close on Command - Decision Makers',
+      metrics: { impressions: 285000, clicks: 5700, spend: 42500, leads: 342, mqls: 164, saos: 38 },
+    },
+    {
+      label: 'FA Maturity Assessment - CFOs',
+      metrics: { impressions: 198000, clicks: 4356, spend: 36200, leads: 261, mqls: 132, saos: 31 },
+    },
+    {
+      label: 'SSON Research Promotion',
+      metrics: { impressions: 156000, clicks: 3432, spend: 24800, leads: 205, mqls: 98, saos: 22 },
+    },
+    {
+      label: 'Financial Drag Analyzer - Controllers',
+      metrics: { impressions: 220000, clicks: 5060, spend: 38500, leads: 310, mqls: 148, saos: 35 },
+    },
+    {
+      label: 'Brand Awareness - Accounting Leaders',
+      metrics: { impressions: 425000, clicks: 6375, spend: 52000, leads: 382, mqls: 172, saos: 28 },
+    },
+  ];
+
+  for (const li of linkedInData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'linkedin_ads',
+      category: 'campaign',
+      label: li.label,
+      periodStart,
+      periodEnd,
+      metrics: li.metrics,
+    });
+  }
+
+  // ── ICP Penetration (Andres' spreadsheet) ──
+  // Summary row
+  await db.insert(campaignReportData).values({
+    calendarId: calendar.id,
+    source: 'icp_penetration',
+    category: 'summary',
+    label: 'ICP Summary',
+    periodStart,
+    periodEnd,
+    metrics: {
+      targetAccounts: 850,
+      engaged: 412,
+      withMqls: 186,
+      withSaos: 72,
+      withOpportunity: 38,
+      totalPipeline: 8420000,
+    },
+  });
+
+  // Top accounts
+  const icpAccounts = [
+    { label: 'Deloitte', metrics: { industry: 'Professional Services', touches: 48, mqls: 8, saos: 3, pipeline: 420000, stage: 'Opportunity' } },
+    { label: 'JPMorgan Chase', metrics: { industry: 'Financial Services', touches: 42, mqls: 6, saos: 2, pipeline: 380000, stage: 'SAO' } },
+    { label: 'EY Global', metrics: { industry: 'Professional Services', touches: 38, mqls: 7, saos: 3, pipeline: 510000, stage: 'Opportunity' } },
+    { label: 'KPMG', metrics: { industry: 'Professional Services', touches: 35, mqls: 5, saos: 2, pipeline: 290000, stage: 'SAO' } },
+    { label: 'Bank of America', metrics: { industry: 'Financial Services', touches: 32, mqls: 4, saos: 1, pipeline: 185000, stage: 'MQL' } },
+    { label: 'PwC', metrics: { industry: 'Professional Services', touches: 30, mqls: 6, saos: 2, pipeline: 340000, stage: 'Opportunity' } },
+    { label: 'Goldman Sachs', metrics: { industry: 'Financial Services', touches: 28, mqls: 3, saos: 1, pipeline: 220000, stage: 'SAO' } },
+    { label: 'BDO International', metrics: { industry: 'Professional Services', touches: 26, mqls: 4, saos: 2, pipeline: 260000, stage: 'SAO' } },
+    { label: 'Grant Thornton', metrics: { industry: 'Professional Services', touches: 24, mqls: 3, saos: 1, pipeline: 175000, stage: 'MQL' } },
+    { label: 'Wells Fargo', metrics: { industry: 'Financial Services', touches: 22, mqls: 3, saos: 1, pipeline: 195000, stage: 'MQL' } },
+  ];
+
+  for (const acct of icpAccounts) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'icp_penetration',
+      category: 'account',
+      label: acct.label,
+      periodStart,
+      periodEnd,
+      metrics: acct.metrics as any,
+    });
+  }
+
+  // ── Outreach Sequence Performance ──
+  const outreachData = [
+    {
+      label: 'Close on Command - Cold Outreach',
+      metrics: { sent: 4200, opened: 1470, replied: 252, meetings: 84, saos: 28 },
+    },
+    {
+      label: 'FA Maturity Assessment Follow-Up',
+      metrics: { sent: 2800, opened: 1120, replied: 196, meetings: 68, saos: 22 },
+    },
+    {
+      label: 'SSON Research Download Follow-Up',
+      metrics: { sent: 3100, opened: 1178, replied: 217, meetings: 72, saos: 24 },
+    },
+    {
+      label: 'Event Attendee Nurture',
+      metrics: { sent: 1800, opened: 810, replied: 162, meetings: 58, saos: 19 },
+    },
+    {
+      label: 'Financial Drag Analyzer Users',
+      metrics: { sent: 2400, opened: 1008, replied: 192, meetings: 64, saos: 21 },
+    },
+    {
+      label: 'Inbound MQL Speed-to-Lead',
+      metrics: { sent: 5200, opened: 2340, replied: 416, meetings: 142, saos: 48 },
+    },
+  ];
+
+  for (const seq of outreachData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'outreach_sequence',
+      category: 'sequence',
+      label: seq.label,
+      periodStart,
+      periodEnd,
+      metrics: seq.metrics,
+    });
+  }
+
+  // ── SFDC Event Lead Progress ──
+  const sfdcEventData = [
+    {
+      label: 'AWS Re:Invent 2025',
+      metrics: { registered: 520, attended: 385, mql: 142, sao: 48, opportunity: 22, closedWon: 8, revenue: 680000 },
+    },
+    {
+      label: 'London Enterprise Dinner Q1',
+      metrics: { registered: 28, attended: 25, mql: 18, sao: 12, opportunity: 7, closedWon: 3, revenue: 285000 },
+    },
+    {
+      label: 'Product Launch Webinar',
+      metrics: { registered: 680, attended: 412, mql: 198, sao: 68, opportunity: 28, closedWon: 10, revenue: 520000 },
+    },
+    {
+      label: 'SaaS Connect Conference',
+      metrics: { registered: 340, attended: 280, mql: 95, sao: 38, opportunity: 16, closedWon: 5, revenue: 380000 },
+    },
+    {
+      label: 'Enterprise Roundtable Series',
+      metrics: { registered: 45, attended: 42, mql: 32, sao: 18, opportunity: 10, closedWon: 4, revenue: 425000 },
+    },
+  ];
+
+  for (const ev of sfdcEventData) {
+    await db.insert(campaignReportData).values({
+      calendarId: calendar.id,
+      source: 'sfdc_event_leads',
+      category: 'event',
+      label: ev.label,
+      periodStart,
+      periodEnd,
+      metrics: ev.metrics,
+    });
+  }
 
   return calendar.id;
 }

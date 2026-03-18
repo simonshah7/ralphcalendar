@@ -296,6 +296,33 @@ export const campaignEvents = pgTable('campaign_events', {
     .references(() => events.id, { onDelete: 'cascade' }),
 });
 
+// ─── Campaign Reporting Data ────────────────────────────
+
+export const reportSourceEnum = pgEnum('report_source', [
+  'marketo_theme',
+  'marketo_channel',
+  'hero_asset',
+  'linkedin_ads',
+  'icp_penetration',
+  'outreach_sequence',
+  'sfdc_event_leads',
+]);
+
+export const campaignReportData = pgTable('campaign_report_data', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  calendarId: uuid('calendar_id')
+    .notNull()
+    .references(() => calendars.id, { onDelete: 'cascade' }),
+  source: reportSourceEnum('source').notNull(),
+  category: text('category').notNull(),
+  label: text('label').notNull(),
+  periodStart: date('period_start', { mode: 'string' }).notNull(),
+  periodEnd: date('period_end', { mode: 'string' }).notNull(),
+  metrics: jsonb('metrics').$type<Record<string, number>>().notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const adminSettings = pgTable('admin_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull(),
@@ -333,4 +360,6 @@ export type SubEventAttendee = typeof subEventAttendees.$inferSelect;
 export type ChecklistItem = typeof checklistItems.$inferSelect;
 export type NewChecklistItem = typeof checklistItems.$inferInsert;
 export type CampaignEvent = typeof campaignEvents.$inferSelect;
+export type CampaignReportData = typeof campaignReportData.$inferSelect;
+export type NewCampaignReportData = typeof campaignReportData.$inferInsert;
 export type AdminSetting = typeof adminSettings.$inferSelect;

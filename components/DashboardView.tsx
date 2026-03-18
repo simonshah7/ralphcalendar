@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Activity, Campaign, Swimlane, Status } from '@/db/schema';
 import { formatCurrency } from '@/lib/utils';
 import { EventComparisonView } from './EventComparisonView';
+import { CampaignReportingDashboard } from './CampaignReportingDashboard';
 
 interface DashboardViewProps {
   activities: Activity[];
@@ -13,7 +14,7 @@ interface DashboardViewProps {
   calendarId?: string;
 }
 
-type DashboardTab = 'overview' | 'yoy-comparison';
+type DashboardTab = 'overview' | 'campaign-reporting' | 'yoy-comparison';
 
 type SortField =
   | 'name'
@@ -616,6 +617,16 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
           Overview
         </button>
         <button
+          onClick={() => setDashboardTab('campaign-reporting')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
+            dashboardTab === 'campaign-reporting'
+              ? 'border-accent text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Campaign Reporting
+        </button>
+        <button
           onClick={() => setDashboardTab('yoy-comparison')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
             dashboardTab === 'yoy-comparison'
@@ -634,6 +645,16 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
       {dashboardTab === 'yoy-comparison' && !calendarId && (
         <div className="text-center py-12 text-muted-foreground text-sm">
           Calendar context required for event comparison.
+        </div>
+      )}
+
+      {/* Campaign Reporting Tab */}
+      {dashboardTab === 'campaign-reporting' && calendarId && (
+        <CampaignReportingDashboard calendarId={calendarId} />
+      )}
+      {dashboardTab === 'campaign-reporting' && !calendarId && (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          Calendar context required for campaign reporting.
         </div>
       )}
 
