@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
-import { addDays, getDaysBetween } from '@/lib/utils';
+import { addDays, getDaysBetween, getContrastTextColor } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
 
 interface TimelineViewProps {
@@ -220,7 +220,7 @@ export function TimelineView({
     const end = getXFromDate(isTemp ? tempActivity.endDate : activity.endDate);
     const width = end - start + config.dayWidth;
     const status = statuses.find((s) => s.id === activity.statusId);
-    const color = activity.color || status?.color || '#0d9488';
+    const color = activity.color || status?.color || '#2563EB';
     const level = activity.level ?? 0;
 
     return {
@@ -429,9 +429,8 @@ export function TimelineView({
         subHeaders.push(
           <div
             key={`day-${d}`}
-            className={`flex-shrink-0 border-r border-card-border/30 text-center text-[10px] py-1 ${
-              isWeekend ? 'bg-muted/60 text-muted-foreground/50' : 'text-muted-foreground'
-            }`}
+            className={`flex-shrink-0 border-r border-card-border/50 text-center text-xs py-1 ${isWeekend ? 'bg-muted text-muted-foreground' : 'text-muted-foreground'
+              }`}
             style={{ width: `${config.dayWidth}px` }}
           >
             <div className="leading-tight">{dayName}</div>
@@ -512,7 +511,7 @@ export function TimelineView({
       <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground mb-2">No swimlanes yet</p>
-          <p className="text-sm text-muted-foreground/60">
+          <p className="text-sm text-muted-foreground">
             Add swimlanes to start organizing your activities
           </p>
         </div>
@@ -527,10 +526,10 @@ export function TimelineView({
         <div className="flex items-center gap-1.5">
           <button
             onClick={navigatePrev}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded hover:bg-muted"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <button
@@ -541,14 +540,21 @@ export function TimelineView({
           </button>
           <button
             onClick={navigateNext}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded hover:bg-muted"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
 
-          <div className="w-px h-5 bg-card-border mx-1.5" />
+        <div className="flex items-center gap-4">
+          {/* Activity Creation Hint */}
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Drag on timeline to create activity</span>
+          </div>
 
           {/* Zoom Controls */}
           <div className="flex bg-muted rounded-md p-0.5">
@@ -568,60 +574,51 @@ export function TimelineView({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Drag hint */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground/70 px-2.5 py-1 rounded-full bg-muted/60">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-            </svg>
-            <span>Drag to create</span>
-          </div>
-
-          {/* View Settings */}
-          <div className="relative" ref={settingsRef}>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                showSettings
-                  ? 'bg-accent text-white'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
+        <div className="flex items-center gap-2 relative" ref={settingsRef}>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${showSettings
+              ? 'bg-accent-purple-btn text-white'
+              : 'bg-muted text-foreground hover:opacity-80'
               }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-              </svg>
-              Settings
-            </button>
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>View Settings</span>
+          </button>
 
-            <AnimatePresence>
-              {showSettings && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-56 bg-card border border-card-border rounded-xl shadow-lg shadow-black/8 z-50 p-3.5"
-                >
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Card Size
-                      </label>
-                      <div className="grid grid-cols-3 gap-1 bg-muted p-0.5 rounded-md">
-                        {(['small', 'medium', 'large'] as CardStyle[]).map((style) => (
-                          <button
-                            key={style}
-                            onClick={() => setCardStyle(style)}
-                            className={`px-2 py-1 text-[11px] rounded capitalize transition-colors ${
-                              cardStyle === style
-                                ? 'bg-card text-foreground shadow-sm font-medium'
-                                : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                          >
-                            {style}
-                          </button>
-                        ))}
-                      </div>
+          {showSettings && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-card-border rounded-lg shadow-xl z-50 p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Card Style
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 bg-muted p-1 rounded-md">
+                    {(['small', 'medium', 'large'] as CardStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setCardStyle(style)}
+                        className={`px-2 py-1 text-xs rounded capitalize ${cardStyle === style
+                          ? 'bg-card text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Visible Fields
+                  </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground opacity-50 cursor-not-allowed">
+                      <input type="checkbox" checked readOnly className="rounded" />
+                      <span>Title (Always shown)</span>
                     </div>
 
                     <div>
@@ -725,8 +722,8 @@ export function TimelineView({
                 >
                   {isEmpty && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-[11px] text-muted-foreground/30">
-                        Drag to create
+                      <span className="text-xs text-muted-foreground opacity-70">
+                        Click and drag to create an activity
                       </span>
                     </div>
                   )}
@@ -747,13 +744,13 @@ export function TimelineView({
                         title={`${activity.title}\n${activity.startDate} - ${activity.endDate}`}
                       >
                         {/* Resize handles */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/20 hover:bg-white/40 transition-all z-10 rounded-l-lg" />
-                        <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-white/20 hover:bg-white/40 transition-all z-10 rounded-r-lg" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
 
                         {/* Actions */}
                         <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-20">
                           <button
-                            className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm"
+                            className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
                             onClick={(e) => handleCloneActivity(e, activity)}
                             title="Clone"
                           >
@@ -762,8 +759,11 @@ export function TimelineView({
                             </svg>
                           </button>
                           <button
-                            className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm"
-                            onClick={(e) => { e.stopPropagation(); onActivityClick(activity); }}
+                            className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onActivityClick(activity);
+                            }}
                             title="Edit"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -773,55 +773,62 @@ export function TimelineView({
                         </div>
 
                         {/* Content */}
-                        <div className={`h-full flex flex-col px-2 ${cardConfig.padding} pointer-events-none`}>
-                          <div className={`font-semibold text-white truncate ${cardConfig.fontSize} pr-6 leading-tight`}>
-                            {activity.title}
-                          </div>
+                        {(() => {
+                          const bgColor = activity.color || status?.color || '#2563EB';
+                          const textColor = getContrastTextColor(bgColor);
+                          const isLight = textColor === '#000000';
+                          return (
+                            <div className={`h-full flex flex-col px-2 ${config.padding} pointer-events-none`}>
+                              <div className={`font-bold truncate ${config.fontSize} pr-6`} style={{ color: textColor }}>
+                                {activity.title}
+                              </div>
 
-                          {cardStyle !== 'small' && (
-                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 overflow-hidden">
-                              {visibleFields.includes('status') && status && (
-                                <span className="text-[10px] bg-white/20 text-white/90 px-1.5 rounded-full truncate max-w-full backdrop-blur-sm">
-                                  {status.name}
-                                </span>
+                              {cardStyle !== 'small' && (
+                                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 overflow-hidden">
+                                  {visibleFields.includes('status') && status && (
+                                    <span className={`text-[10px] ${isLight ? 'bg-black/10' : 'bg-white/20'} px-1 rounded truncate max-w-full`} style={{ color: textColor }}>
+                                      {status.name}
+                                    </span>
+                                  )}
+                                  {visibleFields.includes('campaign') && campaign && (
+                                    <span className="text-[10px] italic truncate" style={{ color: textColor, opacity: 0.8 }}>
+                                      {campaign.name}
+                                    </span>
+                                  )}
+                                  {visibleFields.includes('cost') && activity.cost !== null && (
+                                    <span className="text-[10px] font-medium" style={{ color: textColor }}>
+                                      {activity.currency} {activity.cost.toLocaleString()}
+                                    </span>
+                                  )}
+                                  {visibleFields.includes('region') && activity.region && (
+                                    <span className="text-[10px]" style={{ color: textColor, opacity: 0.8 }}>
+                                      {activity.region}
+                                    </span>
+                                  )}
+                                </div>
                               )}
-                              {visibleFields.includes('campaign') && campaign && (
-                                <span className="text-[10px] text-white/70 italic truncate">
-                                  {campaign.name}
-                                </span>
-                              )}
-                              {visibleFields.includes('cost') && activity.cost !== null && (
-                                <span className="text-[10px] text-white/90 font-medium">
-                                  {activity.currency} {Number(activity.cost).toLocaleString()}
-                                </span>
-                              )}
-                              {visibleFields.includes('region') && activity.region && (
-                                <span className="text-[10px] text-white/60">
-                                  {activity.region}
-                                </span>
+
+                              {cardStyle === 'large' && (
+                                <>
+                                  {visibleFields.includes('tags') && activity.tags && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {activity.tags.split(',').map((tag, i) => (
+                                        <span key={i} className={`text-[9px] ${isLight ? 'bg-black/10 border-black/20' : 'bg-white/10 border-white/20'} px-1 rounded border`} style={{ color: textColor }}>
+                                          {tag.trim()}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {visibleFields.includes('description') && activity.description && (
+                                    <div className="text-[10px] line-clamp-2 mt-1 italic leading-tight" style={{ color: textColor, opacity: 0.9 }}>
+                                      {activity.description}
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
-                          )}
-
-                          {cardStyle === 'large' && (
-                            <>
-                              {visibleFields.includes('tags') && activity.tags && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {activity.tags.split(',').map((tag, i) => (
-                                    <span key={i} className="text-[9px] bg-white/10 text-white/80 px-1.5 rounded-full border border-white/10">
-                                      {tag.trim()}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {visibleFields.includes('description') && activity.description && (
-                                <div className="text-[10px] text-white/70 line-clamp-2 mt-1 leading-tight">
-                                  {activity.description}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}

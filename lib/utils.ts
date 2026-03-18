@@ -61,10 +61,24 @@ export function isSameDay(date1: Date | string, date2: Date | string): boolean {
   );
 }
 
+export function getContrastTextColor(hexColor: string): string {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const toLinear = (c: number) =>
+    c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const luminance =
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+
+  return luminance > 0.179 ? '#000000' : '#ffffff';
+}
+
 export const DEFAULT_STATUSES = [
-  { name: 'Considering', color: '#3B82F6' },
-  { name: 'Negotiating', color: '#F59E0B' },
-  { name: 'Committed', color: '#10B981' },
+  { name: 'Considering', color: '#2563EB' },
+  { name: 'Negotiating', color: '#D97706' },
+  { name: 'Committed', color: '#047857' },
 ];
 
 export const CURRENCIES = ['US$', 'UK£', 'EUR'] as const;

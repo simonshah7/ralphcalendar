@@ -423,61 +423,127 @@ export function TableView({
   const thBtnClass = "flex items-center gap-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors";
   const inputClass = "text-sm px-2 py-1 border border-card-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40";
 
-  return (
-    <div className="flex-1 overflow-auto bg-card">
-      <table className="w-full min-w-[1200px]">
-        <thead className="sticky top-0 bg-surface z-10 border-b border-card-border">
-          <tr>
-            <th className={thClass}>
-              <button onClick={() => handleSort('title')} className={thBtnClass}>
-                Title <SortIcon field="title" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('status')} className={thBtnClass}>
-                Status <SortIcon field="status" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('startDate')} className={thBtnClass}>
-                Start <SortIcon field="startDate" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('endDate')} className={thBtnClass}>
-                End <SortIcon field="endDate" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('swimlane')} className={thBtnClass}>
-                Channel <SortIcon field="swimlane" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('campaign')} className={thBtnClass}>
-                Campaign <SortIcon field="campaign" />
-              </button>
-            </th>
-            <th className={thClass}>
-              <button onClick={() => handleSort('cost')} className={thBtnClass}>
-                Cost <SortIcon field="cost" />
-              </button>
-            </th>
-            <th className={`${thClass} text-[11px] font-semibold text-muted-foreground uppercase tracking-wider`}>
-              Currency
-            </th>
-            <th className={`${thClass} text-[11px] font-semibold text-muted-foreground uppercase tracking-wider`}>
-              Region
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedActivities.map((activity, index) => {
-            const status = statuses.find((s) => s.id === activity.statusId);
-            const swimlane = swimlanes.find((s) => s.id === activity.swimlaneId);
-            const campaign = campaigns.find((c) => c.id === activity.campaignId);
+        {/* Column settings button */}
+        <div className="relative" data-column-menu>
+          <button
+            onClick={() => setShowColumnMenu(!showColumnMenu)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted rounded-md transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Columns
+          </button>
 
-            return (
+          {showColumnMenu && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-card-border rounded-lg shadow-lg z-50 overflow-hidden">
+              <div className="px-3 py-2 border-b border-card-border">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Manage Columns</span>
+                  <button
+                    onClick={resetColumns}
+                    className="text-xs text-muted-foreground hover:text-accent-purple transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">Drag to reorder · Toggle visibility</p>
+              </div>
+              <div className="py-1 max-h-80 overflow-y-auto">
+                {columnSettings.order.map((colId) => {
+                  const col = ALL_COLUMNS.find((c) => c.id === colId);
+                  if (!col) return null;
+                  const isHidden = columnSettings.hidden.includes(colId);
+                  const isTitle = colId === 'title';
+                  return (
+                    <div
+                      key={colId}
+                      draggable
+                      onDragStart={() => handleMenuDragStart(colId)}
+                      onDragOver={(e) => handleMenuDragOver(e, colId)}
+                      onDrop={() => handleMenuDrop(colId)}
+                      onDragEnd={() => { setMenuDragId(null); setMenuDragOverId(null); }}
+                      className={`flex items-center gap-2 px-3 py-1.5 cursor-grab active:cursor-grabbing transition-colors ${
+                        menuDragOverId === colId ? 'bg-accent-purple/10' : 'hover:bg-muted/50'
+                      } ${menuDragId === colId ? 'opacity-50' : ''}`}
+                    >
+                      {/* Drag handle */}
+                      <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+                      </svg>
+
+                      {/* Toggle */}
+                      <button
+                        onClick={() => toggleColumn(colId)}
+                        disabled={isTitle}
+                        className={`relative w-7 h-4 rounded-full transition-colors shrink-0 ${
+                          isTitle
+                            ? 'bg-accent-purple-btn/50 cursor-not-allowed'
+                            : isHidden
+                              ? 'bg-muted-foreground/40 cursor-pointer'
+                              : 'bg-accent-purple-btn cursor-pointer'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                            !isHidden ? 'translate-x-3' : ''
+                          }`}
+                        />
+                      </button>
+
+                      <span className={`text-sm ${isHidden ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        {col.label}
+                      </span>
+
+                      {isTitle && (
+                        <span className="ml-auto text-xs text-muted-foreground">Required</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full min-w-[800px]">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-muted/60 border-b border-card-border">
+              {visibleColumns.map((col) => (
+                <th
+                  key={col.id}
+                  className={`text-left px-4 py-2.5 select-none transition-colors ${
+                    dragOverColId === col.id ? 'bg-accent-purple/10' : ''
+                  } ${draggedColId === col.id ? 'opacity-40' : ''}`}
+                  style={{ minWidth: col.minWidth }}
+                  draggable
+                  onDragStart={() => handleColDragStart(col.id)}
+                  onDragOver={(e) => handleColDragOver(e, col.id)}
+                  onDrop={() => handleColDrop(col.id)}
+                  onDragEnd={handleColDragEnd}
+                >
+                  {col.sortField ? (
+                    <button
+                      onClick={() => handleSort(col.sortField!)}
+                      className="group flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {col.label}
+                      <SortIcon field={col.sortField} />
+                    </button>
+                  ) : (
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {col.label}
+                    </span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-card-border/40">
+            {sortedActivities.map((activity, index) => (
               <tr
                 key={activity.id}
                 className={`border-b border-card-border/30 hover:bg-muted/50 cursor-pointer transition-colors ${

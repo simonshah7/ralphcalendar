@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Activity, Status } from '@/db/schema';
-import { startOfMonth, endOfMonth, addDays, isSameDay } from '@/lib/utils';
+import { startOfMonth, endOfMonth, addDays, isSameDay, getContrastTextColor } from '@/lib/utils';
 
 interface CalendarViewProps {
   activities: Activity[];
@@ -49,8 +49,10 @@ export function CalendarView({
 
   const getActivityStyle = (activity: Activity) => {
     const status = statuses.find((s) => s.id === activity.statusId);
+    const bgColor = activity.color || status?.color || '#2563EB';
     return {
-      backgroundColor: activity.color || status?.color || '#0d9488',
+      backgroundColor: bgColor,
+      color: getContrastTextColor(bgColor),
     };
   };
 
@@ -70,19 +72,19 @@ export function CalendarView({
             onClick={navigatePrev}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-sm font-semibold text-foreground min-w-[180px] text-center">
+          <h2 className="text-lg font-semibold text-foreground min-w-[200px] text-center">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <button
             onClick={navigateNext}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
@@ -101,7 +103,7 @@ export function CalendarView({
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
             <div
               key={day}
-              className="py-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              className="py-2 text-center text-sm font-medium text-muted-foreground"
             >
               {day}
             </div>
@@ -130,8 +132,8 @@ export function CalendarView({
                           ? 'bg-accent text-white'
                           : isCurrentMonth(date)
                             ? 'text-foreground'
-                            : 'text-muted-foreground/40'
-                      }`}
+                            : 'text-muted-foreground'
+                        }`}
                     >
                       {date.getDate()}
                     </div>
@@ -139,7 +141,7 @@ export function CalendarView({
                       {dayActivities.slice(0, 3).map((activity) => (
                         <div
                           key={activity.id}
-                          className="text-[10px] px-1.5 py-0.5 rounded-md truncate text-white cursor-pointer hover:opacity-80 transition-opacity leading-tight font-medium"
+                          className="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
                           style={getActivityStyle(activity)}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -151,7 +153,7 @@ export function CalendarView({
                       ))}
                       {dayActivities.length > 3 && (
                         <div
-                          className="text-[10px] text-accent font-medium px-1 cursor-pointer hover:underline"
+                          className="text-xs text-accent-purple px-1 cursor-pointer hover:underline"
                           onClick={(e) => {
                             e.stopPropagation();
                             onActivityClick(dayActivities[3]);
