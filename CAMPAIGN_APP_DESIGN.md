@@ -324,14 +324,35 @@ Intentionally excluded based on discovery:
 
 ---
 
-## Open Questions
+## Resolved Decisions
 
-1. **Event vs Activity:** Should events replace activities entirely, or coexist? Current thinking: events are a new entity alongside activities. Activities remain for non-event marketing work (content calendar, campaigns without events).
+1. **Event vs Activity: Coexist.** Events are a new entity alongside activities. Activities remain for non-event marketing work (content calendar, campaigns without events). No overlap — they serve different purposes.
 
-2. **Campaign manager identity:** Without auth, how do we track who the campaign manager is? Current thinking: simple name/email field on the campaign, no login required.
+2. **Campaign manager identity: Phase 2.** Defer auth and user identity to Phase 2. For now, campaign manager is not explicitly tracked in the system.
 
-3. **Slack webhook security:** Incoming webhook URLs are sensitive. Should they be stored in the DB or configured via environment variables? For 15-50 events, per-event DB storage is more practical.
+3. **Slack webhook storage: Admin settings area.** Slack webhook URLs are configured in a dedicated admin/settings section of the app, not per-event in the DB and not via environment variables.
 
-4. **Google Calendar auth:** Requires OAuth 2.0 setup. This is the most complex integration — should it be Phase 1 or Phase 2?
+4. **Google Calendar integration: Phase 2.** Build the sub-event data model and scheduling UI in Phase 1, but defer Google Calendar OAuth and invite syncing to Phase 2. Users create calendar invites manually for now.
 
-5. **Migration path:** How do existing activities map to the new event model? Are some current activities actually events that should be migrated?
+5. **Migration path: None needed.** Activities and events are independent entities. No conversion or migration of existing activities. Users create events fresh going forward.
+
+---
+
+## Build Phases
+
+### Phase 1 (Core Event Management)
+- Events entity (CRUD, detail page, list/dashboard)
+- Sub-events with flexible types
+- Attendee management (internal + customer)
+- Pass allocation (fixed pool)
+- Readiness checklist
+- Logistics deck generation (PPTX)
+- YoY comparison (same event)
+- Slack push notifications via webhook (configured in admin settings)
+- Event listing feed for Google Sites portal
+- Timeline integration (events as bars alongside activities)
+
+### Phase 2 (Integrations & Identity)
+- Google Calendar OAuth + sub-event invite syncing
+- Campaign manager identity / auth
+- Any additional Slack capabilities beyond webhooks
