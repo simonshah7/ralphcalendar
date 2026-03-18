@@ -23,6 +23,7 @@ const HELP_TEXT = `I can answer questions about your marketing calendar, includi
 - "Show activities without metrics"
 - "What is our total budget?"
 - "Compare [region] vs [region]" (e.g., US vs EMEA)
+- "Compare events [year] vs [year]" (e.g., compare events 2024 vs 2025)
 - "Top performing campaigns"
 - "Upcoming activities"
 
@@ -148,6 +149,74 @@ export async function POST(request: Request) {
       return NextResponse.json({
         answer: `Total budget across ${allCampaigns.length} campaign${allCampaigns.length === 1 ? '' : 's'}: ${formatCurrency(totalBudget)}. Total spend so far: ${formatCurrency(totalSpend)} (${totalBudget > 0 ? Math.round((totalSpend / totalBudget) * 100) : 0}% utilized).`,
         data: allCampaigns.map((c) => ({ name: c.name, budget: c.budget })),
+      } satisfies CopilotResponse);
+    }
+
+    // --- "compare events [year] vs [year]" ---
+    const eventCompareMatch = q.match(/compare\s+events?\s+(\d{4})\s+(?:vs\.?|versus|and|to|with)\s+(\d{4})/i)
+      || q.match(/(\d{4})\s+(?:vs\.?|versus|and|to)\s+(\d{4})\s+(?:events?|comparison)/i)
+      || q.match(/year.over.year|yoy|year\s+on\s+year/i);
+    if (eventCompareMatch) {
+      let priorYear: number;
+      let currentYear: number;
+      if (eventCompareMatch[1] && eventCompareMatch[2]) {
+        priorYear = parseInt(eventCompareMatch[1]);
+        currentYear = parseInt(eventCompareMatch[2]);
+      } else {
+        currentYear = new Date().getFullYear();
+        priorYear = currentYear - 1;
+      }
+
+      function normalizeTitle(title: string): string {
+        return title
+          .toLowerCase()
+          .replace(/\b(20\d{2}|'\d{2})\b/g, '')
+          .replace(/\b(fy\d{2,4})\b/gi, '')
+          .replace(/\b(h[12]|q[1-4])\b/gi, '')
+          .replace(/[^a-z0-9\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      const priorActivities = allActivities.filter(a => new Date(a.startDate).getFullYear() === priorYear);
+      const currentActivities = allActivities.filter(a => new Date(a.startDate).getFullYear() === currentYear);
+
+      const priorTotalCost = priorActivities.reduce((s, a) => s + Math.max(parseNum(a.actualCost), parseNum(a.cost)), 0);
+      const currentTotalCost = currentActivities.reduce((s, a) => s + Math.max(parseNum(a.actualCost), parseNum(a.cost)), 0);
+      const priorSaos = priorActivities.reduce((s, a) => s + parseNum(a.actualSaos), 0);
+      const currentSaos = currentActivities.reduce((s, a) => s + parseNum(a.actualSaos), 0);
+      const priorPipeline = priorActivities.reduce((s, a) => s + parseNum(a.pipelineGenerated), 0);
+      const currentPipeline = currentActivities.reduce((s, a) => s + parseNum(a.pipelineGenerated), 0);
+      const priorRoi = priorTotalCost > 0 ? priorPipeline / priorTotalCost : 0;
+      const currentRoi = currentTotalCost > 0 ? currentPipeline / currentTotalCost : 0;
+
+      const costChangePct = priorTotalCost > 0 ? ((currentTotalCost - priorTotalCost) / priorTotalCost * 100).toFixed(1) : 'N/A';
+
+      // Match events by normalized title
+      const priorMap = new Map(priorActivities.map(a => [normalizeTitle(a.title), a]));
+      const matchedCount = currentActivities.filter(a => priorMap.has(normalizeTitle(a.title))).length;
+      const newCount = currentActivities.length - matchedCount;
+      const retiredCount = priorActivities.filter(a => {
+        const key = normalizeTitle(a.title);
+        return !currentActivities.some(ca => normalizeTitle(ca.title) === key);
+      }).length;
+
+      return NextResponse.json({
+        answer: `Event Comparison: ${priorYear} vs ${currentYear}\n\n` +
+          `Events: ${priorActivities.length} (${priorYear}) vs ${currentActivities.length} (${currentYear}) \u2014 ${matchedCount} matched, ${newCount} new, ${retiredCount} retired\n` +
+          `Total Cost: ${formatCurrency(priorTotalCost)} \u2192 ${formatCurrency(currentTotalCost)} (${costChangePct}% change)\n` +
+          `SAOs: ${priorSaos} \u2192 ${currentSaos}\n` +
+          `Pipeline: ${formatCurrency(priorPipeline)} \u2192 ${formatCurrency(currentPipeline)}\n` +
+          `ROI: ${priorRoi.toFixed(1)}x \u2192 ${currentRoi.toFixed(1)}x\n\n` +
+          `For detailed event-by-event comparison, go to Dashboard \u2192 YoY Event Comparison tab.`,
+        data: [{
+          priorYear, currentYear,
+          priorEvents: priorActivities.length, currentEvents: currentActivities.length,
+          matched: matchedCount, new: newCount, retired: retiredCount,
+          priorCost: priorTotalCost, currentCost: currentTotalCost,
+          priorSaos, currentSaos, priorPipeline, currentPipeline,
+          priorRoi: parseFloat(priorRoi.toFixed(2)), currentRoi: parseFloat(currentRoi.toFixed(2)),
+        }],
       } satisfies CopilotResponse);
     }
 
