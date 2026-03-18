@@ -162,7 +162,7 @@ export function TimelineView({
           campaignId: '',
           color: null,
           cost: null,
-          currency: 'USD',
+          currency: 'US$',
           region: null,
           tags: null,
           description: null,
