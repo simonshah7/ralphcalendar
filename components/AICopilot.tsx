@@ -193,8 +193,8 @@ export function AICopilot({ calendarId, isOpen, onClose }: AICopilotProps) {
                   </svg>
                 </div>
                 <p className="text-sm text-foreground font-medium">Campaign Performance Copilot</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Ask questions about your campaigns, budgets, and performance metrics.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                  Ask questions in plain English about your budgets, spend, ROI, and campaign performance. Try a suggestion below or type your own question.
                 </p>
               </div>
 

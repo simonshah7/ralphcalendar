@@ -639,6 +639,19 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
 
       {/* Overview Tab */}
       {dashboardTab === 'overview' && <>
+      {/* KPI summary explanation */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>
+          <strong>Budget</strong> = sum of campaign budgets.{' '}
+          <strong>Planned</strong> = total estimated costs across activities.{' '}
+          <strong>Actual</strong> = what you've actually spent.{' '}
+          <strong>SAOs</strong> = Sales Accepted Opportunities.{' '}
+          <strong>Pipeline ROI</strong> = pipeline value divided by actual spend.
+        </span>
+      </div>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard

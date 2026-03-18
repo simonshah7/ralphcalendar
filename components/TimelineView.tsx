@@ -336,10 +336,15 @@ export function TimelineView({
   if (swimlanes.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2">No swimlanes yet</p>
+        <div className="text-center max-w-sm">
+          <div className="w-12 h-12 bg-warm-soft rounded-xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-warm" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M12 17.25h8.25" />
+            </svg>
+          </div>
+          <p className="text-base font-semibold text-foreground mb-1">No channels yet</p>
           <p className="text-sm text-muted-foreground">
-            Add swimlanes to start organizing your activities
+            Channels (swimlanes) organize your timeline into rows like &quot;Social Media&quot;, &quot;Email&quot;, or &quot;Paid Ads&quot;. Add one above to get started.
           </p>
         </div>
       </div>
@@ -432,55 +437,44 @@ export function TimelineView({
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Visible Fields
                   </label>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground opacity-50 cursor-not-allowed">
-                      <input type="checkbox" checked readOnly className="rounded" />
-                      <span>Title (Always shown)</span>
+                  <p className="text-[10px] text-muted-foreground mb-2">Choose which fields appear on activity cards.</p>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] text-muted-foreground/50">
+                      <div className="w-3.5 h-3.5 rounded border border-accent/30 bg-accent/10 flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-accent" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span>Title (always shown)</span>
                     </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Visible Fields
-                      </label>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] text-muted-foreground/50">
-                          <div className="w-3.5 h-3.5 rounded border border-accent/30 bg-accent/10 flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-accent" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    {AVAILABLE_FIELDS.map((field) => (
+                      <label key={field.id} className="flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted rounded-md cursor-pointer transition-colors">
+                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                          visibleFields.includes(field.id)
+                            ? 'border-accent bg-accent'
+                            : 'border-card-border'
+                        }`}>
+                          {visibleFields.includes(field.id) && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
-                          </div>
-                          <span>Title (always)</span>
+                          )}
                         </div>
-                        {AVAILABLE_FIELDS.map((field) => (
-                          <label key={field.id} className="flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted rounded-md cursor-pointer transition-colors">
-                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
-                              visibleFields.includes(field.id)
-                                ? 'border-accent bg-accent'
-                                : 'border-card-border'
-                            }`}>
-                              {visibleFields.includes(field.id) && (
-                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={visibleFields.includes(field.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setVisibleFields([...visibleFields, field.id]);
-                                } else {
-                                  setVisibleFields(visibleFields.filter(f => f !== field.id));
-                                }
-                              }}
-                              className="sr-only"
-                            />
-                            <span className="text-foreground">{field.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                        <input
+                          type="checkbox"
+                          checked={visibleFields.includes(field.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setVisibleFields([...visibleFields, field.id]);
+                            } else {
+                              setVisibleFields(visibleFields.filter(f => f !== field.id));
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        <span className="text-foreground">{field.label}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>

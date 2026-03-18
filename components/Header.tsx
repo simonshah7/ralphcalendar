@@ -67,12 +67,12 @@ export function Header({
   onSeedData,
   isSeedingData,
 }: HeaderProps) {
-  const views: { key: ViewType; label: string }[] = [
-    { key: 'timeline', label: 'Timeline' },
-    { key: 'calendar', label: 'Calendar' },
-    { key: 'table', label: 'Table' },
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'events', label: 'Events' },
+  const views: { key: ViewType; label: string; description: string }[] = [
+    { key: 'timeline', label: 'Timeline', description: 'Gantt-style timeline with drag-to-create activities' },
+    { key: 'calendar', label: 'Calendar', description: 'Month grid view of all activities' },
+    { key: 'table', label: 'Table', description: 'Spreadsheet view with inline editing' },
+    { key: 'dashboard', label: 'Dashboard', description: 'Budget, SAO, and performance analytics' },
+    { key: 'events', label: 'Events', description: 'Manage events, attendees, and checklists' },
   ];
 
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -143,6 +143,7 @@ export function Header({
                 key={view.key}
                 ref={(el) => { tabRefs.current[view.key] = el; }}
                 onClick={() => onViewChange(view.key)}
+                title={view.description}
                 className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
                   currentView === view.key
                     ? 'text-foreground'
@@ -166,7 +167,7 @@ export function Header({
                     ? 'text-foreground bg-card shadow-sm'
                     : 'text-muted-foreground'
                 }`}
-                title={view.label}
+                title={view.description}
               >
                 {VIEW_ICONS[view.key]}
               </button>
@@ -195,7 +196,7 @@ export function Header({
               onClick={onOpenBriefGenerator}
               disabled={!currentCalendar}
               className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-              title="AI Campaign Brief Generator"
+              title="AI Brief: Describe your campaign goal and let AI generate a set of activities for you"
             >
               <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -209,7 +210,7 @@ export function Header({
               onClick={onToggleCopilot}
               disabled={!currentCalendar}
               className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-              title="AI Copilot"
+              title="Copilot: Ask questions about budgets, ROI, and campaign performance in natural language"
             >
               <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -223,7 +224,7 @@ export function Header({
               onClick={onToggleVoiceAgent}
               disabled={!currentCalendar}
               className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-              title="Voice Agent"
+              title="Voice: Use voice commands to create activities, switch views, and control the app hands-free"
             >
               <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />

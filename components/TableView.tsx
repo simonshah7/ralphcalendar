@@ -425,7 +425,13 @@ export function TableView({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-end px-4 py-2 border-b border-card-border bg-surface">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-surface">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Click a row to open details. Edit fields directly in the table. Double-click titles to rename. Drag column headers to reorder.</span>
+        </div>
         {/* Column settings button */}
         <div className="relative" data-column-menu>
           <button
@@ -554,122 +560,15 @@ export function TableView({
                 }`}
                 onClick={() => onActivityClick(activity)}
               >
-                <td className="px-4 py-2.5">
-                  {editingCell?.id === activity.id && editingCell?.field === 'title' ? (
-                    <input
-                      type="text"
-                      defaultValue={activity.title}
-                      autoFocus
-                      className={`w-full ${inputClass} ring-1 ring-accent/40`}
-                      onClick={(e) => e.stopPropagation()}
-                      onBlur={(e) => handleInlineEdit(activity.id, 'title', e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleInlineEdit(activity.id, 'title', e.currentTarget.value);
-                        else if (e.key === 'Escape') setEditingCell(null);
-                      }}
-                    />
-                  ) : (
-                    <span
-                      className="text-sm font-medium text-foreground"
-                      onDoubleClick={(e) => { e.stopPropagation(); setEditingCell({ id: activity.id, field: 'title' }); }}
-                    >
-                      {activity.title}
-                    </span>
-                  )}
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: statuses.find(s => s.id === activity.statusId)?.color }} />
-                    <select
-                      value={activity.statusId || ''}
-                      onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
-                      className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                    >
-                      {statuses.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="date"
-                    value={activity.startDate}
-                    onChange={(e) => handleInlineEdit(activity.id, 'startDate', e.target.value)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                  />
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="date"
-                    value={activity.endDate}
-                    onChange={(e) => handleInlineEdit(activity.id, 'endDate', e.target.value)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                  />
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={activity.swimlaneId}
-                    onChange={(e) => handleInlineEdit(activity.id, 'swimlaneId', e.target.value)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
+                {visibleColumns.map((col) => (
+                  <td
+                    key={col.id}
+                    className={`px-4 py-2.5 ${col.id === 'cost' ? 'text-right' : ''}`}
+                    onClick={col.id !== 'title' ? (e) => e.stopPropagation() : undefined}
                   >
-                    {swimlanes.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={activity.campaignId || ''}
-                    onChange={(e) => handleInlineEdit(activity.id, 'campaignId', e.target.value || null)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                  >
-                    <option value="">None</option>
-                    {campaigns.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </td>
-
-                <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={activity.cost || '0'}
-                    onChange={(e) => handleInlineEdit(activity.id, 'cost', e.target.value)}
-                    className={`text-sm w-24 text-right ${inputClass} border-transparent bg-transparent hover:bg-muted tabular-nums`}
-                  />
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={activity.currency || 'USD'}
-                    onChange={(e) => handleInlineEdit(activity.id, 'currency', e.target.value)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                  >
-                    {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </td>
-
-                <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={activity.region || 'US'}
-                    onChange={(e) => handleInlineEdit(activity.id, 'region', e.target.value)}
-                    className={`text-sm ${inputClass} border-transparent bg-transparent hover:bg-muted`}
-                  >
-                    {REGIONS.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </td>
+                    {renderCell(col, activity)}
+                  </td>
+                ))}
               </tr>
             ))}
 
@@ -677,11 +576,14 @@ export function TableView({
       </table>
 
       {activities.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-64 gap-2">
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
           <svg className="w-10 h-10 text-muted-foreground/30" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
           </svg>
-          <p className="text-sm text-muted-foreground">No activities found</p>
+          <p className="text-sm font-medium text-muted-foreground">No activities found</p>
+          <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+            Create your first activity using the &quot;New Activity&quot; button in the header, or switch to Timeline view and drag to create one.
+          </p>
         </div>
       )}
       </div>
