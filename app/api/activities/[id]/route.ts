@@ -106,7 +106,7 @@ export async function PUT(
       if (currency && !isValidCurrency(currency)) {
         return NextResponse.json({ error: 'Invalid currency' }, { status: 400 });
       }
-      updates.currency = currency || 'US$';
+      updates.currency = currency || 'USD';
     }
 
     if (region !== undefined) {

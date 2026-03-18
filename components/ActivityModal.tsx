@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { CURRENCIES, REGIONS, CURRENCY_LABELS } from '@/lib/utils';
 import { CampaignDropdown } from './CampaignDropdown';
 import { StatusDropdown } from './StatusDropdown';
 import { SwimlaneDropdown } from './SwimlaneDropdown';
@@ -84,7 +84,7 @@ export function ActivityModal({
     description: '',
     cost: 0,
     actualCost: 0,
-    currency: 'US$',
+    currency: 'USD',
     region: 'US',
     tags: '',
     color: '',
@@ -113,7 +113,7 @@ export function ActivityModal({
         description: activity.description || '',
         cost: Number(activity.cost) || 0,
         actualCost: Number(activity.actualCost) || 0,
-        currency: activity.currency || 'US$',
+        currency: activity.currency || 'USD',
         region: activity.region || 'US',
         tags: activity.tags || '',
         color: activity.color || '',
@@ -134,7 +134,7 @@ export function ActivityModal({
         description: defaults?.description || '',
         cost: Number(defaults?.cost) || 0,
         actualCost: 0,
-        currency: defaults?.currency || 'US$',
+        currency: defaults?.currency || 'USD',
         region: defaults?.region || 'US',
         tags: defaults?.tags || '',
         color: defaults?.color || '',
@@ -411,7 +411,7 @@ export function ActivityModal({
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {CURRENCY_LABELS[c] || c}
                   </option>
                 ))}
               </select>

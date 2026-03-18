@@ -14,8 +14,7 @@ import { ExportModal } from '@/components/ExportModal';
 import { AICopilot } from '@/components/AICopilot';
 import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
-import * as htmlToImage from 'html-to-image';
-import PptxGenJS from 'pptxgenjs';
+import { exportToPNG, exportToCSV } from '@/lib/export';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard';
 
@@ -138,19 +137,15 @@ export default function Home() {
     if (currentIndex === -1) return;
     const [movedSwimlane] = swimlanes.splice(currentIndex, 1);
     swimlanes.splice(newIndex, 0, movedSwimlane);
-    const updates = swimlanes.map((s, idx) => ({ id: s.id, sortOrder: idx }));
+    const order = swimlanes.map((s, idx) => ({ id: s.id, sortOrder: idx }));
 
     try {
-      await Promise.all(
-        updates.map((update) =>
-          fetch(`/api/swimlanes/${update.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sortOrder: update.sortOrder }),
-          })
-        )
-      );
-      fetchCalendarData(currentCalendar.id);
+      const response = await fetch('/api/swimlanes/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order }),
+      });
+      if (response.ok) fetchCalendarData(currentCalendar.id);
     } catch (error) {
       console.error('Failed to reorder swimlanes:', error);
     }
@@ -184,7 +179,11 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
-    if (response.ok && currentCalendar) fetchCalendarData(currentCalendar.id);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || 'Failed to update activity');
+    }
+    if (currentCalendar) fetchCalendarData(currentCalendar.id);
   };
 
   const handleActivityClick = (activity: Activity) => {
@@ -203,7 +202,7 @@ export default function Home() {
       description: defaults?.description || '',
       cost: Number(defaults?.cost) || 0,
       actualCost: 0,
-      currency: defaults?.currency || 'US$',
+      currency: defaults?.currency || 'USD',
       region: defaults?.region || 'US',
       tags: defaults?.tags || '',
       color: defaults?.color || '',
@@ -230,24 +229,21 @@ export default function Home() {
     const defaultStatusId = currentCalendar.statuses[0]?.id || '';
     if (!defaultSwimlaneId) return;
 
-    for (const ga of generatedActivities) {
-      // Try to match swimlane suggestion to an existing swimlane
+    const items = generatedActivities.map((ga) => {
       const matchedSwimlane = currentCalendar.swimlanes.find(
         (s) => s.name.toLowerCase() === ga.swimlaneSuggestion.toLowerCase()
       );
-      const swimlaneId = matchedSwimlane?.id || defaultSwimlaneId;
-
-      const activityData: ActivityFormData = {
+      return {
         title: ga.title,
         startDate: ga.startDate,
         endDate: ga.endDate,
         statusId: defaultStatusId,
-        swimlaneId,
+        swimlaneId: matchedSwimlane?.id || defaultSwimlaneId,
         campaignId: null,
         description: ga.description,
         cost: ga.estimatedCost,
         actualCost: 0,
-        currency: 'US$',
+        currency: 'USD',
         region: 'US',
         tags: '',
         color: '',
@@ -258,12 +254,21 @@ export default function Home() {
         revenueGenerated: 0,
         attachments: [],
       };
+    });
 
-      try {
-        await handleActivitySubmit(activityData);
-      } catch (error) {
-        console.error('Failed to create brief activity:', error);
+    try {
+      const response = await fetch('/api/activities/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendarId: currentCalendar.id, items }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.error('Failed to batch create activities:', err.error);
       }
+      fetchCalendarData(currentCalendar.id);
+    } catch (error) {
+      console.error('Failed to apply brief:', error);
     }
     setShowBriefGenerator(false);
   };
@@ -294,55 +299,26 @@ export default function Home() {
   };
 
   const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv' | 'pptx') => {
-    if (exportFormat === 'csv') { exportToCSV(startDate, endDate); return; }
+    if (exportFormat === 'csv') {
+      if (!currentCalendar) return;
+      exportToCSV(
+        filteredActivities,
+        currentCalendar.statuses,
+        currentCalendar.swimlanes,
+        currentCalendar.campaigns,
+        startDate,
+        endDate
+      );
+      return;
+    }
     const elementToCapture = mainContentRef.current;
     if (!elementToCapture) { alert('Unable to export: content not ready'); return; }
     try {
-      const dataUrl = await htmlToImage.toPng(elementToCapture, {
-        backgroundColor: document.documentElement.classList.contains('dark') ? '#0c0a09' : '#fafaf9',
-        quality: 1,
-        style: { transform: 'scale(1)', transformOrigin: 'top left' }
-      });
-      const link = document.createElement('a');
-      link.download = `campaignos-${exportType}-export-${startDate}-to-${endDate}.png`;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await exportToPNG(elementToCapture, exportType, startDate, endDate);
     } catch (error) {
       console.error('Export failed:', error);
       alert('Export failed. Please try again.');
     }
-  };
-
-  const exportToCSV = (startDate: string, endDate: string) => {
-    if (!currentCalendar) return;
-    const activitiesToExport = filteredActivities.filter(a => a.startDate <= endDate && a.endDate >= startDate);
-    const headers = ['Title', 'Start Date', 'End Date', 'Status', 'Swimlane', 'Campaign', 'Cost', 'Currency', 'Region', 'Tags', 'Description'];
-    const escapeCSV = (val: any): string => {
-      if (val === null || val === undefined) return '""';
-      const str = String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) return `"${str.replace(/"/g, '""')}"`;
-      return str;
-    };
-    const csvContent = [
-      headers.join(','),
-      ...activitiesToExport.map(a => {
-        const status = currentCalendar.statuses.find(s => s.id === a.statusId)?.name || '';
-        const swimlane = currentCalendar.swimlanes.find(s => s.id === a.swimlaneId)?.name || '';
-        const campaign = currentCalendar.campaigns.find(c => c.id === a.campaignId)?.name || 'N/A';
-        return [escapeCSV(a.title), escapeCSV(a.startDate), escapeCSV(a.endDate), escapeCSV(status), escapeCSV(swimlane), escapeCSV(campaign), escapeCSV(a.cost), escapeCSV(a.currency), escapeCSV(a.region || ''), escapeCSV(a.tags || ''), escapeCSV(a.description || '')].join(',');
-      })
-    ].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `campaignos-activities-${startDate}-to-${endDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const filteredActivities = useMemo(() => currentCalendar?.activities.filter((activity) => {

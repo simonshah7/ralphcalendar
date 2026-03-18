@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       description: descriptionValue,
       cost: cost !== undefined ? String(cost) : '0',
       actualCost: actualCost !== undefined ? String(actualCost) : '0',
-      currency: currency || 'US$',
+      currency: currency || 'USD',
       region: region || 'US',
       tags: tagsValue,
       color: colorValue,
