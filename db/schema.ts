@@ -221,7 +221,7 @@ export const events = pgTable('events', {
   priorEventId: uuid('prior_event_id'),
   cost: numeric('cost').default('0'),
   actualCost: numeric('actual_cost').default('0'),
-  currency: currencyEnum('currency').default('US$'),
+  currency: currencyEnum('currency').default('USD'),
   region: regionEnum('region').default('US'),
   expectedSaos: numeric('expected_saos').default('0'),
   actualSaos: numeric('actual_saos').default('0'),
