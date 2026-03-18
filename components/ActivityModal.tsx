@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
-import { CURRENCIES, REGIONS, CURRENCY_LABELS } from '@/lib/utils';
+import { CURRENCIES, REGIONS, CURRENCY_LABELS, formatCurrency } from '@/lib/utils';
 import { CampaignDropdown } from './CampaignDropdown';
 import { StatusDropdown } from './StatusDropdown';
 import { SwimlaneDropdown } from './SwimlaneDropdown';
