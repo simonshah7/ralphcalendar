@@ -41,6 +41,7 @@ export default function Home() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
   const [showBriefGenerator, setShowBriefGenerator] = useState(false);
+  const [isSeedingData, setIsSeedingData] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityDefaults, setActivityDefaults] = useState<{
     swimlaneId?: string;
@@ -273,6 +274,25 @@ export default function Home() {
     setShowActivityModal(true);
   };
 
+  const handleSeedData = async (action: 'seed' | 'reset' | 'clear') => {
+    setIsSeedingData(true);
+    try {
+      const method = action === 'clear' ? 'DELETE' : action === 'reset' ? 'PUT' : 'POST';
+      const response = await fetch('/api/seed', { method });
+      if (!response.ok) throw new Error('Failed to ' + action);
+      // Refresh everything
+      setCurrentCalendar(null);
+      setSearchQuery('');
+      setSelectedCampaignId(null);
+      setSelectedStatusId(null);
+      await fetchCalendars();
+    } catch (error) {
+      console.error('Seed action failed:', error);
+    } finally {
+      setIsSeedingData(false);
+    }
+  };
+
   const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv' | 'pptx') => {
     if (exportFormat === 'csv') { exportToCSV(startDate, endDate); return; }
     const elementToCapture = mainContentRef.current;
@@ -367,6 +387,8 @@ export default function Home() {
           onExport={() => { }}
           onToggleCopilot={() => { }}
           onOpenBriefGenerator={() => { }}
+          onSeedData={handleSeedData}
+          isSeedingData={isSeedingData}
         />
         <div className="flex-1 flex items-center justify-center">
           <motion.div
@@ -428,6 +450,8 @@ export default function Home() {
         onExport={() => setShowExportModal(true)}
         onToggleCopilot={() => setShowCopilot(!showCopilot)}
         onOpenBriefGenerator={() => setShowBriefGenerator(true)}
+        onSeedData={handleSeedData}
+        isSeedingData={isSeedingData}
       />
 
       <FilterBar
