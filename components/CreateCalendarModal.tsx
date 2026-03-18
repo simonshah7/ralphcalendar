@@ -45,20 +45,23 @@ export function CreateCalendarModal({ isOpen, onClose, onSubmit }: CreateCalenda
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
       <div className="relative bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-card-border">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
-          Create Calendar
+        <h2 className="text-xl font-semibold text-foreground mb-1">
+          Create Workspace
         </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          A workspace is a separate calendar for organizing campaigns. Use different workspaces for teams, quarters, or regions.
+        </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
-              Calendar Name
+              Workspace Name
             </label>
             <input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My Marketing Calendar"
+              placeholder='e.g. "Q2 2026 Marketing" or "EMEA Campaigns"'
               className="w-full px-3 py-2 border border-card-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent-purple"
               autoFocus
             />

@@ -435,14 +435,23 @@ export default function Home() {
             <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
               Welcome to CampaignOS
             </h1>
-            <p className="text-muted-foreground mb-8 leading-relaxed">
-              Plan, visualize, and manage your marketing campaigns with an intuitive timeline. Create your first calendar to get started.
+            <p className="text-muted-foreground mb-6 leading-relaxed">
+              Plan, visualize, and manage your marketing campaigns with an intuitive timeline.
             </p>
+            <div className="text-left bg-muted/50 rounded-lg p-4 mb-6 space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Here&apos;s how it works:</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs">
+                <li><strong>Create a workspace</strong> &mdash; one per team, quarter, or region</li>
+                <li><strong>Add channels</strong> &mdash; like Social, Email, Paid, Events</li>
+                <li><strong>Plan activities</strong> &mdash; drag on the timeline or click &quot;New Activity&quot;</li>
+                <li><strong>Track performance</strong> &mdash; budgets, SAOs, and pipeline in the Dashboard</li>
+              </ol>
+            </div>
             <button
               onClick={() => setShowCreateCalendar(true)}
               className="px-6 py-2.5 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors shadow-sm shadow-accent/20"
             >
-              Create Your First Calendar
+              Create Your First Workspace
             </button>
           </motion.div>
         </div>
@@ -514,15 +523,15 @@ export default function Home() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-foreground mb-1.5">
-                Add Channels to Get Started
+                Add Your First Channel
               </h2>
               <p className="text-sm text-muted-foreground mb-5">
-                Channels help organize your activities into marketing categories like Social, Email, or Paid.
+                Channels are the rows on your timeline. Each one represents a marketing category. Type a name below and press Enter to add it.
               </p>
               <div className="flex flex-col gap-2 max-w-xs mx-auto">
                 <input
                   type="text"
-                  placeholder="e.g. Social Media"
+                  placeholder="e.g. Social Media, Email, Paid Ads, Events"
                   className="px-4 py-2 border border-card-border rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-accent/40"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -532,7 +541,7 @@ export default function Home() {
                   }}
                 />
                 <p className="text-xs text-muted-foreground/60">
-                  Press Enter to add
+                  Press Enter to add. You can add more channels later.
                 </p>
               </div>
             </motion.div>

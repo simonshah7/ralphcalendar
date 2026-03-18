@@ -71,9 +71,12 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-card-border">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
+        <h2 className="text-xl font-semibold text-foreground mb-1">
           Export Data
         </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Download your campaign data as an image or spreadsheet. Choose a view, format, and date range below.
+        </p>
 
         <div className="space-y-6">
           {/* Export View */}
@@ -148,13 +151,13 @@ export function ExportModal({ isOpen, onClose, onExport, currentView }: ExportMo
                 onClick={() => setQuickRange('quarter')}
                 className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                Cancel
+                This Quarter
               </button>
               <button
                 onClick={() => setQuickRange('year')}
                 className="px-3 py-1.5 text-sm bg-muted text-foreground rounded hover:opacity-80"
               >
-                Export {exportFormat.toUpperCase()}
+                This Year
               </button>
               <button
                 onClick={() => setQuickRange('all')}

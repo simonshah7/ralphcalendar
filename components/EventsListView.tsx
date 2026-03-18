@@ -296,8 +296,8 @@ export function EventsListView({ events, statuses, campaigns, onEventClick, onCr
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
                         <span className="text-xs">{event.attendeeCount}</span>
-                        <span className="text-[10px] text-muted-foreground/60 ml-1">
-                          ({event.internalCount}i + {event.customerCount}c)
+                        <span className="text-[10px] text-muted-foreground/60 ml-1" title={`${event.internalCount} internal + ${event.customerCount} customer attendees`}>
+                          ({event.internalCount} int + {event.customerCount} cust)
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums text-xs text-muted-foreground">

@@ -206,7 +206,7 @@ export function ActivityModal({
     if (!formData.endDate) newErrors.endDate = 'End date is required';
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) newErrors.endDate = 'End date must be on or after start date';
     if (!formData.statusId) newErrors.statusId = 'Status is required';
-    if (!formData.swimlaneId) newErrors.swimlaneId = 'Channel is required';
+    if (!formData.swimlaneId) newErrors.swimlaneId = 'Please select a channel';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -285,32 +285,39 @@ export function ActivityModal({
             </div>
 
             {/* Tab Navigation */}
-            <div className="px-4 sm:px-6 pt-3 flex gap-1 border-b border-card-border overflow-x-auto">
-              {(['details', 'metrics', 'documents'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-colors -mb-px ${
-                    activeTab === tab
-                      ? 'bg-card text-accent-purple border border-card-border border-b-card'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {tab === 'details' && 'Details'}
-                  {tab === 'metrics' && 'Metrics & SAOs'}
-                  {tab === 'documents' && (
-                    <span className="flex items-center gap-1.5">
-                      Documents
-                      {formData.attachments.length > 0 && (
-                        <span className="bg-accent-purple/20 text-accent-purple px-1.5 py-0.5 rounded-full text-[10px]">
-                          {formData.attachments.length}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div className="px-4 sm:px-6 pt-3 border-b border-card-border overflow-x-auto">
+              <div className="flex gap-1">
+                {(['details', 'metrics', 'documents'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-colors -mb-px ${
+                      activeTab === tab
+                        ? 'bg-card text-accent-purple border border-card-border border-b-card'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {tab === 'details' && 'Details'}
+                    {tab === 'metrics' && 'Metrics & SAOs'}
+                    {tab === 'documents' && (
+                      <span className="flex items-center gap-1.5">
+                        Documents
+                        {formData.attachments.length > 0 && (
+                          <span className="bg-accent-purple/20 text-accent-purple px-1.5 py-0.5 rounded-full text-[10px]">
+                            {formData.attachments.length}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1.5 mb-1">
+                {activeTab === 'details' && 'Core info: title, dates, channel, campaign, and description. Fields marked * are required.'}
+                {activeTab === 'metrics' && 'Track budget, SAO targets, pipeline value, and ROI for this activity.'}
+                {activeTab === 'documents' && 'Attach contracts, briefs, creative assets, or any supporting files.'}
+              </p>
             </div>
 
           <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 space-y-4">
@@ -387,7 +394,7 @@ export function ActivityModal({
 
             <div className="col-span-6 sm:col-span-3">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                Swimlane *
+                Channel *
               </label>
               <SwimlaneDropdown
                 swimlanes={swimlanes}
@@ -462,8 +469,9 @@ export function ActivityModal({
 
             <div className="col-span-12 sm:col-span-4">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                Color Override
+                Color
               </label>
+              <p className="text-[10px] text-muted-foreground mb-1">Optional. Overrides the status color on the timeline.</p>
               <div className="flex items-center gap-2">
                 <input
                   type="color"

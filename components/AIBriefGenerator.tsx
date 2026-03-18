@@ -182,7 +182,7 @@ export function AIBriefGenerator({
             <div>
               <h2 className="text-lg font-bold text-foreground">AI Brief Generator</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {step === 'input' ? 'Describe your campaign goals' : 'Review and customize the plan'}
+                {step === 'input' ? 'Describe your campaign goal and AI will generate a plan of activities with suggested channels, dates, and costs.' : 'Review the generated activities below. Edit any details, uncheck ones you don\'t need, then apply to your calendar.'}
               </p>
             </div>
           </div>

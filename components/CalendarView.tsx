@@ -88,12 +88,20 @@ export function CalendarView({
             </svg>
           </button>
         </div>
-        <button
-          onClick={navigateToday}
-          className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors"
-        >
-          Today
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Click any day to add an activity</span>
+          </div>
+          <button
+            onClick={navigateToday}
+            className="px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-md hover:bg-card-hover transition-colors"
+          >
+            Today
+          </button>
+        </div>
       </div>
 
       {/* Calendar Grid */}
