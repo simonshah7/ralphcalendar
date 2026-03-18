@@ -36,14 +36,28 @@
 
 .dark {
   --background: #050505;
-  --foreground: #ffffff;
+  --foreground: #f1f5f9;
   --muted: #1e1b2e;
-  --muted-foreground: #94a3b8;
+  --muted-foreground: #a1a1b5;
   --accent-purple: #c084fc;
   --accent-purple-btn: #7c3aed;
   --accent-yellow: #facc15;
-  --card: #120f1d;
+  --card: #0d0b14;
   --card-border: #2d2a3d;
+  --card-hover: #1a1628;
+  --surface: #12101c;
+  --surface-raised: #1a1628;
+  --danger: #ef4444;
+  --danger-soft: #3b1114;
+  --ring: #c084fc33;
+  --sidebar-bg: #0a0814;
+  --tooltip-bg: #1e1b2e;
+  --tooltip-fg: #e2e8f0;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --glass: rgba(13, 11, 20, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --today-line: #ef4444;
+  --skeleton: #2d2a3d;
 }
 
 @theme inline {
@@ -68,9 +82,8 @@
   --color-glass-border: var(--glass-border);
   --color-today-line: var(--today-line);
   --color-skeleton: var(--skeleton);
-  /* Keep old names for backward compatibility during migration */
-  --color-accent-purple: var(--accent);
-  --color-accent-yellow: var(--warm);
+  --color-tooltip-bg: var(--tooltip-bg);
+  --color-tooltip-fg: var(--tooltip-fg);
 }
 
 body {

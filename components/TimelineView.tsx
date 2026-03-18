@@ -723,7 +723,7 @@ export function TimelineView({
                 >
                   {isEmpty && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-xs text-muted-foreground opacity-70">
+                      <span className="text-xs text-muted-foreground/50">
                         Click and drag to create an activity
                       </span>
                     </div>
