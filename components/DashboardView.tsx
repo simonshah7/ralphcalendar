@@ -287,6 +287,7 @@ function ColumnToggle({
 // ─── Main Component ─────────────────────────────────────
 
 export function DashboardView({ activities, campaigns, swimlanes, statuses, calendarId }: DashboardViewProps) {
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('overview');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [visibleColumns, setVisibleColumns] = useState<Set<SortField>>(
