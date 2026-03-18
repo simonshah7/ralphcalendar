@@ -97,6 +97,7 @@ export const campaigns = pgTable('campaigns', {
   calendarId: uuid('calendar_id')
     .notNull()
     .references(() => calendars.id, { onDelete: 'cascade' }),
+  budget: numeric('budget').default('0'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -133,10 +134,13 @@ export const activities = pgTable('activities', {
   description: text('description').default(''),
   tags: text('tags').default(''),
   cost: numeric('cost').default('0'),
+  actualCost: numeric('actual_cost').default('0'),
   currency: currencyEnum('currency').default('US$'),
   region: regionEnum('region').default('US'),
   expectedSaos: numeric('expected_saos').default('0'),
   actualSaos: numeric('actual_saos').default('0'),
+  pipelineGenerated: numeric('pipeline_generated').default('0'),
+  revenueGenerated: numeric('revenue_generated').default('0'),
   dependencies: jsonb('dependencies').default([]),
   attachments: jsonb('attachments').default([]),
   color: text('color'),

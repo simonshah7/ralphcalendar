@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { calendarId, name } = body;
+    const { calendarId, name, budget } = body;
 
     if (!calendarId) {
       return NextResponse.json({ error: 'calendarId is required' }, { status: 400 });
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       .values({
         calendarId,
         name: name.trim(),
+        budget: budget !== undefined ? String(budget) : '0',
       })
       .returning();
 

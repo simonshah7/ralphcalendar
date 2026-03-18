@@ -9,15 +9,27 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name } = body;
+    const { name, budget } = body;
 
-    if (!name || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    const updates: Record<string, unknown> = {};
+
+    if (name !== undefined) {
+      if (name.trim().length === 0) {
+        return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+      }
+      updates.name = name.trim();
+    }
+    if (budget !== undefined) {
+      updates.budget = String(budget);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
     const [updated] = await db
       .update(campaigns)
-      .set({ name: name.trim() })
+      .set(updates)
       .where(eq(campaigns.id, id))
       .returning();
 

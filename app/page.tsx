@@ -6,13 +6,16 @@ import { FilterBar } from '@/components/FilterBar';
 import { TimelineView } from '@/components/TimelineView';
 import { CalendarView } from '@/components/CalendarView';
 import { TableView } from '@/components/TableView';
+import { DashboardView } from '@/components/DashboardView';
 import { ActivityModal, ActivityFormData } from '@/components/ActivityModal';
 import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
+import { AICopilot } from '@/components/AICopilot';
+import { AIBriefGenerator } from '@/components/AIBriefGenerator';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
 import * as htmlToImage from 'html-to-image';
 
-type ViewType = 'timeline' | 'calendar' | 'table';
+type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard';
 
 interface CalendarData extends Calendar {
   statuses: Status[];
@@ -36,6 +39,8 @@ export default function Home() {
   const [showCreateCalendar, setShowCreateCalendar] = useState(false);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showCopilot, setShowCopilot] = useState(false);
+  const [showBriefGenerator, setShowBriefGenerator] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityDefaults, setActivityDefaults] = useState<{
     swimlaneId?: string;
@@ -229,15 +234,20 @@ export default function Home() {
       startDate,
       endDate,
       statusId: defaults?.statusId || currentCalendar?.statuses[0]?.id || '',
-
       swimlaneId,
       campaignId: defaults?.campaignId || null,
       description: defaults?.description || '',
       cost: Number(defaults?.cost) || 0,
+      actualCost: 0,
       currency: defaults?.currency || 'US$',
       region: defaults?.region || 'US',
       tags: defaults?.tags || '',
       color: defaults?.color || '',
+      expectedSaos: 0,
+      actualSaos: 0,
+      pipelineGenerated: 0,
+      revenueGenerated: 0,
+      attachments: [],
     };
 
     if (silent) {
@@ -257,6 +267,53 @@ export default function Home() {
     setEditingActivity(null);
     setActivityDefaults({ startDate: date, endDate: date });
     setShowActivityModal(true);
+  };
+
+  const handleApplyBrief = async (generatedActivities: Array<{
+    title: string;
+    startDate: string;
+    endDate: string;
+    estimatedCost: number;
+    swimlaneSuggestion: string;
+    description: string;
+  }>) => {
+    if (!currentCalendar) return;
+
+    for (const ga of generatedActivities) {
+      // Match swimlane by name suggestion
+      const swimlane = currentCalendar.swimlanes.find(
+        (s) => s.name.toLowerCase().includes(ga.swimlaneSuggestion.toLowerCase())
+      ) || currentCalendar.swimlanes[0];
+
+      if (!swimlane) continue;
+
+      const activityData: ActivityFormData = {
+        title: ga.title,
+        startDate: ga.startDate,
+        endDate: ga.endDate,
+        statusId: currentCalendar.statuses[0]?.id || '',
+        swimlaneId: swimlane.id,
+        campaignId: null,
+        description: ga.description,
+        cost: ga.estimatedCost,
+        actualCost: 0,
+        currency: 'US$',
+        region: 'US',
+        tags: '',
+        color: '',
+        expectedSaos: 0,
+        actualSaos: 0,
+        pipelineGenerated: 0,
+        revenueGenerated: 0,
+        attachments: [],
+      };
+
+      try {
+        await handleActivitySubmit(activityData);
+      } catch (error) {
+        console.error('Failed to create activity from brief:', error);
+      }
+    }
   };
 
   const handleExport = async (startDate: string, endDate: string, exportType: 'timeline' | 'calendar' | 'table', exportFormat: 'png' | 'csv') => {
@@ -401,6 +458,8 @@ export default function Home() {
           onCreateCalendar={() => setShowCreateCalendar(true)}
           onCreateActivity={() => { }}
           onExport={() => { }}
+          onToggleCopilot={() => { }}
+          onOpenBriefGenerator={() => { }}
         />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto px-4">
@@ -466,6 +525,8 @@ export default function Home() {
           setShowActivityModal(true);
         }}
         onExport={() => setShowExportModal(true)}
+        onToggleCopilot={() => setShowCopilot(!showCopilot)}
+        onOpenBriefGenerator={() => setShowBriefGenerator(true)}
       />
 
       <FilterBar
@@ -544,6 +605,15 @@ export default function Home() {
                 onActivityUpdate={handleActivityUpdate}
               />
             )}
+
+            {currentView === 'dashboard' && currentCalendar && (
+              <DashboardView
+                activities={filteredActivities}
+                campaigns={currentCalendar.campaigns}
+                swimlanes={currentCalendar.swimlanes}
+                statuses={currentCalendar.statuses}
+              />
+            )}
           </>
         )}
       </main>
@@ -583,6 +653,26 @@ export default function Home() {
         onClose={() => setShowExportModal(false)}
         onExport={handleExport}
       />
+
+      {/* AI Copilot */}
+      {currentCalendar && (
+        <AICopilot
+          calendarId={currentCalendar.id}
+          isOpen={showCopilot}
+          onClose={() => setShowCopilot(false)}
+        />
+      )}
+
+      {/* AI Brief Generator */}
+      {currentCalendar && (
+        <AIBriefGenerator
+          isOpen={showBriefGenerator}
+          calendarId={currentCalendar.id}
+          swimlanes={currentCalendar.swimlanes.map((s) => ({ id: s.id, name: s.name }))}
+          onClose={() => setShowBriefGenerator(false)}
+          onApply={handleApplyBrief}
+        />
+      )}
     </div>
   );
 }
