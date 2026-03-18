@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
-import { addDays, getDaysBetween, getContrastTextColor } from '@/lib/utils';
+import { addDays, getDaysBetween, getContrastTextColor, formatCurrency } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
 
 interface TimelineViewProps {
@@ -798,7 +798,7 @@ export function TimelineView({
                                   )}
                                   {visibleFields.includes('cost') && activity.cost !== null && (
                                     <span className="text-[10px] font-medium" style={{ color: textColor }}>
-                                      {activity.currency} {activity.cost.toLocaleString()}
+                                      {formatCurrency(activity.cost, activity.currency || 'US$')}
                                     </span>
                                   )}
                                   {visibleFields.includes('region') && activity.region && (
