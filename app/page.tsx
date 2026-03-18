@@ -483,7 +483,7 @@ export default function Home() {
         isSeedingData={isSeedingData}
       />
 
-      {currentView !== 'dashboard' && (
+      {currentView !== 'dashboard' && currentView !== 'events' && (
         <FilterBar
           campaigns={currentCalendar?.campaigns || []}
           statuses={currentCalendar?.statuses || []}
