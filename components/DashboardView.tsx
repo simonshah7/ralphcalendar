@@ -562,15 +562,16 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
     }
   }
 
-  function SortHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
+  function SortHeader({ field, children, align }: { field: SortField; children: React.ReactNode; align?: 'left' | 'right' }) {
     if (!visibleColumns.has(field)) return null;
     const active = sortField === field;
+    const textAlign = align === 'right' ? 'text-right' : 'text-left';
     return (
       <th
-        className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none whitespace-nowrap"
+        className={`px-3 py-2.5 ${textAlign} text-xs font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none whitespace-nowrap`}
         onClick={() => handleSort(field)}
       >
-        <span className="inline-flex items-center gap-1">
+        <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
           {children}
           <span className={`inline-flex flex-col -space-y-1 ${active ? '' : 'opacity-0 group-hover:opacity-30'}`}>
             {active ? (
@@ -834,14 +835,14 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
             <thead className="bg-muted/50">
               <tr>
                 <SortHeader field="name">Campaign</SortHeader>
-                <SortHeader field="budget">Budget</SortHeader>
-                <SortHeader field="planned">Planned</SortHeader>
-                <SortHeader field="actual">Actual</SortHeader>
-                <SortHeader field="variance">Variance</SortHeader>
-                <SortHeader field="expectedSaos">Exp. SAOs</SortHeader>
-                <SortHeader field="actualSaos">Act. SAOs</SortHeader>
-                <SortHeader field="pipeline">Pipeline</SortHeader>
-                <SortHeader field="roi">ROI</SortHeader>
+                <SortHeader field="budget" align="right">Budget</SortHeader>
+                <SortHeader field="planned" align="right">Planned</SortHeader>
+                <SortHeader field="actual" align="right">Actual</SortHeader>
+                <SortHeader field="variance" align="right">Variance</SortHeader>
+                <SortHeader field="expectedSaos" align="right">Exp. SAOs</SortHeader>
+                <SortHeader field="actualSaos" align="right">Act. SAOs</SortHeader>
+                <SortHeader field="pipeline" align="right">Pipeline</SortHeader>
+                <SortHeader field="roi" align="right">ROI</SortHeader>
               </tr>
             </thead>
             <tbody className="divide-y divide-card-border">
@@ -853,45 +854,45 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
                     </td>
                   )}
                   {col('budget') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {formatCurrency(row.budget)}
                     </td>
                   )}
                   {col('planned') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {formatCurrency(row.planned)}
                     </td>
                   )}
                   {col('actual') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {formatCurrency(row.actual)}
                     </td>
                   )}
                   {col('variance') && (
                     <td
-                      className={`px-3 py-2.5 tabular-nums font-medium ${row.variance >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                      className={`px-3 py-2.5 text-right tabular-nums font-medium ${row.variance >= 0 ? 'text-green-500' : 'text-red-500'}`}
                     >
                       {row.variance >= 0 ? '+' : ''}
                       {formatCurrency(row.variance)}
                     </td>
                   )}
                   {col('expectedSaos') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {row.expectedSaos}
                     </td>
                   )}
                   {col('actualSaos') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {row.actualSaos}
                     </td>
                   )}
                   {col('pipeline') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {formatCurrency(row.pipeline)}
                     </td>
                   )}
                   {col('roi') && (
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground tabular-nums">
                       {row.roi.toFixed(1)}x
                     </td>
                   )}
@@ -902,45 +903,45 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
               <tr>
                 {col('name') && <td className="px-3 py-2.5 text-foreground">Total</td>}
                 {col('budget') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {formatCurrency(metrics.totalBudget)}
                   </td>
                 )}
                 {col('planned') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {formatCurrency(metrics.totalPlanned)}
                   </td>
                 )}
                 {col('actual') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {formatCurrency(metrics.totalActual)}
                   </td>
                 )}
                 {col('variance') && (
                   <td
-                    className={`px-3 py-2.5 tabular-nums ${metrics.totalBudget - metrics.totalActual >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                    className={`px-3 py-2.5 text-right tabular-nums ${metrics.totalBudget - metrics.totalActual >= 0 ? 'text-green-500' : 'text-red-500'}`}
                   >
                     {metrics.totalBudget - metrics.totalActual >= 0 ? '+' : ''}
                     {formatCurrency(metrics.totalBudget - metrics.totalActual)}
                   </td>
                 )}
                 {col('expectedSaos') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {metrics.totalExpectedSaos}
                   </td>
                 )}
                 {col('actualSaos') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {metrics.totalActualSaos}
                   </td>
                 )}
                 {col('pipeline') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {formatCurrency(metrics.totalPipeline)}
                   </td>
                 )}
                 {col('roi') && (
-                  <td className="px-3 py-2.5 text-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-right text-foreground tabular-nums">
                     {metrics.pipelineRoi.toFixed(1)}x
                   </td>
                 )}

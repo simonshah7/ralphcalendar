@@ -215,14 +215,15 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
     }
   }
 
-  function SortHeader({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) {
+  function SortHeader({ field, children, className = '', align }: { field: SortField; children: React.ReactNode; className?: string; align?: 'left' | 'right' }) {
     const active = sortField === field;
+    const textAlign = align === 'right' ? 'text-right' : 'text-left';
     return (
       <th
-        className={`px-2 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none whitespace-nowrap ${className}`}
+        className={`px-2 py-2 ${textAlign} text-[10px] font-medium text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none whitespace-nowrap ${className}`}
         onClick={() => handleSort(field)}
       >
-        <span className="inline-flex items-center gap-0.5">
+        <span className={`inline-flex items-center gap-0.5 ${align === 'right' ? 'justify-end' : ''}`}>
           {children}
           {active && <span className="text-[8px]">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>}
         </span>
@@ -432,15 +433,15 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                   <tr>
                     <SortHeader field="title" className="min-w-[160px]">Event</SortHeader>
                     <SortHeader field="recommendation">Signal</SortHeader>
-                    <SortHeader field="priorCost">{data.priorYear} Cost</SortHeader>
-                    <SortHeader field="currentCost">{data.currentYear} Cost</SortHeader>
-                    <SortHeader field="costChange">Cost Chg</SortHeader>
-                    <SortHeader field="priorSaos">{data.priorYear} SAOs</SortHeader>
-                    <SortHeader field="currentSaos">{data.currentYear} SAOs</SortHeader>
-                    <SortHeader field="priorPipeline">{data.priorYear} Pipeline</SortHeader>
-                    <SortHeader field="currentPipeline">{data.currentYear} Pipeline</SortHeader>
-                    <SortHeader field="priorRoi">{data.priorYear} ROI</SortHeader>
-                    <SortHeader field="currentRoi">{data.currentYear} ROI</SortHeader>
+                    <SortHeader field="priorCost" align="right">{data.priorYear} Cost</SortHeader>
+                    <SortHeader field="currentCost" align="right">{data.currentYear} Cost</SortHeader>
+                    <SortHeader field="costChange" align="right">Cost Chg</SortHeader>
+                    <SortHeader field="priorSaos" align="right">{data.priorYear} SAOs</SortHeader>
+                    <SortHeader field="currentSaos" align="right">{data.currentYear} SAOs</SortHeader>
+                    <SortHeader field="priorPipeline" align="right">{data.priorYear} Pipeline</SortHeader>
+                    <SortHeader field="currentPipeline" align="right">{data.currentYear} Pipeline</SortHeader>
+                    <SortHeader field="priorRoi" align="right">{data.priorYear} ROI</SortHeader>
+                    <SortHeader field="currentRoi" align="right">{data.currentYear} ROI</SortHeader>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-card-border">
@@ -468,31 +469,31 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                             {recStyle.label}
                           </span>
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.priorYear ? formatCurrency(Math.max(comp.priorYear.actualCost, comp.priorYear.cost)) : '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.currentYear ? formatCurrency(Math.max(comp.currentYear.actualCost, comp.currentYear.cost)) : '\u2014'}
                         </td>
-                        <td className={`px-2 py-2 tabular-nums font-medium ${changeColor(comp.changes.costChangePct, true)}`}>
+                        <td className={`px-2 py-2 text-right tabular-nums font-medium ${changeColor(comp.changes.costChangePct, true)}`}>
                           {fmtPct(comp.changes.costChangePct)}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.priorYear?.actualSaos ?? '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.currentYear?.actualSaos ?? '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.priorYear ? formatCurrency(comp.priorYear.pipelineGenerated) : '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.currentYear ? formatCurrency(comp.currentYear.pipelineGenerated) : '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.priorYear ? `${comp.priorYear.roi.toFixed(1)}x` : '\u2014'}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
                           {comp.currentYear ? `${comp.currentYear.roi.toFixed(1)}x` : '\u2014'}
                         </td>
                       </tr>
@@ -504,17 +505,17 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                   <tr>
                     <td className="px-2 py-2 text-foreground">Totals</td>
                     <td className="px-2 py-2" />
-                    <td className="px-2 py-2 text-foreground tabular-nums">{formatCurrency(data.totalPriorCost)}</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{formatCurrency(data.totalCurrentCost)}</td>
-                    <td className={`px-2 py-2 tabular-nums ${changeColor(data.totalCostChangePct, true)}`}>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorCost)}</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalCurrentCost)}</td>
+                    <td className={`px-2 py-2 text-right tabular-nums ${changeColor(data.totalCostChangePct, true)}`}>
                       {fmtPct(data.totalCostChangePct)}
                     </td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{data.totalPriorSaos}</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{data.totalCurrentSaos}</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{formatCurrency(data.totalPriorPipeline)}</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{formatCurrency(data.totalCurrentPipeline)}</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{data.avgPriorRoi.toFixed(1)}x</td>
-                    <td className="px-2 py-2 text-foreground tabular-nums">{data.avgCurrentRoi.toFixed(1)}x</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.totalPriorSaos}</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.totalCurrentSaos}</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorPipeline)}</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalCurrentPipeline)}</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.avgPriorRoi.toFixed(1)}x</td>
+                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.avgCurrentRoi.toFixed(1)}x</td>
                   </tr>
                 </tfoot>
               </table>
