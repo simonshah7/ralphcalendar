@@ -11,8 +11,8 @@ import { DashboardView } from '@/components/DashboardView';
 import { ActivityModal, ActivityFormData } from '@/components/ActivityModal';
 import { CreateCalendarModal } from '@/components/CreateCalendarModal';
 import { ExportModal } from '@/components/ExportModal';
-import { AICopilot } from '@/components/AICopilot';
-import { AIBriefGenerator, GeneratedActivity } from '@/components/AIBriefGenerator';
+import { AICopilot, CopilotTab } from '@/components/AICopilot';
+import type { GeneratedActivity } from '@/components/AIBriefPanel';
 import { Calendar, Status, Swimlane, Campaign, Activity } from '@/db/schema';
 import { EventsListView } from '@/components/EventsListView';
 import type { EventListItem } from '@/components/EventsListView';
@@ -58,7 +58,7 @@ function HomeInner() {
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
-  const [showBriefGenerator, setShowBriefGenerator] = useState(false);
+  const [copilotInitialTab, setCopilotInitialTab] = useState<CopilotTab>('chat');
   const [isSeedingData, setIsSeedingData] = useState(false);
   const [showFeedbackReview, setShowFeedbackReview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -354,7 +354,6 @@ function HomeInner() {
       console.error('Failed to apply brief:', error);
       toast.error('Failed to apply brief');
     }
-    setShowBriefGenerator(false);
   };
 
   const handleCreateEvent = async (startDateParam?: string, endDateParam?: string) => {
@@ -491,7 +490,6 @@ function HomeInner() {
           onCreateActivity={() => { }}
           onExport={() => { }}
           onToggleCopilot={() => { }}
-          onOpenBriefGenerator={() => { }}
           onSeedData={handleSeedData}
           isSeedingData={isSeedingData}
           onOpenSettings={() => setShowSettings(true)}
@@ -569,8 +567,7 @@ function HomeInner() {
           setShowActivityModal(true);
         }}
         onExport={() => setShowExportModal(true)}
-        onToggleCopilot={() => setShowCopilot(!showCopilot)}
-        onOpenBriefGenerator={() => setShowBriefGenerator(true)}
+        onToggleCopilot={() => { setCopilotInitialTab('chat'); setShowCopilot(!showCopilot); }}
         onSeedData={handleSeedData}
         isSeedingData={isSeedingData}
         onOpenFeedbackReview={() => setShowFeedbackReview(true)}
@@ -746,12 +743,15 @@ function HomeInner() {
         calendarId={currentCalendar?.id}
       />
 
-      {/* AI Copilot (with integrated voice) */}
+      {/* AI Copilot (with integrated voice + brief) */}
       {currentCalendar && (
         <AICopilot
           calendarId={currentCalendar.id}
           isOpen={showCopilot}
           onClose={() => setShowCopilot(false)}
+          swimlanes={currentCalendar.swimlanes.map((s) => ({ id: s.id, name: s.name }))}
+          onApplyBrief={handleApplyBrief}
+          initialTab={copilotInitialTab}
           voiceContext={{
             calendarId: currentCalendar.id,
             swimlanes: currentCalendar.swimlanes.map((s) => ({ id: s.id, name: s.name })),
@@ -789,19 +789,8 @@ function HomeInner() {
               setSelectedStatusIds([]);
             },
             onOpenCopilot: () => setShowCopilot(true),
-            onOpenBriefGenerator: () => setShowBriefGenerator(true),
+            onOpenBriefGenerator: () => { setCopilotInitialTab('brief'); setShowCopilot(true); },
           } satisfies VoiceAgentCallbacks}
-        />
-      )}
-
-      {/* AI Brief Generator */}
-      {currentCalendar && (
-        <AIBriefGenerator
-          isOpen={showBriefGenerator}
-          calendarId={currentCalendar.id}
-          swimlanes={currentCalendar.swimlanes.map((s) => ({ id: s.id, name: s.name }))}
-          onClose={() => setShowBriefGenerator(false)}
-          onApply={handleApplyBrief}
         />
       )}
 
@@ -814,7 +803,7 @@ function HomeInner() {
           createCalendar: showCreateCalendar,
           exportModal: showExportModal,
           copilot: showCopilot,
-          briefGenerator: showBriefGenerator,
+          briefGenerator: showCopilot,
         }}
         contextData={{
           calendarName: currentCalendar?.name,
