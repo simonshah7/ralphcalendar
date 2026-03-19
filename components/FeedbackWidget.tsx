@@ -153,7 +153,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
                       className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
                         category === c.value
                           ? c.color + ' ring-1 ring-current'
-                          : 'bg-card-hover text-muted hover:text-foreground'
+                          : 'bg-white/10 text-gray-300 hover:text-white hover:bg-white/20'
                       }`}
                     >
                       {c.label}
