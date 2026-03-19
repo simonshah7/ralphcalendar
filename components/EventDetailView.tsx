@@ -1479,6 +1479,33 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
                 </div>
               </div>
             </div>
+
+            {/* Calendar Invites */}
+            <div className="bg-card border border-card-border rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                  <SolarCalendarLinear className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Calendar Invites</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Download a .ics calendar invite for this event.
+                    {event.attendees.length > 0 && (
+                      <span className="block mt-1">
+                        {event.attendees.filter((a: AttendeeData) => a.email).length} of {event.attendees.length} attendees have email addresses.
+                      </span>
+                    )}
+                  </p>
+                  <a
+                    href={`/api/events/${event.id}/calendar-invite`}
+                    download
+                    className="inline-block px-4 py-2 text-xs font-medium text-white bg-orange-500 rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    Download .ics
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

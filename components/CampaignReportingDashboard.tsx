@@ -373,6 +373,7 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
   const [expanded, setExpanded] = useState(true);
   const [filterType, setFilterType] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [expandedNote, setExpandedNote] = useState<number | null>(null);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
@@ -388,8 +389,8 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
   const filteredInsights = filterType ? insights.filter((i) => i.type === filterType) : insights;
-  const visibleInsights = showAll ? filteredInsights : filteredInsights.slice(0, 5);
-  const hasMore = filteredInsights.length > 5;
+  const visibleInsights = showAll ? filteredInsights : filteredInsights.slice(0, 3);
+  const hasMore = filteredInsights.length > 3;
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -438,7 +439,7 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
               {/* Type filter chips */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
-                  onClick={() => { setFilterType(null); setShowAll(false); }}
+                  onClick={() => { setFilterType(null); setShowAll(false); setExpandedNote(null); }}
                   className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${
                     !filterType ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
                   }`}
@@ -449,7 +450,7 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
                   typeCounts[type] ? (
                     <button
                       key={type}
-                      onClick={() => { setFilterType(filterType === type ? null : type); setShowAll(false); }}
+                      onClick={() => { setFilterType(filterType === type ? null : type); setShowAll(false); setExpandedNote(null); }}
                       className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors flex items-center gap-1.5 ${
                         filterType === type ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
                       }`}
@@ -475,16 +476,18 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
               )}
 
               {/* Insight rows */}
-              <div className="space-y-0.5">
+              <div className="divide-y divide-card-border">
                 {visibleInsights.map((insight, i) => {
                   const cfg = INSIGHT_CONFIG[insight.type] || INSIGHT_CONFIG.learning;
+                  const isNoteExpanded = expandedNote === i;
                   return (
                     <motion.div
                       key={`${insight.type}-${i}`}
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03, duration: 0.2 }}
-                      className="flex flex-col gap-0.5 px-3 py-2 rounded-md hover:bg-muted/30 transition-colors"
+                      className="px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setExpandedNote(isNoteExpanded ? null : i)}
                     >
                       <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
@@ -493,7 +496,19 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
                           <span className="text-xs font-semibold text-foreground tabular-nums flex-shrink-0">{insight.metric}</span>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground pl-3.5 line-clamp-1">{insight.description}</div>
+                      <AnimatePresence>
+                        {isNoteExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="text-[11px] text-muted-foreground pl-3.5 pt-1.5 leading-relaxed">{insight.description}</div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })}
