@@ -15,12 +15,12 @@ interface AIInsight {
   priority: 'high' | 'medium' | 'low';
 }
 
-const INSIGHT_CONFIG: Record<string, { icon: string; color: string; bg: string; label: string }> = {
-  learning: { icon: '💡', color: '#3B53FF', bg: 'rgba(59,83,255,0.1)', label: 'Learning' },
-  improvement: { icon: '📈', color: '#7A00C1', bg: 'rgba(122,0,193,0.1)', label: 'Improvement' },
-  suggestion: { icon: '✨', color: '#006170', bg: 'rgba(0,97,112,0.1)', label: 'Suggestion' },
-  warning: { icon: '⚠️', color: '#FFA943', bg: 'rgba(255,169,67,0.1)', label: 'Warning' },
-  success: { icon: '✅', color: '#34E5E2', bg: 'rgba(52,229,226,0.1)', label: 'Success' },
+const INSIGHT_CONFIG: Record<string, { color: string; label: string }> = {
+  learning: { color: '#3B53FF', label: 'Learning' },
+  improvement: { color: '#7A00C1', label: 'Improvement' },
+  suggestion: { color: '#006170', label: 'Suggestion' },
+  warning: { color: '#FFA943', label: 'Warning' },
+  success: { color: '#34E5E2', label: 'Success' },
 };
 
 interface CampaignReportingDashboardProps {
@@ -360,12 +360,13 @@ function HealthGauge({ score, size = 120 }: { score: number; size?: number }) {
   );
 }
 
-// ─── AI Insights Panel ──────────────────────────────────
+// ─── Performance Notes Panel ─────────────────────────────
 function AIInsightsPanel({ calendarId }: { calendarId: string }) {
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
@@ -373,7 +374,7 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
       const res = await fetch(`/api/ai/campaign-insights?calendarId=${calendarId}`);
       if (res.ok) setInsights(await res.json());
     } catch (e) {
-      console.error('Failed to fetch AI insights:', e);
+      console.error('Failed to fetch insights:', e);
     }
     setLoading(false);
   }, [calendarId]);
@@ -381,6 +382,8 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
   const filteredInsights = filterType ? insights.filter((i) => i.type === filterType) : insights;
+  const visibleInsights = showAll ? filteredInsights : filteredInsights.slice(0, 5);
+  const hasMore = filteredInsights.length > 5;
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -401,14 +404,9 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-purple-400">
-              <path d="M8 1l2 4.5L15 6l-3.5 3.5L12.5 15 8 12.5 3.5 15l1-5.5L1 6l5-0.5L8 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold text-foreground">AI Insights & Recommendations</span>
+          <span className="text-sm font-semibold text-foreground">Performance Notes</span>
           {insights.length > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-purple/15 text-accent-purple font-medium">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
               {insights.length}
             </span>
           )}
@@ -436,24 +434,24 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
               {/* Type filter chips */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
-                  onClick={() => setFilterType(null)}
-                  className={`px-2 py-1 text-[10px] rounded-md font-medium transition-colors ${
-                    !filterType ? 'bg-accent-purple text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  onClick={() => { setFilterType(null); setShowAll(false); }}
+                  className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${
+                    !filterType ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  All ({insights.length})
+                  All
                 </button>
                 {Object.entries(INSIGHT_CONFIG).map(([type, cfg]) => (
                   typeCounts[type] ? (
                     <button
                       key={type}
-                      onClick={() => setFilterType(filterType === type ? null : type)}
-                      className={`px-2 py-1 text-[10px] rounded-md font-medium transition-colors flex items-center gap-1 ${
-                        filterType === type ? 'text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      onClick={() => { setFilterType(filterType === type ? null : type); setShowAll(false); }}
+                      className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+                        filterType === type ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
                       }`}
-                      style={filterType === type ? { backgroundColor: cfg.color } : undefined}
                     >
-                      <span>{cfg.icon}</span> {cfg.label} ({typeCounts[type]})
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                      {cfg.label}
                     </button>
                   ) : null
                 ))}
@@ -461,63 +459,51 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
 
               {loading && (
                 <div className="flex items-center gap-2 py-4 justify-center text-xs text-muted-foreground">
-                  <div className="w-4 h-4 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
-                  Analyzing campaign data...
+                  <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                  Loading...
                 </div>
               )}
 
               {!loading && filteredInsights.length === 0 && (
                 <div className="text-center py-4 text-xs text-muted-foreground">
-                  No insights available for this filter.
+                  No observations for this filter.
                 </div>
               )}
 
-              {/* Insight cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
-                {filteredInsights.map((insight, i) => {
+              {/* Insight rows */}
+              <div className="space-y-0.5">
+                {visibleInsights.map((insight, i) => {
                   const cfg = INSIGHT_CONFIG[insight.type] || INSIGHT_CONFIG.learning;
                   return (
                     <motion.div
                       key={`${insight.type}-${i}`}
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04, duration: 0.25 }}
-                      className="rounded-lg border border-card-border p-3 space-y-1.5"
-                      style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}
+                      transition={{ delay: i * 0.03, duration: 0.2 }}
+                      className="flex flex-col gap-0.5 px-3 py-2 rounded-md hover:bg-muted/30 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm">{cfg.icon}</span>
-                          <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.color }}>
-                            {cfg.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                            insight.priority === 'high' ? 'bg-red-500/15 text-red-400' :
-                            insight.priority === 'medium' ? 'bg-amber-500/15 text-amber-400' :
-                            'bg-green-500/15 text-green-400'
-                          }`}>
-                            {insight.priority}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-xs font-semibold text-foreground">{insight.title}</div>
-                      <div className="text-[11px] text-muted-foreground leading-relaxed">{insight.description}</div>
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wide">
-                          {insight.source.replace(/_/g, ' ')}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                        <span className="text-xs font-medium text-foreground flex-1 truncate">{insight.title}</span>
                         {insight.metric && (
-                          <span className="text-[10px] font-bold" style={{ color: cfg.color }}>
-                            {insight.metric}
-                          </span>
+                          <span className="text-xs font-semibold text-foreground tabular-nums flex-shrink-0">{insight.metric}</span>
                         )}
                       </div>
+                      <div className="text-[11px] text-muted-foreground pl-3.5 line-clamp-1">{insight.description}</div>
                     </motion.div>
                   );
                 })}
               </div>
+
+              {/* Show all / Show less toggle */}
+              {hasMore && (
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors pl-3"
+                >
+                  {showAll ? 'Show less' : `Show all ${filteredInsights.length} observations`}
+                </button>
+              )}
             </div>
           </motion.div>
         )}
