@@ -425,19 +425,36 @@ export function TableView({
           </div>
         );
 
-      case 'cost':
+      case 'cost': {
+        const costNum = typeof activity.cost === 'string' ? parseFloat(activity.cost) : (activity.cost || 0);
+        const formatted = new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(isNaN(costNum) ? 0 : costNum);
         return (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div onClick={(e) => e.stopPropagation()} className="text-right">
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={activity.cost || '0'}
-              onChange={(e) => handleInlineEdit(activity.id, 'cost', e.target.value)}
-              className="text-sm bg-transparent text-foreground outline-none w-20 tabular-nums"
+              type="text"
+              inputMode="decimal"
+              defaultValue={formatted}
+              onFocus={(e) => {
+                e.target.value = String(isNaN(costNum) ? 0 : costNum);
+                e.target.select();
+              }}
+              onBlur={(e) => {
+                const val = parseFloat(e.target.value);
+                const num = isNaN(val) ? 0 : val;
+                handleInlineEdit(activity.id, 'cost', String(num));
+                e.target.value = new Intl.NumberFormat('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(num);
+              }}
+              className="text-sm bg-transparent text-foreground outline-none w-28 tabular-nums text-right"
             />
           </div>
         );
+      }
 
       case 'currency':
         return (
@@ -682,7 +699,7 @@ export function TableView({
                   {col.sortField ? (
                     <button
                       onClick={() => handleSort(col.sortField!)}
-                      className="group flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                      className={`group flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${col.id === 'cost' ? 'ml-auto' : ''}`}
                     >
                       {col.label}
                       <SortIcon field={col.sortField} />
