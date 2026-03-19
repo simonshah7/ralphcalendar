@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, activities, campaigns, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
 import { formatCurrency } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 type Campaign = InferSelectModel<typeof campaigns>;
@@ -174,7 +175,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(insights);
   } catch (error) {
-    console.error('Error generating budget insights:', error);
+    logger.error('Error generating budget insights', error);
     return NextResponse.json({ error: 'Failed to generate budget insights' }, { status: 500 });
   }
 }

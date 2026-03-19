@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
-import { eq, InferSelectModel } from 'drizzle-orm';
-import { isValidCurrency, isValidRegion, isValidUUID } from '@/lib/validation';
+import { eq, InferSelectModel, asc, sql } from 'drizzle-orm';
+import { isValidCurrency, isValidRegion, isValidUUID, validateAttachments } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 type Status = InferSelectModel<typeof statuses>;
@@ -22,14 +23,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Valid calendarId is required' }, { status: 400 });
     }
 
-    const allActivities: Activity[] = await db
+    // Support optional pagination: ?limit=50&offset=0
+    const limit = Math.min(parseInt(searchParams.get('limit') || '500', 10), 500);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+
+    const query = db
       .select()
+      .from(activities)
+      .where(eq(activities.calendarId, calendarId))
+      .orderBy(asc(activities.startDate))
+      .limit(limit)
+      .offset(offset);
+
+    const allActivities: Activity[] = await query;
+
+    // Include total count in header for pagination
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(activities)
       .where(eq(activities.calendarId, calendarId));
 
-    return NextResponse.json(allActivities);
+    return NextResponse.json(allActivities, {
+      headers: { 'X-Total-Count': String(count) },
+    });
   } catch (error) {
-    console.error('Error fetching activities:', error);
+    logger.error('Error fetching activities', error);
     return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
   }
 }
@@ -130,12 +148,12 @@ export async function POST(request: Request) {
       actualSaos: actualSaos !== undefined ? String(actualSaos) : '0',
       pipelineGenerated: pipelineGenerated !== undefined ? String(pipelineGenerated) : '0',
       revenueGenerated: revenueGenerated !== undefined ? String(revenueGenerated) : '0',
-      attachments: attachments || [],
+      attachments: attachments ? (validateAttachments(attachments) ?? []) : [],
     }).returning();
 
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
-    console.error('Error creating activity:', error);
+    logger.error('Error creating activity', error);
     return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 });
   }
 }

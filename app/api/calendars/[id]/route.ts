@@ -8,6 +8,7 @@ type Swimlane = InferSelectModel<typeof swimlanes>;
 type Campaign = InferSelectModel<typeof campaigns>;
 type Activity = InferSelectModel<typeof activities>;
 import { DEFAULT_STATUSES } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -55,7 +56,7 @@ export async function GET(
       activities: calendarActivities,
     });
   } catch (error) {
-    console.error('Error fetching calendar:', error);
+    logger.error('Error fetching calendar', error);
     return NextResponse.json({ error: 'Failed to fetch calendar' }, { status: 500 });
   }
 }
@@ -85,7 +86,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating calendar:', error);
+    logger.error('Error updating calendar', error);
     return NextResponse.json({ error: 'Failed to update calendar' }, { status: 500 });
   }
 }
@@ -105,7 +106,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting calendar:', error);
+    logger.error('Error deleting calendar', error);
     return NextResponse.json({ error: 'Failed to delete calendar' }, { status: 500 });
   }
 }

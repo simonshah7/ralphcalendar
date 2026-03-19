@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
 import { isValidCurrency, isValidRegion, isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 type Status = InferSelectModel<typeof statuses>;
@@ -139,7 +140,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating activity:', error);
+    logger.error('Error updating activity', error);
     return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 });
   }
 }
@@ -159,7 +160,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting activity:', error);
+    logger.error('Error deleting activity', error);
     return NextResponse.json({ error: 'Failed to delete activity' }, { status: 500 });
   }
 }

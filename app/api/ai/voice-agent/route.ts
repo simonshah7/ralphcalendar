@@ -4,6 +4,7 @@ import { VOICE_AGENT_TOOLS } from '@/lib/voice-agent-tools';
 import { db, activities, campaigns, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
 import { formatCurrency } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 type Campaign = InferSelectModel<typeof campaigns>;
@@ -247,7 +248,7 @@ If the user asks something conversational, just respond naturally without tools.
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Voice agent error:', error);
+    logger.error('Voice agent error', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: `Voice agent failed: ${message}` }, { status: 500 });
   }

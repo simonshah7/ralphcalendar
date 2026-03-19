@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { subEvents } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     const items = await db.select().from(subEvents).where(eq(subEvents.eventId, eventId));
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching sub-events:', error);
+    logger.error('Error fetching sub-events', error);
     return NextResponse.json({ error: 'Failed to fetch sub-events' }, { status: 500 });
   }
 }
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error('Error creating sub-event:', error);
+    logger.error('Error creating sub-event', error);
     return NextResponse.json({ error: 'Failed to create sub-event' }, { status: 500 });
   }
 }

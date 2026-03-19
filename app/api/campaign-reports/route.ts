@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { campaignReportData } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(rows);
   } catch (error) {
-    console.error('Failed to fetch campaign report data:', error);
+    logger.error('Failed to fetch campaign report data', error);
     return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
   }
 }

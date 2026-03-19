@@ -208,8 +208,10 @@ export function CalendarView({
     return weeks.map((week) => getSpanningBarsForWeek(week));
   }, [weeks, getSpanningBarsForWeek]);
 
-  // Max single-day items visible before "+N more" (accounting for spanning bar space)
+  // Layout constants
   const MAX_SINGLE_DAY_VISIBLE = 2;
+  const SPANNING_ROW_HEIGHT = 20; // px per spanning bar row
+  const DATE_NUMBER_HEIGHT = 28; // px for the date number at top of cell
 
   return (
     <div className="flex-1 flex flex-col bg-card overflow-hidden">
@@ -272,7 +274,6 @@ export function CalendarView({
           {weeks.map((week, weekIndex) => {
             const bars = weekBars[weekIndex];
             const spanningRowCount = getSpanningRowCount(bars);
-            const SPANNING_ROW_HEIGHT = 20; // px per spanning bar row
             const spanningAreaHeight = spanningRowCount * SPANNING_ROW_HEIGHT;
 
             return (
@@ -283,7 +284,7 @@ export function CalendarView({
                   const leftPercent = (bar.startCol / 7) * 100;
                   const widthPercent = (bar.span / 7) * 100;
                   // Position: top of cell + date number height (~28px) + row offset
-                  const topOffset = 28 + bar.row * SPANNING_ROW_HEIGHT;
+                  const topOffset = DATE_NUMBER_HEIGHT + bar.row * SPANNING_ROW_HEIGHT;
 
                   return (
                     <div

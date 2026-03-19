@@ -6,6 +6,7 @@ type Activity = InferSelectModel<typeof activities>;
 type Campaign = InferSelectModel<typeof campaigns>;
 type Swimlane = InferSelectModel<typeof swimlanes>;
 import { formatCurrency } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface CopilotResponse {
   answer: string;
@@ -295,7 +296,7 @@ export async function POST(request: Request) {
     // --- Unrecognized question ---
     return NextResponse.json({ answer: HELP_TEXT } satisfies CopilotResponse);
   } catch (error) {
-    console.error('Error in copilot:', error);
+    logger.error('Error in copilot', error);
     return NextResponse.json({ error: 'Failed to process question' }, { status: 500 });
   }
 }

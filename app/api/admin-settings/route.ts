@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { adminSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     }
     return NextResponse.json(map);
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    logger.error('Error fetching settings', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
@@ -41,7 +42,7 @@ export async function PUT(request: Request) {
       return NextResponse.json(created, { status: 201 });
     }
   } catch (error) {
-    console.error('Error updating setting:', error);
+    logger.error('Error updating setting', error);
     return NextResponse.json({ error: 'Failed to update setting' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { isAllowedFileType, isAllowedExtension } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
       uploadedAt: new Date().toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading file:', error);
+    logger.error('Error uploading file', error);
     return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
   }
 }

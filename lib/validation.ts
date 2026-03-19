@@ -46,6 +46,46 @@ export function isAllowedExtension(ext: string): boolean {
   return ALLOWED_EXTENSIONS.has(ext.toLowerCase());
 }
 
+export interface AttachmentInput {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
+export function validateAttachments(value: unknown): AttachmentInput[] | null {
+  if (!Array.isArray(value)) return null;
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null) return null;
+    if (typeof item.id !== 'string' || typeof item.name !== 'string' ||
+        typeof item.url !== 'string' || typeof item.size !== 'number' ||
+        typeof item.type !== 'string' || typeof item.uploadedAt !== 'string') {
+      return null;
+    }
+  }
+  return value as AttachmentInput[];
+}
+
+/**
+ * Lightweight runtime type checker for API responses.
+ * Validates that the response has the expected shape.
+ */
+export function assertShape<T>(value: unknown, requiredKeys: string[]): value is T {
+  if (typeof value !== 'object' || value === null) return false;
+  for (const key of requiredKeys) {
+    if (!(key in value)) return false;
+  }
+  return true;
+}
+
+export function assertArrayShape<T>(value: unknown, requiredKeys: string[]): value is T[] {
+  if (!Array.isArray(value)) return false;
+  if (value.length === 0) return true;
+  return assertShape<T>(value[0], requiredKeys);
+}
+
 const FEEDBACK_CATEGORIES = ['bug', 'suggestion', 'question', 'general'] as const;
 const FEEDBACK_STATUSES = ['new', 'in_progress', 'resolved', 'dismissed'] as const;
 const FEEDBACK_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;

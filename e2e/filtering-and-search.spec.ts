@@ -46,17 +46,17 @@ test.describe('UJ-4: Filtering & Search', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Use table view for easier text verification
     await page.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
   });
 
   test('UJ-4.1: Can search activities by title', async ({ page }) => {
     const searchInput = page.getByPlaceholder('Search activities...');
     await searchInput.fill('Email');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     await expect(page.getByText('Email Blast')).toBeVisible();
     await expect(page.getByText('Social Media Push')).not.toBeVisible();
@@ -70,7 +70,7 @@ test.describe('UJ-4: Filtering & Search', () => {
 
     // Select Spring Campaign
     await page.getByRole('button', { name: 'Spring Campaign' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Should show only campaign activities
     await expect(page.getByText('Email Blast')).toBeVisible();
@@ -86,7 +86,7 @@ test.describe('UJ-4: Filtering & Search', () => {
     // Select the first status (Considering)
     const statusName = workspace.statuses[0].name;
     await page.locator('button').filter({ hasText: statusName }).last().click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Only Considering activities should show
     await expect(page.getByText('Email Blast')).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('UJ-4: Filtering & Search', () => {
     await page.getByText('All Campaigns').click();
     await page.waitForTimeout(300);
     await page.getByRole('button', { name: 'Spring Campaign' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Only PR Release should match both filters
     await expect(page.getByText('PR Release')).toBeVisible();
@@ -115,14 +115,14 @@ test.describe('UJ-4: Filtering & Search', () => {
     // Apply search filter
     const searchInput = page.getByPlaceholder('Search activities...');
     await searchInput.fill('Email');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Only one visible
     await expect(page.getByText('Social Media Push')).not.toBeVisible();
 
     // Clear search
     await searchInput.fill('');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // All should be visible again
     await expect(page.getByText('Email Blast')).toBeVisible();

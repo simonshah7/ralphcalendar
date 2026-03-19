@@ -34,7 +34,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('UJ-3.1: Can switch between Timeline, Calendar, and Table views', async ({ page }) => {
@@ -50,15 +50,15 @@ test.describe('UJ-3: Multi-View Navigation', () => {
 
     // Switch to Calendar
     await calendarTab.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Switch to Table
     await tableTab.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Switch back to Timeline
     await timelineTab.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
   });
 
   test('UJ-3.2: Timeline view displays activities as horizontal bars', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
   test('UJ-3.3: Calendar view displays month grid with activities', async ({ page }) => {
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Calendar', exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Activities should be visible in the calendar view (may appear multiple times across days)
     await expect(page.getByText('Alpha Activity').first()).toBeVisible({ timeout: 5000 });
@@ -79,7 +79,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
   test('UJ-3.4: Table view displays activities in sortable format', async ({ page }) => {
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Table headers should be visible
     await expect(page.locator('th').filter({ hasText: 'Title' })).toBeVisible();
@@ -93,7 +93,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
   test('UJ-3.5: All views show the same filtered activities', async ({ page }) => {
     // Search to filter
     await page.getByPlaceholder('Search activities...').fill('Alpha');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Timeline should show only Alpha
     await expect(page.getByText('Alpha Activity')).toBeVisible();
@@ -102,13 +102,13 @@ test.describe('UJ-3: Multi-View Navigation', () => {
     // Switch to Table view — same filter should apply
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table', exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
     await expect(page.getByText('Alpha Activity')).toBeVisible();
     await expect(page.getByText('Beta Activity')).not.toBeVisible();
 
     // Switch to Calendar view
     await header.getByRole('button', { name: 'Calendar', exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
     await expect(page.getByText('Alpha Activity').first()).toBeVisible();
     await expect(page.getByText('Beta Activity')).not.toBeVisible();
   });
@@ -116,7 +116,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
   test('UJ-3.6: Table view supports inline editing for status', async ({ page }) => {
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Find a status dropdown in the table and verify it works
     const statusSelects = page.locator('table select').first();
@@ -129,7 +129,7 @@ test.describe('UJ-3: Multi-View Navigation', () => {
   test('UJ-3.7: Table view supports column sorting', async ({ page }) => {
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Click Title header to sort
     await page.locator('th').filter({ hasText: 'Title' }).click();

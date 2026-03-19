@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, campaigns } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: Request,
@@ -39,7 +40,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating campaign:', error);
+    logger.error('Error updating campaign', error);
     return NextResponse.json({ error: 'Failed to update campaign' }, { status: 500 });
   }
 }
@@ -59,7 +60,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting campaign:', error);
+    logger.error('Error deleting campaign', error);
     return NextResponse.json({ error: 'Failed to delete campaign' }, { status: 500 });
   }
 }

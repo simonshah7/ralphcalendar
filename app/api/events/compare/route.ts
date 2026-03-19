@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, activities, campaigns, swimlanes } from '@/db';
 import { eq, type InferSelectModel } from 'drizzle-orm';
 import { formatCurrency } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 
@@ -406,7 +407,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    console.error('Error in event comparison:', error);
+    logger.error('Error in event comparison', error);
     return NextResponse.json({ error: 'Failed to compare events' }, { status: 500 });
   }
 }

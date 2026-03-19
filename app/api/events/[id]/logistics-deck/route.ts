@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { events, subEvents, eventAttendees, checklistItems, statuses } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import type { SubEvent, EventAttendee, ChecklistItem } from '@/db/schema';
+import { logger } from '@/lib/logger';
 
 // Returns structured data for PPTX generation on the client side
 export async function GET(
@@ -41,7 +42,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching logistics data:', error);
+    logger.error('Error fetching logistics data', error);
     return NextResponse.json({ error: 'Failed to fetch logistics data' }, { status: 500 });
   }
 }

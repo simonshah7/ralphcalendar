@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, feedbackItems } from '@/db';
 import { eq } from 'drizzle-orm';
 import { ensureFeedbackTable } from '@/db/ensure-feedback-table';
+import { logger } from '@/lib/logger';
 
 export async function PATCH(
   request: Request,
@@ -35,7 +36,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating feedback:', error);
+    logger.error('Error updating feedback', error);
     return NextResponse.json({ error: 'Failed to update feedback' }, { status: 500 });
   }
 }
@@ -58,7 +59,7 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error deleting feedback:', error);
+    logger.error('Error deleting feedback', error);
     return NextResponse.json({ error: 'Failed to delete feedback' }, { status: 500 });
   }
 }

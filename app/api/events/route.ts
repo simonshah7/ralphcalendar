@@ -12,6 +12,7 @@ import {
 import { eq, inArray } from 'drizzle-orm';
 import type { Event, EventAttendee, ChecklistItem, SubEvent, CampaignEvent } from '@/db/schema';
 import { isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(enriched);
   } catch (error) {
-    console.error('Error fetching events:', error);
+    logger.error('Error fetching events', error);
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 }
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
-    console.error('Error creating event:', error);
+    logger.error('Error creating event', error);
     return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { db, feedbackItems } from '@/db';
 import { eq, desc, and, SQL } from 'drizzle-orm';
 import { ensureFeedbackTable } from '@/db/ensure-feedback-table';
 import { isValidFeedbackCategory, isValidFeedbackStatus } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching feedback:', error);
+    logger.error('Error fetching feedback', error);
     return NextResponse.json({ error: 'Failed to fetch feedback' }, { status: 500 });
   }
 }
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
-    console.error('Error creating feedback:', error);
+    logger.error('Error creating feedback', error);
     return NextResponse.json({ error: 'Failed to create feedback' }, { status: 500 });
   }
 }

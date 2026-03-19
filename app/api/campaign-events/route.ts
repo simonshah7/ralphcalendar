@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { campaignEvents } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     }
     return NextResponse.json({ error: 'eventId or campaignId is required' }, { status: 400 });
   } catch (error) {
-    console.error('Error fetching campaign-events:', error);
+    logger.error('Error fetching campaign-events', error);
     return NextResponse.json({ error: 'Failed to fetch campaign-events' }, { status: 500 });
   }
 }
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     const [created] = await db.insert(campaignEvents).values({ campaignId, eventId }).returning();
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error('Error creating campaign-event link:', error);
+    logger.error('Error creating campaign-event link', error);
     return NextResponse.json({ error: 'Failed to create link' }, { status: 500 });
   }
 }

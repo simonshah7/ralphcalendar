@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { eventAttendees } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: Request,
@@ -24,7 +25,7 @@ export async function PUT(
     if (!updated) return NextResponse.json({ error: 'Attendee not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating attendee:', error);
+    logger.error('Error updating attendee', error);
     return NextResponse.json({ error: 'Failed to update attendee' }, { status: 500 });
   }
 }
@@ -39,7 +40,7 @@ export async function DELETE(
     if (!deleted) return NextResponse.json({ error: 'Attendee not found' }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting attendee:', error);
+    logger.error('Error deleting attendee', error);
     return NextResponse.json({ error: 'Failed to delete attendee' }, { status: 500 });
   }
 }

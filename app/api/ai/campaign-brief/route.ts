@@ -5,6 +5,7 @@ import { eq, InferSelectModel } from 'drizzle-orm';
 type Activity = InferSelectModel<typeof activities>;
 type Swimlane = InferSelectModel<typeof swimlanes>;
 import { formatCurrency } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface PlannedActivity {
   title: string;
@@ -213,7 +214,7 @@ export async function POST(request: Request) {
       activities: plannedActivities,
     });
   } catch (error) {
-    console.error('Error generating campaign brief:', error);
+    logger.error('Error generating campaign brief', error);
     return NextResponse.json({ error: 'Failed to generate campaign brief' }, { status: 500 });
   }
 }

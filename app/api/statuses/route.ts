@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db, statuses } from '@/db';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -15,11 +16,12 @@ export async function GET(request: Request) {
     const allStatuses = await db
       .select()
       .from(statuses)
-      .where(eq(statuses.calendarId, calendarId));
+      .where(eq(statuses.calendarId, calendarId))
+      .orderBy(asc(statuses.sortOrder));
 
     return NextResponse.json(allStatuses);
   } catch (error) {
-    console.error('Error fetching statuses:', error);
+    logger.error('Error fetching statuses', error);
     return NextResponse.json({ error: 'Failed to fetch statuses' }, { status: 500 });
   }
 }
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newStatus, { status: 201 });
   } catch (error) {
-    console.error('Error creating status:', error);
+    logger.error('Error creating status', error);
     return NextResponse.json({ error: 'Failed to create status' }, { status: 500 });
   }
 }

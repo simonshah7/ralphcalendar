@@ -17,7 +17,7 @@ test.describe('UJ-6: Data Export', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('UJ-6.1: Can open the export modal', async ({ page }) => {

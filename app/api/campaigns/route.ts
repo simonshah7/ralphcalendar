@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, campaigns } from '@/db';
 import { eq } from 'drizzle-orm';
 import { isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(allCampaigns);
   } catch (error) {
-    console.error('Error fetching campaigns:', error);
+    logger.error('Error fetching campaigns', error);
     return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 });
   }
 }
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newCampaign, { status: 201 });
   } catch (error) {
-    console.error('Error creating campaign:', error);
+    logger.error('Error creating campaign', error);
     return NextResponse.json({ error: 'Failed to create campaign' }, { status: 500 });
   }
 }

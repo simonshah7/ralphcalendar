@@ -9,6 +9,8 @@ import {
   date,
   uuid,
   jsonb,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // ─── JSONB Shape Interfaces ──────────────────────────────
@@ -63,7 +65,9 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex('users_email_idx').on(table.email),
+]);
 
 export const calendars = pgTable('calendars', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -171,7 +175,12 @@ export const activities = pgTable('activities', {
   isRecurrenceParent: boolean('is_recurrence_parent').notNull().default(false),
   slackChannel: text('slack_channel'),
   outline: text('outline'),
-});
+}, (table) => [
+  index('activities_calendar_id_idx').on(table.calendarId),
+  index('activities_swimlane_id_idx').on(table.swimlaneId),
+  index('activities_status_id_idx').on(table.statusId),
+  index('activities_campaign_id_idx').on(table.campaignId),
+]);
 
 export const activityComments = pgTable('activity_comments', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -229,7 +238,9 @@ export const events = pgTable('events', {
   revenueGenerated: numeric('revenue_generated').default('0'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('events_calendar_id_idx').on(table.calendarId),
+]);
 
 export const subEvents = pgTable('sub_events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -245,7 +256,9 @@ export const subEvents = pgTable('sub_events', {
   calendarEventId: text('calendar_event_id'),
   sortOrder: integer('sort_order').default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('sub_events_event_id_idx').on(table.eventId),
+]);
 
 export const eventAttendees = pgTable('event_attendees', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -261,7 +274,9 @@ export const eventAttendees = pgTable('event_attendees', {
   travelStatus: text('travel_status').default('not_booked'),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('event_attendees_event_id_idx').on(table.eventId),
+]);
 
 export const subEventAttendees = pgTable('sub_event_attendees', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -284,7 +299,9 @@ export const checklistItems = pgTable('checklist_items', {
   dueDate: text('due_date'),
   sortOrder: integer('sort_order').default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('checklist_items_event_id_idx').on(table.eventId),
+]);
 
 export const campaignEvents = pgTable('campaign_events', {
   id: uuid('id').primaryKey().defaultRandom(),

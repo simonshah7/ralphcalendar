@@ -9,8 +9,13 @@ import { Page, expect } from '@playwright/test';
 export async function waitForAppLoad(page: Page) {
   // Wait for the loading spinner to disappear or LaunchGrid text to appear
   await page.waitForSelector('text=LaunchGrid', { timeout: 15000 });
-  // Small delay for any additional data fetching
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
+}
+
+/** Wait for the app to finish loading data after navigation */
+export async function waitForDataLoad(page: Page) {
+  // Wait for network to be idle (all API calls completed)
+  await page.waitForLoadState('networkidle');
 }
 
 /** Create a calendar via the API and return its data */

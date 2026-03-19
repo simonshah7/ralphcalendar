@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { checklistItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     const items = await db.select().from(checklistItems).where(eq(checklistItems.eventId, eventId));
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching checklist items:', error);
+    logger.error('Error fetching checklist items', error);
     return NextResponse.json({ error: 'Failed to fetch checklist items' }, { status: 500 });
   }
 }
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error('Error creating checklist item:', error);
+    logger.error('Error creating checklist item', error);
     return NextResponse.json({ error: 'Failed to create checklist item' }, { status: 500 });
   }
 }
