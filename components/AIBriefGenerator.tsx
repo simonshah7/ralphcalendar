@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { SolarLightbulbLinear } from './SolarIcons';
 
 export interface GeneratedActivity {
   title: string;
