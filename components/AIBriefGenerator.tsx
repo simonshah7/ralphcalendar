@@ -25,6 +25,8 @@ interface BriefFormData {
   region: 'US' | 'EMEA' | 'ROW';
   startDate: string;
   endDate: string;
+  audience: string;
+  objective: string;
 }
 
 interface GeneratedPlan {
@@ -51,6 +53,8 @@ export function AIBriefGenerator({
     region: 'US',
     startDate: '',
     endDate: '',
+    audience: 'Companies with revenue >= $3B in NA and Europe using SAP',
+    objective: '',
   });
 
   const [plan, setPlan] = useState<GeneratedPlan | null>(null);
@@ -106,6 +110,8 @@ export function AIBriefGenerator({
           region: formData.region,
           startDate: formData.startDate,
           endDate: formData.endDate,
+          audience: formData.audience.trim(),
+          objective: formData.objective.trim(),
         }),
         signal: controller.signal,
       });
@@ -217,6 +223,32 @@ export function AIBriefGenerator({
                   rows={3}
                   placeholder="e.g., Q3 product launch targeting enterprise EMEA"
                   className="w-full px-3 py-2 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm resize-none placeholder:text-gray-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Objective
+                </label>
+                <input
+                  type="text"
+                  value={formData.objective}
+                  onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
+                  placeholder="e.g., Drive pipeline for FA prospects in financial services"
+                  className="w-full px-3 py-2 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm placeholder:text-gray-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Audience / ICP
+                </label>
+                <input
+                  type="text"
+                  value={formData.audience}
+                  onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                  placeholder="e.g., CFOs and Controllers at mid-market companies"
+                  className="w-full px-3 py-2 border border-card-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-accent-purple text-sm placeholder:text-gray-400"
                 />
               </div>
 
