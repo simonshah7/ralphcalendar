@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import type { CampaignReportData } from '@/db/schema';
+import dynamic from 'next/dynamic';
+
+const WorldMapChart = dynamic(() => import('./WorldMapChart'), { ssr: false });
 
 // ─── AI Insight type ────────────────────────────────────
 interface AIInsight {
@@ -1725,6 +1728,13 @@ function ICPPenetration({ rows: _rows }: { rows: CampaignReportData[] }) {
 
       {subTab === 'geo' && (
         <>
+          <Card title="Global Account Distribution">
+            <WorldMapChart
+              countryDistribution={sm.countryDistribution}
+              totalOpportunities={sm.totalOpportunities}
+            />
+          </Card>
+
           <Card title="Regional Distribution">
             <StackedBar
               segments={Object.entries(sm.regionDistribution)
