@@ -16,7 +16,6 @@ import {
   SolarHamburgerMenu,
   SolarMenuDots,
   SolarAltArrowDown,
-  SolarLightbulbLinear,
   SolarChatRoundLinear,
   SolarClipboardLinear,
   SolarDownloadLinear,
@@ -41,7 +40,6 @@ interface HeaderProps {
   onCreateActivity: () => void;
   onExport: () => void;
   onToggleCopilot?: () => void;
-  onOpenBriefGenerator?: () => void;
   onSeedData?: (action: 'seed' | 'reset' | 'clear') => void;
   isSeedingData?: boolean;
   onOpenFeedbackReview?: () => void;
@@ -67,7 +65,6 @@ export function Header({
   onCreateActivity,
   onExport,
   onToggleCopilot,
-  onOpenBriefGenerator,
   onSeedData,
   isSeedingData,
   onOpenFeedbackReview,
@@ -199,7 +196,6 @@ export function Header({
             currentCalendar={currentCalendar}
             onSeedData={onSeedData}
             isSeedingData={isSeedingData}
-            onOpenBriefGenerator={onOpenBriefGenerator}
             onToggleCopilot={onToggleCopilot}
             onOpenFeedbackReview={onOpenFeedbackReview}
             onExport={onExport}
@@ -270,17 +266,6 @@ export function Header({
                   <SeedDataMenu onAction={(action) => { onSeedData(action); setMobileMenuOpen(false); }} isLoading={isSeedingData} />
                 )}
 
-                {onOpenBriefGenerator && (
-                  <button
-                    onClick={() => { onOpenBriefGenerator(); setMobileMenuOpen(false); }}
-                    disabled={!currentCalendar}
-                    className="px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50 flex items-center gap-1.5 justify-center"
-                  >
-                    <SolarLightbulbLinear className="w-4 h-4 text-amber-500" />
-                    AI Brief
-                  </button>
-                )}
-
                 {onToggleCopilot && (
                   <button
                     onClick={() => { onToggleCopilot(); setMobileMenuOpen(false); }}
@@ -334,7 +319,6 @@ function ToolsMenu({
   currentCalendar,
   onSeedData,
   isSeedingData,
-  onOpenBriefGenerator,
   onToggleCopilot,
   onOpenFeedbackReview,
   onExport,
@@ -343,7 +327,6 @@ function ToolsMenu({
   currentCalendar: Calendar | null;
   onSeedData?: (action: 'seed' | 'reset' | 'clear') => void;
   isSeedingData?: boolean;
-  onOpenBriefGenerator?: () => void;
   onToggleCopilot?: () => void;
   onOpenFeedbackReview?: () => void;
   onExport: () => void;
@@ -365,16 +348,6 @@ function ToolsMenu({
   }, [open]);
 
   const items: { key: string; label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean }[] = [];
-
-  if (onOpenBriefGenerator) {
-    items.push({
-      key: 'brief',
-      label: 'AI Brief',
-      icon: <SolarLightbulbLinear className="w-4 h-4 text-amber-500" />,
-      onClick: () => { onOpenBriefGenerator(); setOpen(false); },
-      disabled: !currentCalendar,
-    });
-  }
 
   if (onToggleCopilot) {
     items.push({
