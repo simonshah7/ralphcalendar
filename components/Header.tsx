@@ -26,9 +26,10 @@ import {
   SolarTrashBinLinear,
   SolarSpinner,
   SolarSettingsLinear,
+  SolarChartLinear,
 } from './SolarIcons';
 
-type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
+type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events' | 'reports';
 
 interface HeaderProps {
   calendars: Calendar[];
@@ -53,6 +54,7 @@ const VIEW_ICONS: Record<ViewType, React.ReactNode> = {
   table: <SolarTableLinear className="w-4 h-4" />,
   dashboard: <SolarWidgetLinear className="w-4 h-4" />,
   events: <SolarUsersGroupRounded className="w-4 h-4" />,
+  reports: <SolarChartLinear className="w-4 h-4" />,
 };
 
 export function Header({
@@ -77,6 +79,7 @@ export function Header({
     { key: 'table', label: 'Table', description: 'Spreadsheet view with inline editing' },
     { key: 'events', label: 'Events', description: 'Manage events, attendees, and checklists' },
     { key: 'dashboard', label: 'Dashboard', description: 'Budget, SAO, and performance analytics' },
+    { key: 'reports', label: 'Reports', description: 'Campaign, budget, and event ROI reporting decks' },
   ];
 
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});

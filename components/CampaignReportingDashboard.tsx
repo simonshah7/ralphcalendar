@@ -527,6 +527,13 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
   const [data, setData] = useState<CampaignReportData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Reporting period state
+  const now = new Date();
+  const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  const qEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
+  const [periodStart, setPeriodStart] = useState(qStart.toISOString().split('T')[0]);
+  const [periodEnd, setPeriodEnd] = useState(qEnd.toISOString().split('T')[0]);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -693,7 +700,7 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
   const handleExportDeck = useCallback(async () => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/reports/campaign-performance?calendarId=${calendarId}`);
+      const res = await fetch(`/api/reports/campaign-performance?calendarId=${calendarId}&periodStart=${periodStart}&periodEnd=${periodEnd}`);
       if (!res.ok) throw new Error('Failed to fetch report data');
       const reportData = await res.json();
 
@@ -709,15 +716,14 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
         // Continue without insights
       }
 
-      const now = new Date();
-      const periodLabel = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      const periodLabel = `${periodStart} to ${periodEnd}`;
       await generateCampaignPerformanceDeck(reportData, insights, periodLabel);
     } catch (error) {
       console.error('Error generating campaign deck:', error);
       alert('Failed to generate campaign performance deck');
     }
     setExporting(false);
-  }, [calendarId]);
+  }, [calendarId, periodStart, periodEnd]);
 
   if (loading) {
     return (
@@ -751,13 +757,39 @@ export function CampaignReportingDashboard({ calendarId }: CampaignReportingDash
 
   return (
     <div className="space-y-4">
-      {/* Header with Export */}
-      <div className="flex items-center justify-between">
-        <div />
+      {/* Header with Reporting Period + Export */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-card border border-card-border rounded-lg p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reporting Period</span>
+          <input
+            type="date"
+            value={periodStart}
+            onChange={(e) => setPeriodStart(e.target.value)}
+            className="px-2 py-1 text-xs border border-card-border rounded-md bg-background text-foreground"
+          />
+          <span className="text-xs text-muted-foreground">to</span>
+          <input
+            type="date"
+            value={periodEnd}
+            onChange={(e) => setPeriodEnd(e.target.value)}
+            className="px-2 py-1 text-xs border border-card-border rounded-md bg-background text-foreground"
+          />
+          <div className="flex gap-1 ml-1">
+            {([
+              ['This Month', () => { const n = new Date(); setPeriodStart(new Date(n.getFullYear(), n.getMonth(), 1).toISOString().split('T')[0]); setPeriodEnd(new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().split('T')[0]); }],
+              ['This Quarter', () => { const n = new Date(); const q = Math.floor(n.getMonth() / 3); setPeriodStart(new Date(n.getFullYear(), q * 3, 1).toISOString().split('T')[0]); setPeriodEnd(new Date(n.getFullYear(), q * 3 + 3, 0).toISOString().split('T')[0]); }],
+              ['YTD', () => { const n = new Date(); setPeriodStart(new Date(n.getFullYear(), 0, 1).toISOString().split('T')[0]); setPeriodEnd(n.toISOString().split('T')[0]); }],
+            ] as [string, () => void][]).map(([label, fn]) => (
+              <button key={label} onClick={fn} className="px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted rounded hover:text-foreground transition-colors">
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           onClick={handleExportDeck}
           disabled={exporting}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-accent-purple-btn rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-accent-purple-btn rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex-shrink-0"
         >
           <SolarDownloadLinear className="w-4 h-4" />
           {exporting ? 'Generating...' : 'Export Performance Deck'}

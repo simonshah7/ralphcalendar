@@ -24,8 +24,9 @@ import { FeedbackWidget } from '@/components/FeedbackWidget';
 import { FeedbackReviewView } from '@/components/FeedbackReviewView';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { DriveBrowser } from '@/components/DriveBrowser';
+import { ReportsView } from '@/components/ReportsView';
 
-type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
+type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events' | 'reports';
 
 interface CalendarData extends Calendar {
   statuses: Status[];
@@ -82,7 +83,7 @@ function HomeInner() {
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view') as ViewType | null;
     const eventParam = params.get('event');
-    if (viewParam && ['timeline', 'calendar', 'table', 'dashboard', 'events'].includes(viewParam)) {
+    if (viewParam && ['timeline', 'calendar', 'table', 'dashboard', 'events', 'reports'].includes(viewParam)) {
       setCurrentView(viewParam);
     }
     if (eventParam) {
@@ -576,7 +577,7 @@ function HomeInner() {
         onOpenSettings={() => setShowSettings(true)}
       />
 
-      {currentView !== 'dashboard' && currentView !== 'events' && (
+      {currentView !== 'dashboard' && currentView !== 'events' && currentView !== 'reports' && (
         <FilterBar
           campaigns={currentCalendar?.campaigns || []}
           statuses={currentCalendar?.statuses || []}
@@ -677,6 +678,10 @@ function HomeInner() {
                 statuses={currentCalendar.statuses}
                 calendarId={currentCalendar.id}
               />
+            )}
+
+            {currentView === 'reports' && currentCalendar && (
+              <ReportsView calendarId={currentCalendar.id} />
             )}
 
             {currentView === 'events' && currentCalendar && !selectedEventId && (
