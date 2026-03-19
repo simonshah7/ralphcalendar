@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
     if (periodStart && periodEnd) {
       activityRows = activityRows.filter(
-        (a) => a.endDate >= periodStart && a.startDate <= periodEnd,
+        (a: typeof activityRows[number]) => a.endDate >= periodStart && a.startDate <= periodEnd,
       );
     }
 
