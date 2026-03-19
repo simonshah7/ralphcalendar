@@ -804,6 +804,28 @@ function HomeInner() {
           copilot: showCopilot,
           briefGenerator: showBriefGenerator,
         }}
+        contextData={{
+          calendarName: currentCalendar?.name,
+          activityName: editingActivity?.title,
+          activityId: editingActivity?.id,
+          eventTitle: selectedEventId
+            ? eventsList.find((e) => e.id === selectedEventId)?.title
+            : undefined,
+          eventId: selectedEventId || undefined,
+          activeFilters: {
+            campaigns: selectedCampaignIds.length > 0
+              ? currentCalendar?.campaigns
+                  ?.filter((c) => selectedCampaignIds.includes(c.id))
+                  .map((c) => c.name)
+              : undefined,
+            statuses: selectedStatusIds.length > 0
+              ? currentCalendar?.statuses
+                  ?.filter((s) => selectedStatusIds.includes(s.id))
+                  .map((s) => s.name)
+              : undefined,
+            searchQuery: searchQuery || undefined,
+          },
+        }}
       />
 
       <FeedbackReviewView

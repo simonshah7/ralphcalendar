@@ -5,6 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { FeedbackItem } from '@/db/schema';
 import { SolarClipboardLinear, SolarCloseLinear, SolarTrashBinLinear } from './SolarIcons';
 
+interface FeedbackMetadata {
+  calendarName?: string;
+  activityName?: string;
+  activityId?: string;
+  eventTitle?: string;
+  eventId?: string;
+  filterCampaigns?: string;
+  filterStatuses?: string;
+  filterSearch?: string;
+}
+
 interface FeedbackReviewViewProps {
   isOpen: boolean;
   onClose: () => void;
@@ -233,6 +244,36 @@ export function FeedbackReviewView({ isOpen, onClose }: FeedbackReviewViewProps)
                         <span className="text-[10px] text-muted ml-auto">{timeAgo(item.createdAt as unknown as string)}</span>
                       </div>
 
+                      {/* Context badges - always visible */}
+                      {(() => {
+                        const meta = item.metadata as FeedbackMetadata | null;
+                        if (!meta || Object.keys(meta).length === 0) return null;
+                        return (
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            {meta.calendarName && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-card-hover text-muted">
+                                {meta.calendarName}
+                              </span>
+                            )}
+                            {meta.activityName && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">
+                                Activity: {meta.activityName}
+                              </span>
+                            )}
+                            {meta.eventTitle && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400">
+                                Event: {meta.eventTitle}
+                              </span>
+                            )}
+                            {(meta.filterCampaigns || meta.filterStatuses || meta.filterSearch) && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400">
+                                Filtered
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       <p
                         className={`text-xs text-foreground ${expandedId === item.id ? '' : 'line-clamp-2'} cursor-pointer`}
                         onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
@@ -257,6 +298,20 @@ export function FeedbackReviewView({ isOpen, onClose }: FeedbackReviewViewProps)
                             }
                           })()}
                           {item.url && <p><span className="font-medium">URL:</span> {item.url}</p>}
+                          {(() => {
+                            const meta = item.metadata as FeedbackMetadata | null;
+                            if (!meta) return null;
+                            return (
+                              <>
+                                {meta.calendarName && <p><span className="font-medium">Calendar:</span> {meta.calendarName}</p>}
+                                {meta.activityName && <p><span className="font-medium">Activity:</span> {meta.activityName}</p>}
+                                {meta.eventTitle && <p><span className="font-medium">Event:</span> {meta.eventTitle}</p>}
+                                {meta.filterCampaigns && <p><span className="font-medium">Campaign filter:</span> {meta.filterCampaigns}</p>}
+                                {meta.filterStatuses && <p><span className="font-medium">Status filter:</span> {meta.filterStatuses}</p>}
+                                {meta.filterSearch && <p><span className="font-medium">Search:</span> &quot;{meta.filterSearch}&quot;</p>}
+                              </>
+                            );
+                          })()}
                           <p><span className="font-medium">Submitted:</span> {new Date(item.createdAt as unknown as string).toLocaleString()}</p>
                         </div>
                       )}
