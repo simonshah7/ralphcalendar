@@ -401,7 +401,7 @@ function KpiCard({
 
   return (
     <motion.div
-      className="bg-card border border-card-border rounded-lg p-3 sm:p-4 flex flex-col gap-1 sm:gap-1.5 min-w-0 cursor-default"
+      className="bg-card border border-card-border rounded-lg p-3 sm:p-4 flex flex-col gap-1 sm:gap-1.5 min-w-0 cursor-default h-full"
       whileHover={{ scale: 1.03, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
@@ -427,7 +427,7 @@ function KpiCard({
           {trend.label}
         </div>
       )}
-      <div className="mt-1">
+      <div className="mt-auto pt-1">
         <MiniAreaChart data={trendData} color={colors.textColor || '#6B7280'} />
       </div>
     </motion.div>
