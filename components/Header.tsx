@@ -83,6 +83,17 @@ export function Header({
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    setIsDark(root.classList.contains('dark'));
+    const observer = new MutationObserver(() => {
+      setIsDark(root.classList.contains('dark'));
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const activeTab = tabRefs.current[currentView];
@@ -120,7 +131,7 @@ export function Header({
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
             <img
-              src="/launchgridlogo.png"
+              src={isDark ? '/launchgridlogodark.png' : '/launchgridlogolight.png'}
               alt="LaunchGrid"
               className="h-8 sm:h-9 w-auto object-contain"
             />
