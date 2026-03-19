@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { events, subEvents, eventAttendees, checklistItems, statuses, activities, campaignEvents } from '@/db/schema';
+import { events, subEvents, eventAttendees, checklistItems, statuses, activities, campaignEvents, Event, SubEvent, EventAttendee, ChecklistItem, CampaignEvent } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 function isUuid(s: string): boolean {
@@ -26,14 +26,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Valid eventId required' }, { status: 400 });
     }
 
-    const [event] = await db.select().from(events).where(eq(events.id, eventId));
+    const [event]: Event[] = await db.select().from(events).where(eq(events.id, eventId));
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    const subs = await db.select().from(subEvents).where(eq(subEvents.eventId, eventId));
-    const attendees = await db.select().from(eventAttendees).where(eq(eventAttendees.eventId, eventId));
-    const checklist = await db.select().from(checklistItems).where(eq(checklistItems.eventId, eventId));
+    const subs: SubEvent[] = await db.select().from(subEvents).where(eq(subEvents.eventId, eventId));
+    const attendees: EventAttendee[] = await db.select().from(eventAttendees).where(eq(eventAttendees.eventId, eventId));
+    const checklist: ChecklistItem[] = await db.select().from(checklistItems).where(eq(checklistItems.eventId, eventId));
 
     let statusName: string | null = null;
     if (event.statusId) {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     // Get linked activity metrics
-    const linkedCampaignEvents = await db
+    const linkedCampaignEvents: CampaignEvent[] = await db
       .select()
       .from(campaignEvents)
       .where(eq(campaignEvents.eventId, eventId));
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     const readinessPct = checklist.length > 0 ? doneChecklist / checklist.length : 0;
 
     // YoY: find prior event
-    let priorEvent = null;
+    let priorEvent: Event | null = null;
     let priorMetrics = null;
 
     if (event.priorEventId) {
@@ -72,10 +72,10 @@ export async function GET(request: Request) {
       if (prior) priorEvent = prior;
     } else if (event.seriesName) {
       // Find another event with same series name
-      const seriesEvents = await db
+      const seriesEvents: Event[] = await db
         .select()
         .from(events)
-        .where(eq(events.seriesName, event.seriesName));
+        .where(eq(events.seriesName, event.seriesName!));
       const priors = seriesEvents
         .filter((e) => e.id !== eventId && e.startDate < event.startDate)
         .sort((a, b) => (b.startDate > a.startDate ? 1 : -1));
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     }
 
     if (priorEvent) {
-      const priorAttendees = await db
+      const priorAttendees: EventAttendee[] = await db
         .select()
         .from(eventAttendees)
         .where(eq(eventAttendees.eventId, priorEvent.id));

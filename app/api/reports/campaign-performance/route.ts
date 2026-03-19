@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { campaignReportData, activities, campaigns, swimlanes } from '@/db/schema';
+import { campaignReportData, activities, campaigns, swimlanes, CampaignReportData, Activity, Campaign, Swimlane } from '@/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 function isUuid(s: string): boolean {
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch report data
-    let reportRows = await db
+    let reportRows: CampaignReportData[] = await db
       .select()
       .from(campaignReportData)
       .where(eq(campaignReportData.calendarId, calendarId));
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch activities
-    let activityRows = await db
+    let activityRows: Activity[] = await db
       .select()
       .from(activities)
       .where(eq(activities.calendarId, calendarId));
@@ -54,12 +54,12 @@ export async function GET(request: Request) {
     }
 
     // Fetch campaigns and swimlanes
-    const campaignRows = await db
+    const campaignRows: Campaign[] = await db
       .select()
       .from(campaigns)
       .where(eq(campaigns.calendarId, calendarId));
 
-    const swimlaneRows = await db
+    const swimlaneRows: Swimlane[] = await db
       .select()
       .from(swimlanes)
       .where(eq(swimlanes.calendarId, calendarId));

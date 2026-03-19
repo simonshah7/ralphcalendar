@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { activities, campaigns, swimlanes } from '@/db/schema';
+import { activities, campaigns, swimlanes, Activity, Campaign, Swimlane } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 function isUuid(s: string): boolean {
@@ -28,23 +28,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Valid calendarId required' }, { status: 400 });
     }
 
-    let activityRows = await db
+    let activityRows: Activity[] = await db
       .select()
       .from(activities)
       .where(eq(activities.calendarId, calendarId));
 
     if (periodStart && periodEnd) {
       activityRows = activityRows.filter(
-        (a: typeof activityRows[number]) => a.endDate >= periodStart && a.startDate <= periodEnd,
+        (a) => a.endDate >= periodStart && a.startDate <= periodEnd,
       );
     }
 
-    const campaignRows = await db
+    const campaignRows: Campaign[] = await db
       .select()
       .from(campaigns)
       .where(eq(campaigns.calendarId, calendarId));
 
-    const swimlaneRows = await db
+    const swimlaneRows: Swimlane[] = await db
       .select()
       .from(swimlanes)
       .where(eq(swimlanes.calendarId, calendarId));
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
         roi: safeDiv(pipeline, actual),
         activityCount: acts.length,
       };
-    }).sort((a: { actual: number }, b: { actual: number }) => b.actual - a.actual);
+    }).sort((a, b) => b.actual - a.actual);
 
     // By campaign
     const byCampaign = campaignRows.map((c) => {
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
         roi: safeDiv(pipeline, actual),
         activityCount: acts.length,
       };
-    }).sort((a: { actual: number }, b: { actual: number }) => b.actual - a.actual);
+    }).sort((a, b) => b.actual - a.actual);
 
     // By region
     const regionMap: Record<string, { spend: number; pipeline: number; saos: number; count: number }> = {
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
           actual: s.actual,
           overrun: safeDiv(s.actual - s.budget, s.budget),
         })),
-    ].sort((a: { overrun: number }, b: { overrun: number }) => b.overrun - a.overrun);
+    ].sort((a, b) => b.overrun - a.overrun);
 
     // Under-budget opportunities
     const underBudget = [
@@ -165,7 +165,7 @@ export async function GET(request: Request) {
           remaining: s.budget - s.actual,
           utilization: s.utilization,
         })),
-    ].sort((a: { remaining: number }, b: { remaining: number }) => b.remaining - a.remaining);
+    ].sort((a, b) => b.remaining - a.remaining);
 
     return NextResponse.json({
       summary: {
