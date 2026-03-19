@@ -411,15 +411,34 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
 
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_WIDE';
+      pptx.author = 'LaunchGrid';
+      pptx.company = 'LaunchGrid';
 
+      // Brand constants
+      const B = {
+        forestBlack: '082029', teal: '006170', turquoise: '34E5E2',
+        white: 'FFFFFF', navyMid: '0E2E38', lightGrey: 'F2F2F2',
+        lightTeal: 'EBF5F3', textMuted: '7C9AA3', textDim: '8FB3BB',
+        red: 'E24650',
+      };
+      const headFont = 'Archivo';
+      const bodyFont = 'Roboto';
+
+      // Slide 1: Title (Forest Black bg, Pattern A)
       const slide1 = pptx.addSlide();
-      slide1.addText(data.event.title, { x: 0.5, y: 1.5, w: '90%', fontSize: 36, bold: true, color: '1a1a1a' });
-      slide1.addText(`${data.event.startDate} - ${data.event.endDate}`, { x: 0.5, y: 2.5, w: '90%', fontSize: 18, color: '666666' });
-      slide1.addText(data.event.location || 'Location TBD', { x: 0.5, y: 3.0, w: '90%', fontSize: 16, color: '888888' });
-      slide1.addText(`Status: ${data.event.statusName || 'N/A'}`, { x: 0.5, y: 3.5, w: '90%', fontSize: 14, color: '888888' });
+      slide1.background = { color: B.forestBlack };
+      slide1.addShape('rect' as PptxGenJS.ShapeType, { x: 0, y: 0, w: '100%', h: 0.04, fill: { color: B.turquoise } });
+      slide1.addText(data.event.title, { x: 0.8, y: 1.5, w: '80%', fontSize: 42, bold: true, color: B.white, fontFace: headFont, charSpacing: -1, shadow: { type: 'none' } as any });
+      slide1.addText(`${data.event.startDate} - ${data.event.endDate}`, { x: 0.8, y: 3.2, w: '80%', fontSize: 18, color: B.turquoise, fontFace: headFont, shadow: { type: 'none' } as any });
+      slide1.addText(data.event.location || 'Location TBD', { x: 0.8, y: 3.8, w: '80%', fontSize: 14, color: B.textDim, fontFace: bodyFont, shadow: { type: 'none' } as any });
+      slide1.addText(`Status: ${data.event.statusName || 'N/A'}`, { x: 0.8, y: 4.2, w: '80%', fontSize: 12, color: B.textDim, fontFace: bodyFont, shadow: { type: 'none' } as any });
+      slide1.addShape('rect' as PptxGenJS.ShapeType, { x: 0, y: 6.6, w: '100%', h: 0.65, fill: { color: B.navyMid } });
+      slide1.addText('Redwood', { x: 0.5, y: 6.85, w: 1.5, h: 0.3, fontSize: 11, fontFace: headFont, bold: true, color: B.white, shadow: { type: 'none' } as any });
 
+      // Slide 2: Overview (White bg, Pattern C)
       const slide2 = pptx.addSlide();
-      slide2.addText('Event Overview', { x: 0.5, y: 0.3, w: '90%', fontSize: 24, bold: true, color: '1a1a1a' });
+      slide2.background = { color: B.white };
+      slide2.addText('Event overview', { x: 0.5, y: 0.5, w: '90%', fontSize: 36, bold: true, color: B.forestBlack, fontFace: headFont, charSpacing: -1, shadow: { type: 'none' } as any });
       const overviewRows: string[][] = [
         ['Metric', 'Value'],
         ['Passes', `${data.passAllocation.allocated}/${data.passAllocation.total} allocated`],
@@ -429,26 +448,35 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
         ['Checklist', `${data.checklist.filter((c: ChecklistItemData) => c.isDone).length}/${data.checklist.length} complete`],
         ['Budget', formatCurrency(num(data.event.cost))],
       ];
-      slide2.addTable(overviewRows.map((row: string[]) => row.map((cell: string) => ({ text: cell }))), { x: 0.5, y: 1.2, w: 8, fontSize: 12, border: { type: 'solid', pt: 0.5, color: 'cccccc' } });
+      const headerRow2 = overviewRows[0].map((cell: string) => ({ text: cell, options: { bold: true, color: B.white, fill: { color: B.teal }, fontSize: 11, fontFace: headFont, shadow: { type: 'none' } as any } }));
+      const dataRows2 = overviewRows.slice(1).map((row: string[], ri: number) => row.map((cell: string) => ({ text: cell, options: { fontSize: 11, color: B.forestBlack, fontFace: bodyFont, fill: { color: ri % 2 === 0 ? B.white : B.lightGrey }, shadow: { type: 'none' } as any } })));
+      slide2.addTable([headerRow2, ...dataRows2], { x: 0.5, y: 1.4, w: 8, fontSize: 11, border: { type: 'solid', pt: 0.5, color: B.lightTeal } });
+      slide2.addText('Redwood', { x: 0.5, y: 6.85, w: 1.5, h: 0.3, fontSize: 11, fontFace: headFont, bold: true, color: B.forestBlack, shadow: { type: 'none' } as any });
 
       if (data.subEvents.length > 0) {
         const slide3 = pptx.addSlide();
-        slide3.addText('Schedule / Sub-Events', { x: 0.5, y: 0.3, w: '90%', fontSize: 24, bold: true, color: '1a1a1a' });
-        const subRows: string[][] = [['Title', 'Type', 'Time', 'Location']];
-        data.subEvents.forEach((se: SubEventData) => {
-          subRows.push([se.title, se.type || '-', `${se.startDatetime} - ${se.endDatetime}`, se.location || '-']);
-        });
-        slide3.addTable(subRows.map((row: string[]) => row.map((cell: string) => ({ text: cell }))), { x: 0.5, y: 1.2, w: 12, fontSize: 11, border: { type: 'solid', pt: 0.5, color: 'cccccc' } });
+        slide3.background = { color: B.white };
+        slide3.addText('Schedule / sub-events', { x: 0.5, y: 0.5, w: '90%', fontSize: 36, bold: true, color: B.forestBlack, fontFace: headFont, charSpacing: -1, shadow: { type: 'none' } as any });
+        const subHeaders = ['Title', 'Type', 'Time', 'Location'];
+        const subHeaderRow = subHeaders.map((h: string) => ({ text: h, options: { bold: true, color: B.white, fill: { color: B.teal }, fontSize: 10, fontFace: headFont, shadow: { type: 'none' } as any } }));
+        const subDataRows = data.subEvents.map((se: SubEventData, ri: number) =>
+          [se.title, se.type || '-', `${se.startDatetime} - ${se.endDatetime}`, se.location || '-'].map((cell: string) => ({ text: cell, options: { fontSize: 10, color: B.forestBlack, fontFace: bodyFont, fill: { color: ri % 2 === 0 ? B.white : B.lightGrey }, shadow: { type: 'none' } as any } }))
+        );
+        slide3.addTable([subHeaderRow, ...subDataRows], { x: 0.5, y: 1.4, w: 12, fontSize: 10, border: { type: 'solid', pt: 0.5, color: B.lightTeal } });
+        slide3.addText('Redwood', { x: 0.5, y: 6.85, w: 1.5, h: 0.3, fontSize: 11, fontFace: headFont, bold: true, color: B.forestBlack, shadow: { type: 'none' } as any });
       }
 
       if (data.attendees.internal.length > 0 || data.attendees.customers.length > 0) {
         const slide4 = pptx.addSlide();
-        slide4.addText('Attendees', { x: 0.5, y: 0.3, w: '90%', fontSize: 24, bold: true, color: '1a1a1a' });
-        const attRows: string[][] = [['Name', 'Type', 'Role', 'Company', 'Pass', 'Travel']];
-        [...data.attendees.internal, ...data.attendees.customers].forEach((a: AttendeeData) => {
-          attRows.push([a.name, a.attendeeType, a.role || '-', a.company || '-', a.hasPass ? 'Yes' : 'No', a.travelStatus || '-']);
-        });
-        slide4.addTable(attRows.map((row: string[]) => row.map((cell: string) => ({ text: cell }))), { x: 0.5, y: 1.2, w: 12, fontSize: 10, border: { type: 'solid', pt: 0.5, color: 'cccccc' } });
+        slide4.background = { color: B.white };
+        slide4.addText('Attendees', { x: 0.5, y: 0.5, w: '90%', fontSize: 36, bold: true, color: B.forestBlack, fontFace: headFont, charSpacing: -1, shadow: { type: 'none' } as any });
+        const attHeaders = ['Name', 'Type', 'Role', 'Company', 'Pass', 'Travel'];
+        const attHeaderRow = attHeaders.map((h: string) => ({ text: h, options: { bold: true, color: B.white, fill: { color: B.teal }, fontSize: 10, fontFace: headFont, shadow: { type: 'none' } as any } }));
+        const attDataRows = [...data.attendees.internal, ...data.attendees.customers].map((a: AttendeeData, ri: number) =>
+          [a.name, a.attendeeType, a.role || '-', a.company || '-', a.hasPass ? 'Yes' : 'No', a.travelStatus || '-'].map((cell: string) => ({ text: cell, options: { fontSize: 10, color: B.forestBlack, fontFace: bodyFont, fill: { color: ri % 2 === 0 ? B.white : B.lightGrey }, shadow: { type: 'none' } as any } }))
+        );
+        slide4.addTable([attHeaderRow, ...attDataRows], { x: 0.5, y: 1.4, w: 12, fontSize: 10, border: { type: 'solid', pt: 0.5, color: B.lightTeal } });
+        slide4.addText('Redwood', { x: 0.5, y: 6.85, w: 1.5, h: 0.3, fontSize: 11, fontFace: headFont, bold: true, color: B.forestBlack, shadow: { type: 'none' } as any });
       }
 
       await pptx.writeFile({ fileName: `${data.event.title.replace(/[^a-zA-Z0-9]/g, '_')}_Logistics.pptx` });

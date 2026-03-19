@@ -174,14 +174,17 @@ export async function generateEventRoiDeck(data: EventRoiData): Promise<void> {
 
   // Slide 7: Key Takeaways & Recommendation
   const slide = pptx.addSlide();
-  slide.addText('Key Takeaways & Recommendation', {
+  slide.background = { color: BRAND.white };
+  slide.addText('Key takeaways &\nrecommendation', {
     x: 0.5,
-    y: 0.3,
+    y: 0.5,
     w: '90%',
-    fontSize: 22,
+    fontSize: 36,
     bold: true,
-    color: BRAND.dark,
+    color: BRAND.forestBlack,
     fontFace: FONTS.heading,
+    charSpacing: -1,
+    shadow: { type: 'none' } as any,
   });
 
   // Recommendation badge
@@ -189,13 +192,13 @@ export async function generateEventRoiDeck(data: EventRoiData): Promise<void> {
     invest: BRAND.green,
     maintain: BRAND.blue,
     reduce: BRAND.orange,
-    cut: BRAND.red,
-    new: BRAND.purple,
-  }[data.recommendation] || BRAND.mid;
+    cut: BRAND.crimson,
+    new: BRAND.teal,
+  }[data.recommendation] || BRAND.textMuted;
 
   slide.addShape('rect' as any, {
     x: 0.5,
-    y: 1.2,
+    y: 1.8,
     w: 11.5,
     h: 1.0,
     fill: { color: recColor },
@@ -204,17 +207,18 @@ export async function generateEventRoiDeck(data: EventRoiData): Promise<void> {
 
   slide.addText(RECOMMENDATION_LABELS[data.recommendation] || data.recommendation, {
     x: 0.8,
-    y: 1.2,
+    y: 1.8,
     w: 11,
     h: 1.0,
     fontSize: 22,
     bold: true,
-    color: BRAND.bgWhite,
+    color: BRAND.white,
     fontFace: FONTS.heading,
     valign: 'middle',
+    shadow: { type: 'none' } as any,
   });
 
-  // Supporting data points
+  // Supporting data points — use small Teal rect shapes instead of bullet Unicode
   const points: string[] = [];
   if (data.financial.roi > 0) points.push(`ROI: ${data.financial.roi.toFixed(1)}x`);
   if (data.saos.actual > 0) points.push(`${fmtCompact(data.saos.actual)} SAOs generated`);
@@ -225,13 +229,23 @@ export async function generateEventRoiDeck(data: EventRoiData): Promise<void> {
   }
 
   points.forEach((point, i) => {
-    slide.addText(`• ${point}`, {
+    const y = 3.2 + i * 0.45;
+    // Small Teal rectangle as bullet indicator (no Unicode)
+    slide.addShape('rect' as any, {
       x: 0.8,
-      y: 2.6 + i * 0.45,
-      w: 11,
+      y: y + 0.07,
+      w: 0.12,
+      h: 0.12,
+      fill: { color: BRAND.teal },
+    });
+    slide.addText(point, {
+      x: 1.1,
+      y,
+      w: 10.5,
       fontSize: 14,
-      color: BRAND.dark,
+      color: BRAND.forestBlack,
       fontFace: FONTS.body,
+      shadow: { type: 'none' } as any,
     });
   });
 
