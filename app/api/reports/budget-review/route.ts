@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { activities, campaigns, swimlanes } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, type InferSelectModel } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+
+type Activity = InferSelectModel<typeof activities>;
+type Campaign = InferSelectModel<typeof campaigns>;
+type Swimlane = InferSelectModel<typeof swimlanes>;
 function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
 
     if (periodStart && periodEnd) {
       activityRows = activityRows.filter(
-        (a: typeof activityRows[number]) => a.endDate >= periodStart && a.startDate <= periodEnd,
+        (a: Activity) => a.endDate >= periodStart && a.startDate <= periodEnd,
       );
     }
 
@@ -51,19 +55,19 @@ export async function GET(request: Request) {
 
     // Overall summary
     const totalBudget =
-      campaignRows.reduce((s: number, c) => s + num(c.budget), 0) +
-      swimlaneRows.reduce((s: number, sw) => s + num(sw.budget), 0);
-    const totalPlanned = activityRows.reduce((s: number, a) => s + num(a.cost), 0);
-    const totalActual = activityRows.reduce((s: number, a) => s + num(a.actualCost), 0);
-    const totalPipeline = activityRows.reduce((s: number, a) => s + num(a.pipelineGenerated), 0);
+      campaignRows.reduce((s: number, c: Campaign) => s + num(c.budget), 0) +
+      swimlaneRows.reduce((s: number, sw: Swimlane) => s + num(sw.budget), 0);
+    const totalPlanned = activityRows.reduce((s: number, a: Activity) => s + num(a.cost), 0);
+    const totalActual = activityRows.reduce((s: number, a: Activity) => s + num(a.actualCost), 0);
+    const totalPipeline = activityRows.reduce((s: number, a: Activity) => s + num(a.pipelineGenerated), 0);
 
     // By swimlane
-    const bySwimlane = swimlaneRows.map((sw) => {
-      const acts = activityRows.filter((a) => a.swimlaneId === sw.id);
-      const planned = acts.reduce((s: number, a) => s + num(a.cost), 0);
-      const actual = acts.reduce((s: number, a) => s + num(a.actualCost), 0);
-      const pipeline = acts.reduce((s: number, a) => s + num(a.pipelineGenerated), 0);
-      const saos = acts.reduce((s: number, a) => s + num(a.actualSaos), 0);
+    const bySwimlane = swimlaneRows.map((sw: Swimlane) => {
+      const acts = activityRows.filter((a: Activity) => a.swimlaneId === sw.id);
+      const planned = acts.reduce((s: number, a: Activity) => s + num(a.cost), 0);
+      const actual = acts.reduce((s: number, a: Activity) => s + num(a.actualCost), 0);
+      const pipeline = acts.reduce((s: number, a: Activity) => s + num(a.pipelineGenerated), 0);
+      const saos = acts.reduce((s: number, a: Activity) => s + num(a.actualSaos), 0);
       const budget = num(sw.budget);
       return {
         name: sw.name,
@@ -80,12 +84,12 @@ export async function GET(request: Request) {
     }).sort((a, b) => b.actual - a.actual);
 
     // By campaign
-    const byCampaign = campaignRows.map((c) => {
-      const acts = activityRows.filter((a) => a.campaignId === c.id);
-      const planned = acts.reduce((s: number, a) => s + num(a.cost), 0);
-      const actual = acts.reduce((s: number, a) => s + num(a.actualCost), 0);
-      const pipeline = acts.reduce((s: number, a) => s + num(a.pipelineGenerated), 0);
-      const saos = acts.reduce((s: number, a) => s + num(a.actualSaos), 0);
+    const byCampaign = campaignRows.map((c: Campaign) => {
+      const acts = activityRows.filter((a: Activity) => a.campaignId === c.id);
+      const planned = acts.reduce((s: number, a: Activity) => s + num(a.cost), 0);
+      const actual = acts.reduce((s: number, a: Activity) => s + num(a.actualCost), 0);
+      const pipeline = acts.reduce((s: number, a: Activity) => s + num(a.pipelineGenerated), 0);
+      const saos = acts.reduce((s: number, a: Activity) => s + num(a.actualSaos), 0);
       const budget = num(c.budget);
       return {
         name: c.name,
