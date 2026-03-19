@@ -226,6 +226,8 @@ export const events = pgTable('events', {
   statusId: uuid('status_id').references(() => statuses.id),
   totalPasses: integer('total_passes').default(0),
   slackWebhookUrl: text('slack_webhook_url'),
+  slackChannelId: text('slack_channel_id'),
+  slackChannelName: text('slack_channel_name'),
   description: text('description'),
   priorEventId: uuid('prior_event_id'),
   cost: numeric('cost').default('0'),

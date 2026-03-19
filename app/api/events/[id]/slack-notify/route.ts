@@ -19,17 +19,6 @@ export async function POST(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Get webhook URL: prefer event-level, fall back to admin global setting
-    let webhookUrl = event.slackWebhookUrl;
-    if (!webhookUrl) {
-      const settings = await db.select().from(adminSettings).where(eq(adminSettings.key, 'slack_webhook_url'));
-      webhookUrl = settings[0]?.value || null;
-    }
-
-    if (!webhookUrl) {
-      return NextResponse.json({ error: 'No Slack webhook URL configured. Set it in Admin Settings or on the event.' }, { status: 400 });
-    }
-
     // Build message based on type
     let slackMessage: { text: string; blocks?: unknown[] };
 
@@ -74,19 +63,60 @@ export async function POST(
       };
     }
 
-    // Send to Slack
-    const slackResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slackMessage),
-    });
+    // Send to Slack — prefer channel (Web API), fall back to webhook
+    if (event.slackChannelId) {
+      // Use Slack Web API with bot token + channel ID
+      const tokenSettings = await db.select().from(adminSettings).where(eq(adminSettings.key, 'slack_bot_token'));
+      const botToken = tokenSettings[0]?.value;
+      if (!botToken) {
+        return NextResponse.json({ error: 'Slack Bot Token not configured. Set it in Settings.' }, { status: 400 });
+      }
 
-    if (!slackResponse.ok) {
-      const errorText = await slackResponse.text();
-      return NextResponse.json(
-        { error: `Slack webhook failed: ${errorText}` },
-        { status: 502 }
-      );
+      const slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${botToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel: event.slackChannelId,
+          text: slackMessage.text,
+          blocks: slackMessage.blocks,
+        }),
+      });
+
+      const slackData = await slackResponse.json();
+      if (!slackData.ok) {
+        return NextResponse.json(
+          { error: `Slack API error: ${slackData.error}` },
+          { status: 502 }
+        );
+      }
+    } else {
+      // Fall back to webhook URL
+      let webhookUrl = event.slackWebhookUrl;
+      if (!webhookUrl) {
+        const settings = await db.select().from(adminSettings).where(eq(adminSettings.key, 'slack_webhook_url'));
+        webhookUrl = settings[0]?.value || null;
+      }
+
+      if (!webhookUrl) {
+        return NextResponse.json({ error: 'No Slack channel or webhook URL configured.' }, { status: 400 });
+      }
+
+      const slackResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackMessage),
+      });
+
+      if (!slackResponse.ok) {
+        const errorText = await slackResponse.text();
+        return NextResponse.json(
+          { error: `Slack webhook failed: ${errorText}` },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Slack notification sent' });

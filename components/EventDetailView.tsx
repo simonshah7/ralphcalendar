@@ -88,6 +88,8 @@ interface EventDetailData {
   statusName: string | null;
   totalPasses: number | null;
   slackWebhookUrl: string | null;
+  slackChannelId: string | null;
+  slackChannelName: string | null;
   description: string | null;
   priorEventId: string | null;
   cost: string | null;
@@ -227,6 +229,13 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
   const [slackMessage, setSlackMessage] = useState('');
   const [slackSending, setSlackSending] = useState(false);
   const [slackResult, setSlackResult] = useState<string | null>(null);
+
+  // Slack channel selector
+  const [slackChannels, setSlackChannels] = useState<{ id: string; name: string; is_private: boolean; num_members: number }[]>([]);
+  const [channelSearch, setChannelSearch] = useState('');
+  const [channelDropdownOpen, setChannelDropdownOpen] = useState(false);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [channelError, setChannelError] = useState<string | null>(null);
 
   // Campaign linking
   const [showCampaignLink, setShowCampaignLink] = useState(false);
@@ -400,6 +409,48 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
     } finally {
       setSlackSending(false);
     }
+  };
+
+  // Fetch Slack channels for selector
+  const fetchSlackChannels = useCallback(async (search?: string) => {
+    setLoadingChannels(true);
+    setChannelError(null);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      const res = await fetch(`/api/slack-channels?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSlackChannels(data.channels);
+      } else {
+        setChannelError(data.error || 'Failed to load channels');
+        setSlackChannels([]);
+      }
+    } catch {
+      setChannelError('Failed to load channels');
+      setSlackChannels([]);
+    } finally {
+      setLoadingChannels(false);
+    }
+  }, []);
+
+  // Debounced channel search
+  useEffect(() => {
+    if (!channelDropdownOpen) return;
+    const timer = setTimeout(() => {
+      fetchSlackChannels(channelSearch || undefined);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [channelSearch, channelDropdownOpen, fetchSlackChannels]);
+
+  const handleSelectChannel = (channel: { id: string; name: string }) => {
+    handleUpdateEvent({ slackChannelId: channel.id, slackChannelName: channel.name });
+    setChannelDropdownOpen(false);
+    setChannelSearch('');
+  };
+
+  const handleClearChannel = () => {
+    handleUpdateEvent({ slackChannelId: null, slackChannelName: null });
   };
 
   // Logistics deck PPTX generation
@@ -1329,7 +1380,75 @@ export function EventDetailView({ eventId, statuses, campaigns, allEvents, onBac
                 </div>
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-foreground mb-1">Slack</h3>
-                  <p className="text-xs text-muted-foreground mb-3">Send notifications to your team channel.</p>
+                  <p className="text-xs text-muted-foreground mb-3">Send notifications to your event channel.</p>
+
+                  {/* Channel Selector */}
+                  <div className="relative mb-3">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block mb-1">Channel</label>
+                    <button
+                      type="button"
+                      onClick={() => setChannelDropdownOpen(!channelDropdownOpen)}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs bg-muted border border-card-border rounded-lg text-foreground hover:border-accent/40 transition-colors text-left"
+                    >
+                      <span className={event.slackChannelName ? 'text-foreground' : 'text-muted-foreground/50 italic'}>
+                        {event.slackChannelName ? `# ${event.slackChannelName}` : 'Select a channel...'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {event.slackChannelName && (
+                          <span
+                            role="button"
+                            onClick={(e) => { e.stopPropagation(); handleClearChannel(); }}
+                            className="text-muted-foreground hover:text-foreground p-0.5"
+                          >
+                            &times;
+                          </span>
+                        )}
+                        <svg className={`w-3 h-3 text-muted-foreground transition-transform ${channelDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </button>
+
+                    {channelDropdownOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-card border border-card-border rounded-lg shadow-xl overflow-hidden">
+                        <div className="p-2 border-b border-card-border">
+                          <input
+                            type="text"
+                            placeholder="Search channels..."
+                            value={channelSearch}
+                            onChange={(e) => setChannelSearch(e.target.value)}
+                            className="w-full px-2 py-1 text-xs bg-muted border border-card-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-accent/30"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {loadingChannels && (
+                            <div className="px-3 py-4 text-xs text-muted-foreground text-center">Loading channels...</div>
+                          )}
+                          {channelError && (
+                            <div className="px-3 py-4 text-xs text-red-400 text-center">{channelError}</div>
+                          )}
+                          {!loadingChannels && !channelError && slackChannels.length === 0 && (
+                            <div className="px-3 py-4 text-xs text-muted-foreground text-center">No channels found</div>
+                          )}
+                          {!loadingChannels && slackChannels.map((ch) => (
+                            <button
+                              key={ch.id}
+                              type="button"
+                              onClick={() => handleSelectChannel(ch)}
+                              className={`w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left ${
+                                event.slackChannelId === ch.id ? 'bg-purple-500/10 text-purple-400' : 'text-foreground'
+                              }`}
+                            >
+                              <span>
+                                {ch.is_private ? '🔒 ' : '# '}{ch.name}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">{ch.num_members} members</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSendSlackUpdate('status_update')}

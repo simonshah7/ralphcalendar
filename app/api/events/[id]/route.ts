@@ -127,7 +127,7 @@ export async function PUT(
       'statusId', 'totalPasses', 'description', 'priorEventId',
       'cost', 'actualCost', 'currency', 'region',
       'expectedSaos', 'actualSaos', 'pipelineGenerated', 'revenueGenerated',
-      'slackWebhookUrl',
+      'slackWebhookUrl', 'slackChannelId', 'slackChannelName',
     ];
 
     for (const field of allowedFields) {

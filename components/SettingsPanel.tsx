@@ -28,6 +28,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
+  const [slackBotToken, setSlackBotToken] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         setApiKey(data.ai_api_key || '');
         setModel(data.ai_model || '');
         setDriveFolderId(data.google_drive_folder_id || '');
+        setSlackBotToken(data.slack_bot_token || '');
       }
     } catch {
       // Ignore load errors
@@ -71,6 +73,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         saveSetting('ai_api_key', apiKey),
         saveSetting('ai_model', model || DEFAULT_MODELS[provider]),
         saveSetting('google_drive_folder_id', driveFolderId),
+        saveSetting('slack_bot_token', slackBotToken),
       ]);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -216,6 +219,31 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
                       The folder ID from the Google Drive URL. Share this folder with your service account email.
+                    </p>
+                  </section>
+
+                  {/* Divider */}
+                  <div className="h-px bg-card-border" />
+
+                  {/* Slack Section */}
+                  <section>
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
+                      Slack
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Connect Slack to send event notifications to dedicated channels.
+                    </p>
+
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Bot Token</label>
+                    <input
+                      type="password"
+                      value={slackBotToken}
+                      onChange={(e) => setSlackBotToken(e.target.value)}
+                      placeholder="xoxb-..."
+                      className="w-full px-3 py-2 bg-muted border border-card-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent-purple-btn/50"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      Bot token from your Slack app. Requires <code className="text-xs">channels:read</code>, <code className="text-xs">groups:read</code>, and <code className="text-xs">chat:write</code> scopes.
                     </p>
                   </section>
                 </>
