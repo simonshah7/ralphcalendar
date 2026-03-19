@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './Toast';
 import { SolarChatRoundLinear, SolarCloseLinear } from './SolarIcons';
 
-type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
+type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events' | 'reports';
 
 interface FeedbackContextData {
   calendarName?: string;
