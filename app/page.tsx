@@ -20,6 +20,8 @@ import { EventDetailView } from '@/components/EventDetailView';
 import type { VoiceAgentCallbacks, CalendarContext } from '@/hooks/useVoiceAgent';
 import { exportToPNG, exportToCSV } from '@/lib/export';
 import { ToastProvider, useToast } from '@/components/Toast';
+import { FeedbackWidget } from '@/components/FeedbackWidget';
+import { FeedbackReviewView } from '@/components/FeedbackReviewView';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
 
@@ -55,6 +57,7 @@ function HomeInner() {
   const [showCopilot, setShowCopilot] = useState(false);
   const [showBriefGenerator, setShowBriefGenerator] = useState(false);
   const [isSeedingData, setIsSeedingData] = useState(false);
+  const [showFeedbackReview, setShowFeedbackReview] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityDefaults, setActivityDefaults] = useState<{
     swimlaneId?: string;
@@ -554,6 +557,7 @@ function HomeInner() {
         onOpenBriefGenerator={() => setShowBriefGenerator(true)}
         onSeedData={handleSeedData}
         isSeedingData={isSeedingData}
+        onOpenFeedbackReview={() => setShowFeedbackReview(true)}
       />
 
       {currentView !== 'dashboard' && currentView !== 'events' && (
@@ -778,6 +782,24 @@ function HomeInner() {
           onApply={handleApplyBrief}
         />
       )}
+
+      {/* Feedback Collection */}
+      <FeedbackWidget
+        currentView={currentView}
+        selectedEventId={selectedEventId}
+        activeModals={{
+          activityModal: showActivityModal,
+          createCalendar: showCreateCalendar,
+          exportModal: showExportModal,
+          copilot: showCopilot,
+          briefGenerator: showBriefGenerator,
+        }}
+      />
+
+      <FeedbackReviewView
+        isOpen={showFeedbackReview}
+        onClose={() => setShowFeedbackReview(false)}
+      />
     </div>
   );
 }

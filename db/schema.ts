@@ -296,6 +296,44 @@ export const campaignEvents = pgTable('campaign_events', {
     .references(() => events.id, { onDelete: 'cascade' }),
 });
 
+// ─── Feedback Collection ────────────────────────────────
+
+export const feedbackCategoryEnum = pgEnum('feedback_category', [
+  'bug',
+  'suggestion',
+  'question',
+  'general',
+]);
+
+export const feedbackStatusEnum = pgEnum('feedback_status', [
+  'new',
+  'in_progress',
+  'resolved',
+  'dismissed',
+]);
+
+export const feedbackPriorityEnum = pgEnum('feedback_priority', [
+  'low',
+  'medium',
+  'high',
+  'critical',
+]);
+
+export const feedbackItems = pgTable('feedback_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  screenName: text('screen_name').notNull(),
+  category: feedbackCategoryEnum('category').notNull().default('general'),
+  priority: feedbackPriorityEnum('priority').notNull().default('medium'),
+  status: feedbackStatusEnum('status').notNull().default('new'),
+  content: text('content').notNull(),
+  testerName: text('tester_name'),
+  browserInfo: text('browser_info'),
+  url: text('url'),
+  metadata: jsonb('metadata').$type<Record<string, string>>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ─── Campaign Reporting Data ────────────────────────────
 
 export const reportSourceEnum = pgEnum('report_source', [
@@ -363,3 +401,5 @@ export type CampaignEvent = typeof campaignEvents.$inferSelect;
 export type CampaignReportData = typeof campaignReportData.$inferSelect;
 export type NewCampaignReportData = typeof campaignReportData.$inferInsert;
 export type AdminSetting = typeof adminSettings.$inferSelect;
+export type FeedbackItem = typeof feedbackItems.$inferSelect;
+export type NewFeedbackItem = typeof feedbackItems.$inferInsert;
