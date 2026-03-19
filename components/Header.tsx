@@ -25,6 +25,7 @@ import {
   SolarRestartLinear,
   SolarTrashBinLinear,
   SolarSpinner,
+  SolarSettingsLinear,
 } from './SolarIcons';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
@@ -43,6 +44,7 @@ interface HeaderProps {
   onSeedData?: (action: 'seed' | 'reset' | 'clear') => void;
   isSeedingData?: boolean;
   onOpenFeedbackReview?: () => void;
+  onOpenSettings?: () => void;
 }
 
 const VIEW_ICONS: Record<ViewType, React.ReactNode> = {
@@ -67,6 +69,7 @@ export function Header({
   onSeedData,
   isSeedingData,
   onOpenFeedbackReview,
+  onOpenSettings,
 }: HeaderProps) {
   const views: { key: ViewType; label: string; description: string }[] = [
     { key: 'timeline', label: 'Timeline', description: 'Gantt-style timeline with drag-to-create activities' },
@@ -196,6 +199,7 @@ export function Header({
             onToggleCopilot={onToggleCopilot}
             onOpenFeedbackReview={onOpenFeedbackReview}
             onExport={onExport}
+            onOpenSettings={onOpenSettings}
           />
 
           <button
@@ -302,6 +306,16 @@ export function Header({
                   <SolarDownloadLinear className="w-4 h-4" />
                   Export
                 </button>
+
+                {onOpenSettings && (
+                  <button
+                    onClick={() => { onOpenSettings(); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-1.5 justify-center px-3 py-2 text-sm font-medium text-muted-foreground bg-muted rounded-lg hover:text-foreground transition-colors"
+                  >
+                    <SolarSettingsLinear className="w-4 h-4" />
+                    Settings
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -320,6 +334,7 @@ function ToolsMenu({
   onToggleCopilot,
   onOpenFeedbackReview,
   onExport,
+  onOpenSettings,
 }: {
   currentCalendar: Calendar | null;
   onSeedData?: (action: 'seed' | 'reset' | 'clear') => void;
@@ -328,6 +343,7 @@ function ToolsMenu({
   onToggleCopilot?: () => void;
   onOpenFeedbackReview?: () => void;
   onExport: () => void;
+  onOpenSettings?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [seedSubmenuOpen, setSeedSubmenuOpen] = useState(false);
@@ -382,6 +398,15 @@ function ToolsMenu({
     onClick: () => { onExport(); setOpen(false); },
     disabled: !currentCalendar,
   });
+
+  if (onOpenSettings) {
+    items.push({
+      key: 'settings',
+      label: 'Settings',
+      icon: <SolarSettingsLinear className="w-4 h-4 text-muted-foreground" />,
+      onClick: () => { onOpenSettings(); setOpen(false); },
+    });
+  }
 
   const seedActions = [
     { key: 'seed' as const, label: 'Seed Sample Data', icon: <SolarFolderLinear className="w-4 h-4 text-green-500" /> },

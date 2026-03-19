@@ -22,6 +22,8 @@ import { exportToPNG, exportToCSV } from '@/lib/export';
 import { ToastProvider, useToast } from '@/components/Toast';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
 import { FeedbackReviewView } from '@/components/FeedbackReviewView';
+import { SettingsPanel } from '@/components/SettingsPanel';
+import { DriveBrowser } from '@/components/DriveBrowser';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
 
@@ -58,6 +60,8 @@ function HomeInner() {
   const [showBriefGenerator, setShowBriefGenerator] = useState(false);
   const [isSeedingData, setIsSeedingData] = useState(false);
   const [showFeedbackReview, setShowFeedbackReview] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDriveBrowser, setShowDriveBrowser] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityDefaults, setActivityDefaults] = useState<{
     swimlaneId?: string;
@@ -489,6 +493,7 @@ function HomeInner() {
           onOpenBriefGenerator={() => { }}
           onSeedData={handleSeedData}
           isSeedingData={isSeedingData}
+          onOpenSettings={() => setShowSettings(true)}
         />
         <div className="flex-1 flex items-center justify-center">
           <motion.div
@@ -568,6 +573,7 @@ function HomeInner() {
         onSeedData={handleSeedData}
         isSeedingData={isSeedingData}
         onOpenFeedbackReview={() => setShowFeedbackReview(true)}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       {currentView !== 'dashboard' && currentView !== 'events' && (
@@ -831,6 +837,16 @@ function HomeInner() {
       <FeedbackReviewView
         isOpen={showFeedbackReview}
         onClose={() => setShowFeedbackReview(false)}
+      />
+
+      <SettingsPanel
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      <DriveBrowser
+        open={showDriveBrowser}
+        onClose={() => setShowDriveBrowser(false)}
       />
     </div>
   );

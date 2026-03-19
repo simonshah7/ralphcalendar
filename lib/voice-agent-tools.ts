@@ -1,6 +1,14 @@
-import type { Tool } from '@anthropic-ai/sdk/resources/messages';
+interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
 
-export const VOICE_AGENT_TOOLS: Tool[] = [
+export const VOICE_AGENT_TOOLS: ToolDefinition[] = [
   {
     name: 'create_activity',
     description: 'Create a new marketing activity/event on the calendar. Use this when the user wants to add, create, or schedule a new activity.',
