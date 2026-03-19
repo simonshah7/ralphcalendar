@@ -21,6 +21,7 @@ import {
   campaignReportData,
   adminSettings,
 } from '@/db/schema';
+import type { SubEvent, EventAttendee } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 
@@ -399,8 +400,9 @@ async function seedData() {
     },
   ];
 
+  const createdActivities: Record<string, string> = {};
   for (const act of activitySeed) {
-    await db.insert(activities).values({
+    const [created] = await db.insert(activities).values({
       calendarId: calendar.id,
       swimlaneId: createdSwimlanes[act.swimlane],
       statusId: act.status,
@@ -423,7 +425,8 @@ async function seedData() {
       vendorId: act.vendorId || null,
       typeId: act.typeId || null,
       recurrenceFrequency: act.recurrenceFrequency || 'none',
-    });
+    }).returning();
+    createdActivities[act.title] = created.id;
   }
 
   // ─── Events ─────────────────────────────────────────────
@@ -539,7 +542,7 @@ async function seedData() {
   await db.update(events).set({ priorEventId: priorReInvent.id }).where(eq(events.id, eventReInvent.id));
 
   // ─── Sub-Events ────────────────────────────────────────
-  await db.insert(subEvents).values([
+  const createdSubEvents = await db.insert(subEvents).values([
     { eventId: eventReInvent.id, title: 'Booth Setup & Demo Stations', type: 'booth', startDatetime: `${dateOffset(15)}T08:00`, endDatetime: `${dateOffset(18)}T18:00`, location: 'Expo Hall B, Booth #1247', sortOrder: 0 },
     { eventId: eventReInvent.id, title: 'Workshop: Cloud Migration Masterclass', type: 'workshop', startDatetime: `${dateOffset(16)}T10:00`, endDatetime: `${dateOffset(16)}T12:00`, location: 'Room 304A', description: '2-hour hands-on workshop. Target 60 attendees.', sortOrder: 1 },
     { eventId: eventReInvent.id, title: 'Executive Dinner', type: 'dinner', startDatetime: `${dateOffset(16)}T19:00`, endDatetime: `${dateOffset(16)}T22:00`, location: 'Tao Restaurant, The Venetian', description: 'Private dinner for 20 VIP prospects and key customers.', sortOrder: 2 },
@@ -549,10 +552,10 @@ async function seedData() {
     { eventId: eventGartner.id, title: 'Executive Roundtable', type: 'roundtable', startDatetime: `${dateOffset(37)}T10:00`, endDatetime: `${dateOffset(37)}T12:00`, location: 'VIP Suite 4', description: 'Roundtable with 15 CIOs on data strategy.', sortOrder: 1 },
     { eventId: eventLondonDinner.id, title: 'Cocktail Reception', type: 'reception', startDatetime: `${dateOffset(25)}T18:30`, endDatetime: `${dateOffset(25)}T19:30`, location: 'The Savoy, Thames Foyer', sortOrder: 0 },
     { eventId: eventLondonDinner.id, title: 'Seated Dinner & Keynote', type: 'dinner', startDatetime: `${dateOffset(25)}T19:30`, endDatetime: `${dateOffset(25)}T22:00`, location: 'The Savoy, Lancaster Room', sortOrder: 1 },
-  ]);
+  ]).returning();
 
   // ─── Event Attendees ───────────────────────────────────
-  await db.insert(eventAttendees).values([
+  const createdAttendees = await db.insert(eventAttendees).values([
     { eventId: eventReInvent.id, name: 'Sarah Chen', email: 'sarah.chen@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
     { eventId: eventReInvent.id, name: 'Mike Rodriguez', email: 'mike.r@redwood.io', attendeeType: 'internal' as const, role: 'staffing booth', hasPass: true, travelStatus: 'booked' },
     { eventId: eventReInvent.id, name: 'Emily Park', email: 'emily.p@redwood.io', attendeeType: 'internal' as const, role: 'presenting', hasPass: true, travelStatus: 'confirmed' },
@@ -566,7 +569,7 @@ async function seedData() {
     { eventId: eventLondonDinner.id, name: 'James Liu', email: 'james.l@redwood.io', attendeeType: 'internal' as const, role: 'hosting', hasPass: false, travelStatus: 'confirmed' },
     { eventId: eventLondonDinner.id, name: 'Nigel Thornton', email: 'n.thornton@barclays.co.uk', company: 'Barclays', attendeeType: 'customer' as const, role: 'guest', hasPass: false },
     { eventId: eventLondonDinner.id, name: 'Sophie Martin', email: 's.martin@hsbc.com', company: 'HSBC', attendeeType: 'customer' as const, role: 'guest', hasPass: false },
-  ]);
+  ]).returning();
 
   // ─── Checklist Items ───────────────────────────────────
   await db.insert(checklistItems).values([
@@ -768,11 +771,11 @@ async function seedData() {
     periodEnd,
     metrics: {
       targetAccounts: 850,
-      engaged: 412,
-      withMqls: 186,
-      withSaos: 72,
+      engagedAccounts: 412,
+      accountsWithMqls: 186,
+      accountsWithSaos: 72,
       withOpportunity: 38,
-      totalPipeline: 8420000,
+      pipeline: 8420000,
     },
   });
 
@@ -806,27 +809,27 @@ async function seedData() {
   const outreachData = [
     {
       label: 'Close on Command - Cold Outreach',
-      metrics: { sent: 4200, opened: 1470, replied: 252, meetings: 84, saos: 28 },
+      metrics: { sent: 4200, opened: 1470, replied: 252, meetings: 84, saos: 28, spend: 12600 },
     },
     {
       label: 'FA Maturity Assessment Follow-Up',
-      metrics: { sent: 2800, opened: 1120, replied: 196, meetings: 68, saos: 22 },
+      metrics: { sent: 2800, opened: 1120, replied: 196, meetings: 68, saos: 22, spend: 8400 },
     },
     {
       label: 'SSON Research Download Follow-Up',
-      metrics: { sent: 3100, opened: 1178, replied: 217, meetings: 72, saos: 24 },
+      metrics: { sent: 3100, opened: 1178, replied: 217, meetings: 72, saos: 24, spend: 9300 },
     },
     {
       label: 'Event Attendee Nurture',
-      metrics: { sent: 1800, opened: 810, replied: 162, meetings: 58, saos: 19 },
+      metrics: { sent: 1800, opened: 810, replied: 162, meetings: 58, saos: 19, spend: 5400 },
     },
     {
       label: 'Financial Drag Analyzer Users',
-      metrics: { sent: 2400, opened: 1008, replied: 192, meetings: 64, saos: 21 },
+      metrics: { sent: 2400, opened: 1008, replied: 192, meetings: 64, saos: 21, spend: 7200 },
     },
     {
       label: 'Inbound MQL Speed-to-Lead',
-      metrics: { sent: 5200, opened: 2340, replied: 416, meetings: 142, saos: 48 },
+      metrics: { sent: 5200, opened: 2340, replied: 416, meetings: 142, saos: 48, spend: 15600 },
     },
   ];
 
@@ -846,23 +849,23 @@ async function seedData() {
   const sfdcEventData = [
     {
       label: 'AWS Re:Invent 2025',
-      metrics: { registered: 520, attended: 385, mql: 142, sao: 48, opportunity: 22, closedWon: 8, revenue: 680000 },
+      metrics: { registered: 520, attended: 385, mqls: 142, saos: 48, opportunities: 22, closedWon: 8, closedWonRevenue: 680000, spend: 85000 },
     },
     {
       label: 'London Enterprise Dinner Q1',
-      metrics: { registered: 28, attended: 25, mql: 18, sao: 12, opportunity: 7, closedWon: 3, revenue: 285000 },
+      metrics: { registered: 28, attended: 25, mqls: 18, saos: 12, opportunities: 7, closedWon: 3, closedWonRevenue: 285000, spend: 18000 },
     },
     {
       label: 'Product Launch Webinar',
-      metrics: { registered: 680, attended: 412, mql: 198, sao: 68, opportunity: 28, closedWon: 10, revenue: 520000 },
+      metrics: { registered: 680, attended: 412, mqls: 198, saos: 68, opportunities: 28, closedWon: 10, closedWonRevenue: 520000, spend: 8000 },
     },
     {
       label: 'SaaS Connect Conference',
-      metrics: { registered: 340, attended: 280, mql: 95, sao: 38, opportunity: 16, closedWon: 5, revenue: 380000 },
+      metrics: { registered: 340, attended: 280, mqls: 95, saos: 38, opportunities: 16, closedWon: 5, closedWonRevenue: 380000, spend: 35000 },
     },
     {
       label: 'Enterprise Roundtable Series',
-      metrics: { registered: 45, attended: 42, mql: 32, sao: 18, opportunity: 10, closedWon: 4, revenue: 425000 },
+      metrics: { registered: 45, attended: 42, mqls: 32, saos: 18, opportunities: 10, closedWon: 4, closedWonRevenue: 425000, spend: 15000 },
     },
   ];
 
@@ -877,6 +880,173 @@ async function seedData() {
       metrics: ev.metrics,
     });
   }
+
+  // ─── Sub-Event Attendees ──────────────────────────────
+  // Link attendees to specific sub-events they're participating in
+  const subEventWorkshop = createdSubEvents.find((se: SubEvent) => se.title.includes('Workshop'));
+  const subEventDinner = createdSubEvents.find((se: SubEvent) => se.title === 'Executive Dinner');
+  const subEventMeetings = createdSubEvents.find((se: SubEvent) => se.title.includes('1:1'));
+  const subEventBooth = createdSubEvents.find((se: SubEvent) => se.title.includes('Booth'));
+  const subEventDebrief = createdSubEvents.find((se: SubEvent) => se.title === 'Team Debrief');
+  const subEventCocktail = createdSubEvents.find((se: SubEvent) => se.title === 'Cocktail Reception');
+  const subEventSeatedDinner = createdSubEvents.find((se: SubEvent) => se.title.includes('Seated Dinner'));
+
+  // Re:Invent attendees (indexes 0-7 in createdAttendees)
+  const sarahChen = createdAttendees.find((a: EventAttendee) => a.name === 'Sarah Chen' && a.eventId === eventReInvent.id);
+  const mikeRodriguez = createdAttendees.find((a: EventAttendee) => a.name === 'Mike Rodriguez');
+  const emilyPark = createdAttendees.find((a: EventAttendee) => a.name === 'Emily Park' && a.eventId === eventReInvent.id);
+  const jamesLiuReInvent = createdAttendees.find((a: EventAttendee) => a.name === 'James Liu' && a.eventId === eventReInvent.id);
+  const rachelGreen = createdAttendees.find((a: EventAttendee) => a.name === 'Rachel Green');
+  const davidKim = createdAttendees.find((a: EventAttendee) => a.name === 'David Kim');
+  const lisaWang = createdAttendees.find((a: EventAttendee) => a.name === 'Lisa Wang');
+  const tomBradley = createdAttendees.find((a: EventAttendee) => a.name === 'Tom Bradley');
+  // London dinner attendees
+  const jamesLiuLondon = createdAttendees.find((a: EventAttendee) => a.name === 'James Liu' && a.eventId === eventLondonDinner.id);
+  const nigelThornton = createdAttendees.find((a: EventAttendee) => a.name === 'Nigel Thornton');
+  const sophieMartin = createdAttendees.find((a: EventAttendee) => a.name === 'Sophie Martin');
+
+  const subEventAttendeeValues: Array<{ subEventId: string; attendeeId: string }> = [];
+
+  // Workshop: presenters + booth staff attend
+  if (subEventWorkshop && sarahChen && emilyPark) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventWorkshop.id, attendeeId: sarahChen.id },
+      { subEventId: subEventWorkshop.id, attendeeId: emilyPark.id },
+    );
+  }
+  // Executive Dinner: presenters + VIP customers
+  if (subEventDinner && sarahChen && emilyPark && davidKim && lisaWang) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventDinner.id, attendeeId: sarahChen.id },
+      { subEventId: subEventDinner.id, attendeeId: emilyPark.id },
+      { subEventId: subEventDinner.id, attendeeId: davidKim.id },
+      { subEventId: subEventDinner.id, attendeeId: lisaWang.id },
+    );
+  }
+  // 1:1 Customer Meetings: sales reps + customers
+  if (subEventMeetings && jamesLiuReInvent && davidKim && tomBradley) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventMeetings.id, attendeeId: jamesLiuReInvent.id },
+      { subEventId: subEventMeetings.id, attendeeId: davidKim.id },
+      { subEventId: subEventMeetings.id, attendeeId: tomBradley.id },
+    );
+  }
+  // Booth: booth staff
+  if (subEventBooth && mikeRodriguez && jamesLiuReInvent && rachelGreen) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventBooth.id, attendeeId: mikeRodriguez.id },
+      { subEventId: subEventBooth.id, attendeeId: jamesLiuReInvent.id },
+      { subEventId: subEventBooth.id, attendeeId: rachelGreen.id },
+    );
+  }
+  // Team Debrief: all internal
+  if (subEventDebrief && sarahChen && mikeRodriguez && emilyPark && jamesLiuReInvent && rachelGreen) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventDebrief.id, attendeeId: sarahChen.id },
+      { subEventId: subEventDebrief.id, attendeeId: mikeRodriguez.id },
+      { subEventId: subEventDebrief.id, attendeeId: emilyPark.id },
+      { subEventId: subEventDebrief.id, attendeeId: jamesLiuReInvent.id },
+      { subEventId: subEventDebrief.id, attendeeId: rachelGreen.id },
+    );
+  }
+  // London Cocktail + Dinner
+  if (subEventCocktail && jamesLiuLondon && nigelThornton && sophieMartin) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventCocktail.id, attendeeId: jamesLiuLondon.id },
+      { subEventId: subEventCocktail.id, attendeeId: nigelThornton.id },
+      { subEventId: subEventCocktail.id, attendeeId: sophieMartin.id },
+    );
+  }
+  if (subEventSeatedDinner && jamesLiuLondon && nigelThornton && sophieMartin) {
+    subEventAttendeeValues.push(
+      { subEventId: subEventSeatedDinner.id, attendeeId: jamesLiuLondon.id },
+      { subEventId: subEventSeatedDinner.id, attendeeId: nigelThornton.id },
+      { subEventId: subEventSeatedDinner.id, attendeeId: sophieMartin.id },
+    );
+  }
+
+  if (subEventAttendeeValues.length > 0) {
+    await db.insert(subEventAttendees).values(subEventAttendeeValues);
+  }
+
+  // ─── Activity Comments ──────────────────────────────────
+  const googleAdsId = createdActivities['Google Search Ads - Product Launch'];
+  const linkedInAdsId = createdActivities['LinkedIn Sponsored Content - Enterprise'];
+  const webinarId = createdActivities['Product Launch Webinar'];
+  const caseStudiesId = createdActivities['Enterprise Case Studies'];
+  const coMarketingId = createdActivities['Co-Marketing with Salesforce'];
+
+  await db.insert(activityComments).values([
+    { activityId: googleAdsId, userId: user.id, content: 'Performance is strong — CTR is above benchmark. Recommend increasing daily budget by 15% to capture more demand.' },
+    { activityId: googleAdsId, userId: user.id, content: 'Updated the negative keyword list to reduce wasted spend on irrelevant queries. Should improve cost-per-SAO going forward.' },
+    { activityId: linkedInAdsId, userId: user.id, content: 'The CFO targeting segment is outperforming VP-level targeting by 2x on SAO conversion. Shifting more budget there.' },
+    { activityId: webinarId, userId: user.id, content: 'Registration count hit 480 — tracking to exceed our 500 target. Need to confirm the Q&A moderator for the live session.' },
+    { activityId: webinarId, userId: user.id, content: 'Post-webinar follow-up sequence is ready in HubSpot. Set to trigger 24h after attendance.' },
+    { activityId: caseStudiesId, userId: user.id, content: 'Acme Corp case study is in final review with their legal team. Expecting sign-off by end of week.' },
+    { activityId: coMarketingId, userId: user.id, content: 'Salesforce confirmed their speaker for the joint webinar — VP of Integrations. Date locked for next month.' },
+    { activityId: coMarketingId, userId: user.id, content: 'Whitepaper draft v2 is with the Salesforce marketing team for review. Targeting publication in 2 weeks.' },
+  ]);
+
+  // ─── Activity History (Audit Trail) ─────────────────────
+  await db.insert(activityHistory).values([
+    { activityId: googleAdsId, userId: user.id, fieldName: 'status', oldValue: 'Considering', newValue: 'Committed' },
+    { activityId: googleAdsId, userId: user.id, fieldName: 'cost', oldValue: '20000', newValue: '25000' },
+    { activityId: googleAdsId, userId: user.id, fieldName: 'actualCost', oldValue: '0', newValue: '22500' },
+    { activityId: linkedInAdsId, userId: user.id, fieldName: 'status', oldValue: 'Negotiating', newValue: 'Committed' },
+    { activityId: linkedInAdsId, userId: user.id, fieldName: 'actualSaos', oldValue: '0', newValue: '38' },
+    { activityId: webinarId, userId: user.id, fieldName: 'startDate', oldValue: dateOffset(7), newValue: dateOffset(3) },
+    { activityId: webinarId, userId: user.id, fieldName: 'status', oldValue: 'Negotiating', newValue: 'Committed' },
+    { activityId: caseStudiesId, userId: user.id, fieldName: 'actualCost', oldValue: '0', newValue: '6000' },
+    { activityId: coMarketingId, userId: user.id, fieldName: 'cost', oldValue: '15000', newValue: '20000' },
+    { activityId: coMarketingId, userId: user.id, fieldName: 'status', oldValue: 'Considering', newValue: 'Committed' },
+  ]);
+
+  // ─── Activity Dependencies & Attachments ─────────────────
+  // Add dependencies: Blog series blocks the Product Launch Webinar, Case Studies block Co-Marketing
+  const blogSeriesId = createdActivities['Product Launch Blog Series'];
+  const nurtureId = createdActivities['Product Launch Nurture Sequence'];
+
+  await db.update(activities).set({
+    dependencies: [
+      { activityId: blogSeriesId, type: 'blocked_by' },
+    ] as any,
+  }).where(eq(activities.id, webinarId));
+
+  await db.update(activities).set({
+    dependencies: [
+      { activityId: webinarId, type: 'blocks' },
+    ] as any,
+  }).where(eq(activities.id, blogSeriesId));
+
+  await db.update(activities).set({
+    dependencies: [
+      { activityId: caseStudiesId, type: 'blocked_by' },
+    ] as any,
+  }).where(eq(activities.id, coMarketingId));
+
+  // Add sample attachments to a few activities
+  await db.update(activities).set({
+    attachments: [
+      { id: 'att-1', name: 'Campaign Brief v3.pdf', url: '/uploads/campaign-brief-v3.pdf', size: 245000, type: 'application/pdf', uploadedAt: dateOffset(-5) },
+      { id: 'att-2', name: 'Target Keywords.xlsx', url: '/uploads/target-keywords.xlsx', size: 82000, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', uploadedAt: dateOffset(-3) },
+    ] as any,
+  }).where(eq(activities.id, googleAdsId));
+
+  await db.update(activities).set({
+    attachments: [
+      { id: 'att-3', name: 'Webinar Slides Final.pptx', url: '/uploads/webinar-slides-final.pptx', size: 3200000, type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', uploadedAt: dateOffset(-1) },
+    ] as any,
+  }).where(eq(activities.id, webinarId));
+
+  await db.update(activities).set({
+    attachments: [
+      { id: 'att-4', name: 'Acme Corp Case Study Draft.docx', url: '/uploads/acme-case-study-draft.docx', size: 156000, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploadedAt: dateOffset(-7) },
+    ] as any,
+  }).where(eq(activities.id, caseStudiesId));
+
+  // ─── Fix Recurrence Parent ──────────────────────────────
+  const newsletterId = createdActivities['Monthly Newsletter - Q2'];
+  await db.update(activities).set({ isRecurrenceParent: true }).where(eq(activities.id, newsletterId));
 
   return calendar.id;
 }
