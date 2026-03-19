@@ -71,13 +71,13 @@ export function getContrastTextColor(hexColor: string): string {
   const luminance =
     0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 
-  return luminance > 0.179 ? '#000000' : '#ffffff';
+  return luminance > 0.4 ? '#000000' : '#ffffff';
 }
 
 export const DEFAULT_STATUSES = [
   { name: 'Considering', color: '#3B53FF' },
   { name: 'Negotiating', color: '#FFA943' },
-  { name: 'Committed', color: '#006170' },
+  { name: 'Committed', color: '#0D9488' },
 ];
 
 export const CURRENCIES = ['USD', 'GBP', 'EUR'] as const;

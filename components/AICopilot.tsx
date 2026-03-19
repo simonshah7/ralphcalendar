@@ -247,6 +247,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
               <button
                 onClick={handleClearAll}
                 className="p-1.5 text-gray-400 hover:text-foreground transition-colors rounded-md hover:bg-muted"
+                aria-label="Clear conversation"
                 title="Clear conversation"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -256,6 +257,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
             )}
             <button
               onClick={onClose}
+              aria-label="Close copilot"
               className="p-1.5 text-gray-400 hover:text-foreground transition-colors rounded-md hover:bg-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,6 +447,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
             <button
               onClick={() => sendTextMessage(input)}
               disabled={!input.trim() || isAnyLoading}
+              aria-label="Send message"
               className="px-3 py-2 bg-accent-purple text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

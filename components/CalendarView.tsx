@@ -56,12 +56,12 @@ export function CalendarView({
 
   const toDateStr = (date: Date) => date.toISOString().split('T')[0];
 
-  const getActivitiesForDay = (date: Date) => {
+  const getActivitiesForDay = useCallback((date: Date) => {
     const dateStr = toDateStr(date);
     return activities.filter((activity) => {
       return dateStr >= activity.startDate && dateStr <= activity.endDate;
     });
-  };
+  }, [activities]);
 
   const getActivityStyle = (activity: Activity) => {
     const status = statuses.find((s) => s.id === activity.statusId);
@@ -160,13 +160,13 @@ export function CalendarView({
   }, [activities]);
 
   // Compute single-day activities for a given date (exclude multi-day ones)
-  const getSingleDayActivitiesForDay = (date: Date) => {
+  const getSingleDayActivitiesForDay = useCallback((date: Date) => {
     const dateStr = toDateStr(date);
     return activities.filter((activity) => {
       if (isMultiDay(activity)) return false;
       return dateStr >= activity.startDate && dateStr <= activity.endDate;
     });
-  };
+  }, [activities]);
 
   // Get number of spanning bar rows for a week to reserve space
   const getSpanningRowCount = (bars: SpanningBar[]) => {
@@ -386,6 +386,8 @@ export function CalendarView({
       {popover && (
         <div
           ref={popoverRef}
+          role="dialog"
+          aria-label={`Activities for ${popover.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
           className="fixed z-50 bg-card border border-card-border rounded-lg shadow-lg p-2 min-w-[180px] max-w-[260px] max-h-[300px] overflow-y-auto"
           style={{
             top: Math.min(popover.anchorRect.bottom + 4, window.innerHeight - 320),

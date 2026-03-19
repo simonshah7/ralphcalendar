@@ -50,7 +50,7 @@
   --background: #050505;
   --foreground: #f1f5f9;
   --muted: #1e1b2e;
-  --muted-foreground: #a1a1b5;
+  --muted-foreground: #b8b8cc;
   --accent: #c084fc;
   --accent-hover: #a855f7;
   --accent-soft: #1e1b2e;
@@ -114,6 +114,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Firefox scrollbar */
+* {
+  scrollbar-color: var(--card-border) transparent;
+  scrollbar-width: thin;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -144,9 +150,10 @@ body {
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--accent);
 }
 
-/* Smooth transitions for theme switching */
-*, *::before, *::after {
-  transition-property: background-color, border-color;
+/* Smooth transitions for theme switching — scoped to avoid interfering with drag */
+body, .bg-card, .bg-background, .bg-surface, .bg-muted,
+button, a, input, select, textarea, nav, header, aside {
+  transition-property: background-color, border-color, color;
   transition-duration: 150ms;
   transition-timing-function: ease;
 }

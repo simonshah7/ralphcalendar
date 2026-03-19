@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
-
-function isValidCurrency(value: string): boolean {
-  return (CURRENCIES as readonly string[]).includes(value);
-}
-
-function isValidRegion(value: string): boolean {
-  return (REGIONS as readonly string[]).includes(value);
-}
+import { isValidCurrency, isValidRegion } from '@/lib/validation';
 
 export async function POST(request: Request) {
   try {
@@ -76,9 +68,8 @@ export async function POST(request: Request) {
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error('Error batch creating activities:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: `Failed to batch create activities: ${errorMessage}` },
+      { error: 'Failed to batch create activities' },
       { status: 500 }
     );
   }

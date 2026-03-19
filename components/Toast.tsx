@@ -84,6 +84,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <motion.div
                 key={t.id}
                 layout
+                role="alert"
+                aria-live="polite"
                 initial={{ opacity: 0, x: 80, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 80, scale: 0.95 }}
@@ -91,10 +93,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 onClick={() => removeToast(t.id)}
                 className={`pointer-events-auto cursor-pointer flex items-center gap-3 px-4 py-3 rounded-lg border border-card-border border-l-4 ${accent.border} bg-card shadow-lg min-w-[280px] max-w-[400px]`}
               >
-                <span className={`flex-shrink-0 ${accent.icon}`}>
+                <span className={`flex-shrink-0 ${accent.icon}`} aria-hidden="true">
                   {icons[t.type]}
                 </span>
-                <span className="text-sm text-foreground leading-snug">{t.message}</span>
+                <span className="text-sm text-foreground leading-snug">
+                  <span className="sr-only">{t.type === 'success' ? 'Success: ' : t.type === 'error' ? 'Error: ' : 'Info: '}</span>
+                  {t.message}
+                </span>
               </motion.div>
             );
           })}

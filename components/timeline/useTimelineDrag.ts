@@ -104,9 +104,11 @@ export function useTimelineDrag({
         swimlaneId: activity.swimlaneId,
       };
 
-      if (relativeX < 10) {
+      const RESIZE_HANDLE_PX = 10;
+      const resizeThreshold = Math.max(RESIZE_HANDLE_PX, width * 0.1);
+      if (relativeX < resizeThreshold) {
         setResizing({ activityId: activity.id, edge: 'start', initialDate: activity.startDate });
-      } else if (relativeX > width - 10) {
+      } else if (relativeX > width - resizeThreshold) {
         setResizing({ activityId: activity.id, edge: 'end', initialDate: activity.endDate });
       } else {
         const x = getX(e);

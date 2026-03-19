@@ -885,7 +885,7 @@ export async function POST() {
   } catch (error) {
     console.error('Seed failed:', error);
     return NextResponse.json(
-      { error: 'Failed to seed data', details: String(error) },
+      { error: 'Failed to seed data' },
       { status: 500 }
     );
   }
@@ -899,7 +899,7 @@ export async function DELETE() {
   } catch (error) {
     console.error('Clear failed:', error);
     return NextResponse.json(
-      { error: 'Failed to clear data', details: String(error) },
+      { error: 'Failed to clear data' },
       { status: 500 }
     );
   }
@@ -914,7 +914,7 @@ export async function PUT() {
   } catch (error) {
     console.error('Reset failed:', error);
     return NextResponse.json(
-      { error: 'Failed to reset data', details: String(error) },
+      { error: 'Failed to reset data' },
       { status: 500 }
     );
   }

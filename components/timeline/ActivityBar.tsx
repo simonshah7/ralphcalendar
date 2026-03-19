@@ -1,5 +1,6 @@
 import React from 'react';
-import { Activity, Status, Campaign } from '@/db/schema';
+import { Activity, Status } from '@/db/schema';
+import type { Campaign } from '@/db/schema';
 import { getContrastTextColor } from '@/lib/utils';
 
 type CardStyle = 'small' | 'medium' | 'large';
@@ -42,7 +43,7 @@ export function ActivityBar({
 
   return (
     <div
-      className="activity-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden group border border-white/15"
+      className="activity-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden group border border-foreground/15"
       style={style}
       role="button"
       tabIndex={0}
@@ -53,14 +54,15 @@ export function ActivityBar({
       title={`${activity.title}\n${activity.startDate} - ${activity.endDate}`}
     >
       {/* Resize handles */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 hover:bg-black/40 transition-colors z-10" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 hover:bg-foreground/40 transition-colors z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 hover:bg-foreground/40 transition-colors z-10" />
 
       {/* Actions */}
       <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-20">
         <button
-          className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
+          className="p-1 rounded bg-foreground/30 hover:bg-foreground/50 text-white dark:text-black"
           onClick={onClone}
+          aria-label="Clone activity"
           title="Clone"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -68,8 +70,9 @@ export function ActivityBar({
           </svg>
         </button>
         <button
-          className="p-1 rounded bg-black/30 hover:bg-black/50 text-white"
+          className="p-1 rounded bg-foreground/30 hover:bg-foreground/50 text-white dark:text-black"
           onClick={onEdit}
+          aria-label="Edit activity"
           title="Edit"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -119,7 +122,7 @@ export function ActivityBar({
             {visibleFields.includes('tags') && activity.tags && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {activity.tags.split(',').map((tag, i) => (
-                  <span key={i} className={`text-[9px] ${isLight ? 'bg-black/10 border-black/20' : 'bg-white/10 border-white/20'} px-1 rounded border`} style={{ color: textColor }}>
+                  <span key={i} className={`text-[9px] ${isLight ? 'bg-foreground/10 border-foreground/20' : 'bg-white/10 border-white/20'} px-1 rounded border`} style={{ color: textColor }}>
                     {tag.trim()}
                   </span>
                 ))}

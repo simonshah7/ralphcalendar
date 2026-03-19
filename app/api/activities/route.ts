@@ -1,20 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { isValidCurrency, isValidRegion, isValidUUID } from '@/lib/validation';
 
 type Activity = InferSelectModel<typeof activities>;
 type Status = InferSelectModel<typeof statuses>;
 type Swimlane = InferSelectModel<typeof swimlanes>;
-
-// Type-safe includes check for readonly arrays
-function isValidCurrency(value: string): boolean {
-  return (CURRENCIES as readonly string[]).includes(value);
-}
-
-function isValidRegion(value: string): boolean {
-  return (REGIONS as readonly string[]).includes(value);
-}
 
 // Helper to convert empty strings to null (important for UUID fields)
 function emptyToNull<T>(value: T): T | null {
@@ -27,8 +18,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const calendarId = searchParams.get('calendarId');
 
-    if (!calendarId) {
-      return NextResponse.json({ error: 'calendarId is required' }, { status: 400 });
+    if (!calendarId || !isValidUUID(calendarId)) {
+      return NextResponse.json({ error: 'Valid calendarId is required' }, { status: 400 });
     }
 
     const allActivities: Activity[] = await db
@@ -145,7 +136,6 @@ export async function POST(request: Request) {
     return NextResponse.json(newActivity, { status: 201 });
   } catch (error) {
     console.error('Error creating activity:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: `Failed to create activity: ${errorMessage}` }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 });
   }
 }

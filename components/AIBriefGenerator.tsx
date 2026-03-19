@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export interface GeneratedActivity {
   title: string;
@@ -56,6 +56,7 @@ export function AIBriefGenerator({
   const [plan, setPlan] = useState<GeneratedPlan | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [editableActivities, setEditableActivities] = useState<GeneratedActivity[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const resetState = () => {
     setStep('input');
@@ -87,6 +88,13 @@ export function AIBriefGenerator({
     setError(null);
     setIsGenerating(true);
 
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch('/api/ai/campaign-brief', {
         method: 'POST',
@@ -99,6 +107,7 @@ export function AIBriefGenerator({
           startDate: formData.startDate,
           endDate: formData.endDate,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -110,7 +119,8 @@ export function AIBriefGenerator({
       setEditableActivities([...result.activities]);
       setSelectedIds(new Set(result.activities.map((_, i) => i)));
       setStep('review');
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError('Failed to generate plan. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -163,9 +173,9 @@ export function AIBriefGenerator({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-      <div className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-2 sm:mx-4 max-h-[90vh] flex flex-col border border-card-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="presentation">
+      <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-labelledby="ai-brief-title" className="relative bg-card rounded-lg shadow-xl max-w-4xl w-full mx-2 sm:mx-4 max-h-[90vh] flex flex-col border border-card-border">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-card-border">
           <div className="flex items-center gap-2">
@@ -180,13 +190,13 @@ export function AIBriefGenerator({
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">AI Brief Generator</h2>
+              <h2 id="ai-brief-title" className="text-lg font-bold text-foreground">AI Brief Generator</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {step === 'input' ? 'Describe your campaign goal and AI will generate a plan of activities with suggested channels, dates, and costs.' : 'Review the generated activities below. Edit any details, uncheck ones you don\'t need, then apply to your calendar.'}
               </p>
             </div>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-foreground transition-colors">
+          <button onClick={handleClose} aria-label="Close dialog" className="text-gray-400 hover:text-foreground transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -319,7 +329,7 @@ export function AIBriefGenerator({
               <div className="space-y-3">
                 {editableActivities.map((activity, index) => (
                   <div
-                    key={index}
+                    key={`${activity.title}-${activity.startDate}-${index}`}
                     className={`border rounded-lg p-4 transition-colors ${
                       selectedIds.has(index)
                         ? 'border-accent-purple/40 bg-card'

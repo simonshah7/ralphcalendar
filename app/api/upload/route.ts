@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { isAllowedFileType, isAllowedExtension } from '@/lib/validation';
 
 export async function POST(request: Request) {
   try {
@@ -17,11 +18,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File too large. Max 10MB.' }, { status: 400 });
     }
 
+    // Validate file type
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!isAllowedFileType(file.type) || !isAllowedExtension(ext)) {
+      return NextResponse.json(
+        { error: 'File type not allowed. Accepted: images, PDFs, Office documents, CSV, and text files.' },
+        { status: 400 }
+      );
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate unique filename
-    const ext = file.name.split('.').pop() || 'bin';
+    // Generate unique filename with validated extension
     const uniqueName = `${randomUUID()}.${ext}`;
     const uploadDir = join(process.cwd(), 'public', 'uploads');
 
