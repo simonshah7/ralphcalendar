@@ -1401,6 +1401,11 @@ interface ICPSummaryData {
   activePipelineCount: number;
   closedWonCount: number;
   closedLostCount: number;
+  targetAccounts: number;
+  engaged: number;
+  withMqls: number;
+  withSaos: number;
+  withOpportunity: number;
 }
 
 interface ICPAccountData {
