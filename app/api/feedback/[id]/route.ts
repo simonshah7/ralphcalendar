@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db, feedbackItems } from '@/db';
 import { eq } from 'drizzle-orm';
+import { ensureFeedbackTable } from '@/db/ensure-feedback-table';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureFeedbackTable(db);
     const { id } = await params;
     const body = await request.json();
     const updates: Record<string, unknown> = {};
@@ -43,6 +45,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureFeedbackTable(db);
     const { id } = await params;
     const [deleted] = await db
       .delete(feedbackItems)

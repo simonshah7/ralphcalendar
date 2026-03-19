@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db, feedbackItems } from '@/db';
 import { eq, desc, and, SQL } from 'drizzle-orm';
+import { ensureFeedbackTable } from '@/db/ensure-feedback-table';
 
 export async function GET(request: Request) {
   try {
+    await ensureFeedbackTable(db);
     const { searchParams } = new URL(request.url);
     const screen = searchParams.get('screen');
     const category = searchParams.get('category');
@@ -37,6 +39,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { screenName, content, category, priority, testerName, browserInfo, url, metadata } = body;
+
+    await ensureFeedbackTable(db);
 
     if (!screenName) {
       return NextResponse.json({ error: 'screenName is required' }, { status: 400 });
