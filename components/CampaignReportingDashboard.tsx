@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import type { CampaignReportData } from '@/db/schema';
 import dynamic from 'next/dynamic';
+import { SolarAltArrowDown } from './SolarIcons';
 
 const WorldMapChart = dynamic(() => import('./WorldMapChart'), { ssr: false });
 
@@ -414,14 +415,12 @@ function AIInsightsPanel({ calendarId }: { calendarId: string }) {
             </span>
           )}
         </div>
-        <motion.svg
-          width="16" height="16" viewBox="0 0 16 16" fill="none"
+        <motion.div
           animate={{ rotate: expanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-muted-foreground"
         >
-          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </motion.svg>
+          <SolarAltArrowDown className="w-4 h-4 text-muted-foreground" />
+        </motion.div>
       </button>
 
       <AnimatePresence>
