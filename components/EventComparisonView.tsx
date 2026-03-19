@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCurrency } from '@/lib/utils';
 
 interface YearStats {
@@ -98,6 +98,20 @@ const RECOMMENDATION_STYLES: Record<string, { label: string; bg: string; text: s
   retired: { label: 'Retired', bg: 'bg-gray-500/15', text: 'text-gray-400' },
 };
 
+const RECOMMENDATION_TOOLTIPS: Record<string, string> = {
+  invest: 'High ROI (>3x) with strong SAO generation — increase budget.',
+  maintain: 'Steady performance — continue at current level.',
+  reduce: 'Below-average returns — consider reducing spend.',
+  cut: 'No measurable SAOs or pipeline — recommend discontinuing.',
+  new: 'First year — no prior data to compare.',
+  retired: 'Not repeated this year.',
+};
+
+const REC_BAR_COLORS: Record<string, string> = {
+  invest: '#006170', maintain: '#3B53FF', reduce: '#FFA943',
+  new: '#7A00C1', cut: '#FF715A', retired: '#D6E4EA',
+};
+
 export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
   const [data, setData] = useState<ComparisonSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +122,54 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [filter, setFilter] = useState<FilterType>('all');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showPriorYear, setShowPriorYear] = useState(false);
+  const [showKpis, setShowKpis] = useState(true);
+  const [editingCost, setEditingCost] = useState<string | null>(null);
+  const [editingCostValue, setEditingCostValue] = useState('');
+  const costInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingCost && costInputRef.current) {
+      costInputRef.current.focus();
+      costInputRef.current.select();
+    }
+  }, [editingCost]);
+
+  async function handleCostSave(activityId: string, newCost: string, normalizedKey: string) {
+    const numVal = parseFloat(newCost);
+    if (isNaN(numVal) || !activityId) { setEditingCost(null); return; }
+    try {
+      await fetch(`/api/events/${activityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cost: String(numVal) }),
+      });
+      setData(prev => {
+        if (!prev) return prev;
+        const comparisons = prev.comparisons.map(c => {
+          if (c.normalizedKey === normalizedKey && c.currentYear) {
+            return { ...c, currentYear: { ...c.currentYear, cost: numVal } };
+          }
+          return c;
+        });
+        const totalCurrentCost = comparisons.reduce(
+          (sum, c) => sum + (c.currentYear ? Math.max(c.currentYear.actualCost, c.currentYear.cost) : 0), 0
+        );
+        const totalCostChange = totalCurrentCost - prev.totalPriorCost;
+        const totalCostChangePct = prev.totalPriorCost > 0 ? (totalCostChange / prev.totalPriorCost) * 100 : null;
+        return { ...prev, comparisons, totalCurrentCost, totalCostChange, totalCostChangePct };
+      });
+    } catch { /* silently fail for now */ }
+    setEditingCost(null);
+  }
+
+  function recToFilter(rec: string): FilterType {
+    if (rec === 'invest') return 'invest';
+    if (rec === 'cut' || rec === 'reduce') return 'cut';
+    if (rec === 'new') return 'new';
+    if (rec === 'retired') return 'retired';
+    return 'matched';
+  }
 
   useEffect(() => {
     if (!calendarId) return;
@@ -322,59 +384,80 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
       ) : (
         <>
           {/* Summary KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Total Cost YoY</div>
-              <div className="text-lg font-bold text-foreground">{fmtPct(data.totalCostChangePct)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {formatCurrency(data.totalPriorCost)} &rarr; {formatCurrency(data.totalCurrentCost)}
-              </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-foreground">Summary</span>
+              <button
+                onClick={() => setShowKpis(!showKpis)}
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showKpis ? 'Collapse' : 'Expand'}
+              </button>
             </div>
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">SAOs YoY</div>
-              <div className={`text-lg font-bold ${changeColor(data.totalCurrentSaos - data.totalPriorSaos)}`}>
-                {data.totalCurrentSaos - data.totalPriorSaos >= 0 ? '+' : ''}{data.totalCurrentSaos - data.totalPriorSaos}
+            {showKpis ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Total Cost YoY</div>
+                  <div className="text-lg font-bold text-foreground">{fmtPct(data.totalCostChangePct)}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {formatCurrency(data.totalPriorCost)} &rarr; {formatCurrency(data.totalCurrentCost)}
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">SAOs YoY</div>
+                  <div className={`text-lg font-bold ${changeColor(data.totalCurrentSaos - data.totalPriorSaos)}`}>
+                    {data.totalCurrentSaos - data.totalPriorSaos >= 0 ? '+' : ''}{data.totalCurrentSaos - data.totalPriorSaos}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {data.totalPriorSaos} &rarr; {data.totalCurrentSaos}
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Pipeline YoY</div>
+                  <div className={`text-lg font-bold ${changeColor(data.totalCurrentPipeline - data.totalPriorPipeline)}`}>
+                    {formatCurrency(data.totalCurrentPipeline - data.totalPriorPipeline)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {formatCurrency(data.totalPriorPipeline)} &rarr; {formatCurrency(data.totalCurrentPipeline)}
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Avg ROI</div>
+                  <div className={`text-lg font-bold ${changeColor(data.avgCurrentRoi - data.avgPriorRoi)}`}>
+                    {data.avgCurrentRoi.toFixed(1)}x
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    was {data.avgPriorRoi.toFixed(1)}x in {data.priorYear}
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Matched Events</div>
+                  <div className="text-lg font-bold text-foreground">{data.matchedEvents}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    of {data.totalEvents} total
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">New / Retired</div>
+                  <div className="text-lg font-bold text-foreground">
+                    <span className="text-purple-500">{data.newEvents}</span>
+                    {' / '}
+                    <span className="text-gray-400">{data.retiredEvents}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    events changed
+                  </div>
+                </div>
               </div>
-              <div className="text-[10px] text-muted-foreground">
-                {data.totalPriorSaos} &rarr; {data.totalCurrentSaos}
+            ) : (
+              <div className="bg-card border border-card-border rounded-lg px-3 py-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                <span>Cost: <span className="text-foreground font-medium">{formatCurrency(data.totalCurrentCost)}</span> <span className={changeColor(data.totalCostChangePct, true)}>({fmtPct(data.totalCostChangePct)})</span></span>
+                <span>SAOs: <span className="text-foreground font-medium">{data.totalCurrentSaos}</span></span>
+                <span>Pipeline: <span className="text-foreground font-medium">{formatCurrency(data.totalCurrentPipeline)}</span></span>
+                <span>ROI: <span className="text-foreground font-medium">{data.avgCurrentRoi.toFixed(1)}x</span></span>
+                <span>Events: <span className="text-foreground font-medium">{data.totalEvents}</span> (<span className="text-purple-500">{data.newEvents} new</span>, <span className="text-gray-400">{data.retiredEvents} retired</span>)</span>
               </div>
-            </div>
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Pipeline YoY</div>
-              <div className={`text-lg font-bold ${changeColor(data.totalCurrentPipeline - data.totalPriorPipeline)}`}>
-                {formatCurrency(data.totalCurrentPipeline - data.totalPriorPipeline)}
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                {formatCurrency(data.totalPriorPipeline)} &rarr; {formatCurrency(data.totalCurrentPipeline)}
-              </div>
-            </div>
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Avg ROI</div>
-              <div className={`text-lg font-bold ${changeColor(data.avgCurrentRoi - data.avgPriorRoi)}`}>
-                {data.avgCurrentRoi.toFixed(1)}x
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                was {data.avgPriorRoi.toFixed(1)}x in {data.priorYear}
-              </div>
-            </div>
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Matched Events</div>
-              <div className="text-lg font-bold text-foreground">{data.matchedEvents}</div>
-              <div className="text-[10px] text-muted-foreground">
-                of {data.totalEvents} total
-              </div>
-            </div>
-            <div className="bg-card border border-card-border rounded-lg p-3">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">New / Retired</div>
-              <div className="text-lg font-bold text-foreground">
-                <span className="text-purple-500">{data.newEvents}</span>
-                {' / '}
-                <span className="text-gray-400">{data.retiredEvents}</span>
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                events changed
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Recommendation Breakdown Bar */}
@@ -385,16 +468,13 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                 const count = data.comparisons.filter(c => c.recommendation === rec).length;
                 if (count === 0) return null;
                 const pct = (count / data.comparisons.length) * 100;
-                const colors: Record<string, string> = {
-                  invest: '#006170', maintain: '#3B53FF', reduce: '#FFA943',
-                  new: '#7A00C1', cut: '#FF715A', retired: '#D6E4EA',
-                };
                 return (
                   <div
                     key={rec}
-                    className="h-full transition-all"
-                    style={{ width: `${pct}%`, backgroundColor: colors[rec] }}
+                    className="h-full transition-all cursor-pointer hover:opacity-80"
+                    style={{ width: `${pct}%`, backgroundColor: REC_BAR_COLORS[rec] }}
                     title={`${RECOMMENDATION_STYLES[rec].label}: ${count}`}
+                    onClick={() => { const f = recToFilter(rec); setFilter(prev => prev === f ? 'all' : f); }}
                   />
                 );
               })}
@@ -405,10 +485,12 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                 if (count === 0) return null;
                 const style = RECOMMENDATION_STYLES[rec];
                 return (
-                  <span key={rec} className="flex items-center gap-1">
-                    <span className={`inline-block w-2 h-2 rounded-full ${style.bg}`} style={{
-                      backgroundColor: rec === 'invest' ? '#006170' : rec === 'maintain' ? '#3B53FF' : rec === 'reduce' ? '#FFA943' : rec === 'new' ? '#7A00C1' : rec === 'cut' ? '#FF715A' : '#D6E4EA'
-                    }} />
+                  <span
+                    key={rec}
+                    className="flex items-center gap-1 cursor-pointer hover:opacity-80"
+                    onClick={() => { const f = recToFilter(rec); setFilter(prev => prev === f ? 'all' : f); }}
+                  >
+                    <span className={`inline-block w-2 h-2 rounded-full`} style={{ backgroundColor: REC_BAR_COLORS[rec] }} />
                     <span className={style.text}>{style.label}</span>
                     <span className="text-muted-foreground">({count})</span>
                   </span>
@@ -419,13 +501,25 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
 
           {/* Comparison Table */}
           <div className="bg-card border border-card-border rounded-lg overflow-hidden">
-            <div className="px-3 py-2 border-b border-card-border flex items-center justify-between">
+            <div className="px-3 py-2 border-b border-card-border flex items-center justify-between gap-2">
               <h3 className="text-xs font-semibold text-foreground">
                 Event-by-Event Comparison
               </h3>
-              <span className="text-[10px] text-muted-foreground">
-                {sortedComparisons.length} events
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPriorYear(!showPriorYear)}
+                  className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+                    showPriorYear
+                      ? 'bg-accent text-white'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {showPriorYear ? 'Hide' : 'Show'} {data.priorYear} data
+                </button>
+                <span className="text-[10px] text-muted-foreground">
+                  {sortedComparisons.length} events
+                </span>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -433,14 +527,14 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                   <tr>
                     <SortHeader field="title" className="min-w-[160px]">Event</SortHeader>
                     <SortHeader field="recommendation">Signal</SortHeader>
-                    <SortHeader field="priorCost" align="right">{data.priorYear} Cost</SortHeader>
+                    {showPriorYear && <SortHeader field="priorCost" align="right">{data.priorYear} Cost</SortHeader>}
                     <SortHeader field="currentCost" align="right">{data.currentYear} Cost</SortHeader>
                     <SortHeader field="costChange" align="right">Cost Chg</SortHeader>
-                    <SortHeader field="priorSaos" align="right">{data.priorYear} SAOs</SortHeader>
+                    {showPriorYear && <SortHeader field="priorSaos" align="right">{data.priorYear} SAOs</SortHeader>}
                     <SortHeader field="currentSaos" align="right">{data.currentYear} SAOs</SortHeader>
-                    <SortHeader field="priorPipeline" align="right">{data.priorYear} Pipeline</SortHeader>
+                    {showPriorYear && <SortHeader field="priorPipeline" align="right">{data.priorYear} Pipeline</SortHeader>}
                     <SortHeader field="currentPipeline" align="right">{data.currentYear} Pipeline</SortHeader>
-                    <SortHeader field="priorRoi" align="right">{data.priorYear} ROI</SortHeader>
+                    {showPriorYear && <SortHeader field="priorRoi" align="right">{data.priorYear} ROI</SortHeader>}
                     <SortHeader field="currentRoi" align="right">{data.currentYear} ROI</SortHeader>
                   </tr>
                 </thead>
@@ -448,55 +542,202 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                   {sortedComparisons.map((comp) => {
                     const isExpanded = expandedRow === comp.normalizedKey;
                     const recStyle = RECOMMENDATION_STYLES[comp.recommendation];
+                    const isEditingThis = editingCost === comp.normalizedKey;
+                    const colCount = showPriorYear ? 11 : 7;
                     return (
-                      <tr
-                        key={comp.normalizedKey}
-                        className="hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => setExpandedRow(isExpanded ? null : comp.normalizedKey)}
-                      >
-                        <td className="px-2 py-2 text-foreground font-medium">
-                          <div className="truncate max-w-[200px]" title={comp.title}>
-                            {comp.title}
-                          </div>
-                          {comp.priorYear?.title && comp.currentYear?.title && comp.priorYear.title !== comp.currentYear.title && (
-                            <div className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={comp.priorYear.title}>
-                              was: {comp.priorYear.title}
+                      <React.Fragment key={comp.normalizedKey}>
+                        <tr
+                          className="hover:bg-muted/30 transition-colors cursor-pointer"
+                          onClick={() => setExpandedRow(isExpanded ? null : comp.normalizedKey)}
+                        >
+                          <td className="px-2 py-2 text-foreground font-medium">
+                            <div className="flex items-center gap-1">
+                              <span className={`text-[10px] text-muted-foreground transition-transform inline-block ${isExpanded ? 'rotate-90' : ''}`}>&#9654;</span>
+                              <div className="truncate max-w-[200px]" title={comp.title}>
+                                {comp.title}
+                              </div>
                             </div>
+                            {comp.priorYear?.title && comp.currentYear?.title && comp.priorYear.title !== comp.currentYear.title && (
+                              <div className="text-[10px] text-muted-foreground truncate max-w-[200px] pl-4" title={comp.priorYear.title}>
+                                was: {comp.priorYear.title}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="relative group/tip inline-flex">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${recStyle.bg} ${recStyle.text}`}>
+                                {recStyle.label}
+                              </span>
+                              <div className="absolute left-0 top-full mt-1 z-50 w-48 px-2 py-1.5 text-[10px] text-foreground bg-card border border-card-border rounded shadow-lg opacity-0 group-hover/tip:opacity-100 pointer-events-none transition-opacity whitespace-normal">
+                                {RECOMMENDATION_TOOLTIPS[comp.recommendation]}
+                              </div>
+                            </div>
+                          </td>
+                          {showPriorYear && (
+                            <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                              {comp.priorYear ? formatCurrency(Math.max(comp.priorYear.actualCost, comp.priorYear.cost)) : '\u2014'}
+                            </td>
                           )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${recStyle.bg} ${recStyle.text}`}>
-                            {recStyle.label}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.priorYear ? formatCurrency(Math.max(comp.priorYear.actualCost, comp.priorYear.cost)) : '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.currentYear ? formatCurrency(Math.max(comp.currentYear.actualCost, comp.currentYear.cost)) : '\u2014'}
-                        </td>
-                        <td className={`px-2 py-2 text-right tabular-nums font-medium ${changeColor(comp.changes.costChangePct, true)}`}>
-                          {fmtPct(comp.changes.costChangePct)}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.priorYear?.actualSaos ?? '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.currentYear?.actualSaos ?? '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.priorYear ? formatCurrency(comp.priorYear.pipelineGenerated) : '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.currentYear ? formatCurrency(comp.currentYear.pipelineGenerated) : '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.priorYear ? `${comp.priorYear.roi.toFixed(1)}x` : '\u2014'}
-                        </td>
-                        <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
-                          {comp.currentYear ? `${comp.currentYear.roi.toFixed(1)}x` : '\u2014'}
-                        </td>
-                      </tr>
+                          <td
+                            className="px-2 py-2 text-right tabular-nums group/cost"
+                            onClick={(e) => {
+                              if (!comp.currentYear?.activityId) return;
+                              e.stopPropagation();
+                              setEditingCost(comp.normalizedKey);
+                              setEditingCostValue(String(Math.max(comp.currentYear.actualCost, comp.currentYear.cost)));
+                            }}
+                          >
+                            {isEditingThis ? (
+                              <input
+                                ref={costInputRef}
+                                type="number"
+                                value={editingCostValue}
+                                onChange={(e) => setEditingCostValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleCostSave(comp.currentYear!.activityId!, editingCostValue, comp.normalizedKey);
+                                  if (e.key === 'Escape') setEditingCost(null);
+                                }}
+                                onBlur={() => handleCostSave(comp.currentYear!.activityId!, editingCostValue, comp.normalizedKey)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-24 px-1 py-0.5 text-right text-xs bg-muted border border-accent/40 rounded text-foreground outline-none"
+                              />
+                            ) : (
+                              <span className={`${comp.currentYear?.activityId ? 'text-foreground border-b border-dashed border-transparent group-hover/cost:border-muted-foreground' : 'text-muted-foreground'}`}>
+                                {comp.currentYear ? formatCurrency(Math.max(comp.currentYear.actualCost, comp.currentYear.cost)) : '\u2014'}
+                              </span>
+                            )}
+                          </td>
+                          <td className={`px-2 py-2 text-right tabular-nums font-medium ${changeColor(comp.changes.costChangePct, true)}`}>
+                            {fmtPct(comp.changes.costChangePct)}
+                          </td>
+                          {showPriorYear && (
+                            <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                              {comp.priorYear?.actualSaos ?? '\u2014'}
+                            </td>
+                          )}
+                          <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                            {comp.currentYear?.actualSaos ?? '\u2014'}
+                          </td>
+                          {showPriorYear && (
+                            <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                              {comp.priorYear ? formatCurrency(comp.priorYear.pipelineGenerated) : '\u2014'}
+                            </td>
+                          )}
+                          <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                            {comp.currentYear ? formatCurrency(comp.currentYear.pipelineGenerated) : '\u2014'}
+                          </td>
+                          {showPriorYear && (
+                            <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                              {comp.priorYear ? `${comp.priorYear.roi.toFixed(1)}x` : '\u2014'}
+                            </td>
+                          )}
+                          <td className="px-2 py-2 text-right text-muted-foreground tabular-nums">
+                            {comp.currentYear ? `${comp.currentYear.roi.toFixed(1)}x` : '\u2014'}
+                          </td>
+                        </tr>
+                        {/* Expanded Row Detail Panel */}
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={colCount} className="px-4 py-3 bg-muted/20 border-b border-card-border">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Prior Year Stats */}
+                                <div className="bg-card border border-card-border rounded-lg p-3">
+                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2 font-medium">{data.priorYear}</div>
+                                  {comp.priorYear ? (
+                                    <div className="space-y-1 text-xs">
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span className="text-foreground tabular-nums">{formatCurrency(Math.max(comp.priorYear.actualCost, comp.priorYear.cost))}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">SAOs</span><span className="text-foreground tabular-nums">{comp.priorYear.actualSaos}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Pipeline</span><span className="text-foreground tabular-nums">{formatCurrency(comp.priorYear.pipelineGenerated)}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">ROI</span><span className="text-foreground tabular-nums">{comp.priorYear.roi.toFixed(1)}x</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Cost/SAO</span><span className="text-foreground tabular-nums">{comp.priorYear.costPerSao > 0 ? formatCurrency(comp.priorYear.costPerSao) : '\u2014'}</span></div>
+                                      {comp.priorYear.startDate && <div className="flex justify-between"><span className="text-muted-foreground">Dates</span><span className="text-foreground text-[10px]">{comp.priorYear.startDate?.slice(0, 10)}</span></div>}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-muted-foreground italic">No data for this year</div>
+                                  )}
+                                </div>
+                                {/* Current Year Stats */}
+                                <div className="bg-card border border-card-border rounded-lg p-3">
+                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2 font-medium">{data.currentYear}</div>
+                                  {comp.currentYear ? (
+                                    <div className="space-y-1 text-xs">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Cost</span>
+                                        {editingCost === comp.normalizedKey + '-detail' ? (
+                                          <input
+                                            type="number"
+                                            autoFocus
+                                            value={editingCostValue}
+                                            onChange={(e) => setEditingCostValue(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') { handleCostSave(comp.currentYear!.activityId!, editingCostValue, comp.normalizedKey); setEditingCost(null); }
+                                              if (e.key === 'Escape') setEditingCost(null);
+                                            }}
+                                            onBlur={() => { handleCostSave(comp.currentYear!.activityId!, editingCostValue, comp.normalizedKey); setEditingCost(null); }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-24 px-1 py-0.5 text-right text-xs bg-muted border border-accent/40 rounded text-foreground outline-none"
+                                          />
+                                        ) : (
+                                          <span
+                                            className={`tabular-nums ${comp.currentYear.activityId ? 'text-foreground cursor-pointer border-b border-dashed border-transparent hover:border-muted-foreground' : 'text-foreground'}`}
+                                            onClick={(e) => {
+                                              if (!comp.currentYear?.activityId) return;
+                                              e.stopPropagation();
+                                              setEditingCost(comp.normalizedKey + '-detail');
+                                              setEditingCostValue(String(Math.max(comp.currentYear.actualCost, comp.currentYear.cost)));
+                                            }}
+                                          >
+                                            {formatCurrency(Math.max(comp.currentYear.actualCost, comp.currentYear.cost))}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">SAOs</span><span className="text-foreground tabular-nums">{comp.currentYear.actualSaos}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Pipeline</span><span className="text-foreground tabular-nums">{formatCurrency(comp.currentYear.pipelineGenerated)}</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">ROI</span><span className="text-foreground tabular-nums">{comp.currentYear.roi.toFixed(1)}x</span></div>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Cost/SAO</span><span className="text-foreground tabular-nums">{comp.currentYear.costPerSao > 0 ? formatCurrency(comp.currentYear.costPerSao) : '\u2014'}</span></div>
+                                      {comp.currentYear.startDate && <div className="flex justify-between"><span className="text-muted-foreground">Dates</span><span className="text-foreground text-[10px]">{comp.currentYear.startDate?.slice(0, 10)}</span></div>}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-muted-foreground italic">No data for this year</div>
+                                  )}
+                                </div>
+                                {/* Recommendation Explanation */}
+                                <div className="bg-card border border-card-border rounded-lg p-3">
+                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2 font-medium">Recommendation</div>
+                                  <div className="mb-2">
+                                    <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${recStyle.bg} ${recStyle.text}`}>
+                                      {recStyle.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    {RECOMMENDATION_TOOLTIPS[comp.recommendation]}
+                                  </p>
+                                  {comp.changes.costChangePct !== null && (
+                                    <div className="mt-2 pt-2 border-t border-card-border space-y-1 text-[10px]">
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Cost change</span>
+                                        <span className={changeColor(comp.changes.costChangePct, true)}>{fmtPct(comp.changes.costChangePct)}</span>
+                                      </div>
+                                      {comp.changes.saosChangePct !== null && (
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">SAO change</span>
+                                          <span className={changeColor(comp.changes.saosChangePct)}>{fmtPct(comp.changes.saosChangePct)}</span>
+                                        </div>
+                                      )}
+                                      {comp.changes.pipelineChangePct !== null && (
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Pipeline change</span>
+                                          <span className={changeColor(comp.changes.pipelineChangePct)}>{fmtPct(comp.changes.pipelineChangePct)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -505,16 +746,16 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
                   <tr>
                     <td className="px-2 py-2 text-foreground">Totals</td>
                     <td className="px-2 py-2" />
-                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorCost)}</td>
+                    {showPriorYear && <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorCost)}</td>}
                     <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalCurrentCost)}</td>
                     <td className={`px-2 py-2 text-right tabular-nums ${changeColor(data.totalCostChangePct, true)}`}>
                       {fmtPct(data.totalCostChangePct)}
                     </td>
-                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.totalPriorSaos}</td>
+                    {showPriorYear && <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.totalPriorSaos}</td>}
                     <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.totalCurrentSaos}</td>
-                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorPipeline)}</td>
+                    {showPriorYear && <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalPriorPipeline)}</td>}
                     <td className="px-2 py-2 text-right text-foreground tabular-nums">{formatCurrency(data.totalCurrentPipeline)}</td>
-                    <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.avgPriorRoi.toFixed(1)}x</td>
+                    {showPriorYear && <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.avgPriorRoi.toFixed(1)}x</td>}
                     <td className="px-2 py-2 text-right text-foreground tabular-nums">{data.avgCurrentRoi.toFixed(1)}x</td>
                   </tr>
                 </tfoot>
