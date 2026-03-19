@@ -6,7 +6,7 @@ test.describe('UJ-7: Theme & Personalization', () => {
     await setupTestWorkspace(page);
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('UJ-7.1: Can toggle between light and dark mode', async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe('UJ-7: Theme & Personalization', () => {
     // Find theme toggle by aria-label
     const themeToggle = page.getByLabel(/switch to (light|dark) mode/i).first();
     await themeToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Verify the theme changed
     const newClassList = await htmlElement.getAttribute('class') || '';
@@ -37,7 +37,7 @@ test.describe('UJ-7: Theme & Personalization', () => {
     // Toggle theme
     const themeToggle = page.getByLabel(/switch to (light|dark) mode/i).first();
     await themeToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     const afterToggle = await htmlElement.getAttribute('class') || '';
     const isDarkAfterToggle = afterToggle.includes('dark');
@@ -46,7 +46,7 @@ test.describe('UJ-7: Theme & Personalization', () => {
     // Reload page
     await page.reload();
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Check theme persisted
     const afterReload = await page.locator('html').getAttribute('class') || '';

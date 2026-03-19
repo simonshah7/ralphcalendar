@@ -42,10 +42,10 @@ export function CreateCalendarModal({ isOpen, onClose, onSubmit }: CreateCalenda
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-      <div className="relative bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-card-border">
-        <h2 className="text-xl font-semibold text-foreground mb-1">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="presentation">
+      <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-labelledby="create-calendar-title" className="relative bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-card-border">
+        <h2 id="create-calendar-title" className="text-xl font-semibold text-foreground mb-1">
           Create Workspace
         </h2>
         <p className="text-sm text-muted-foreground mb-4">

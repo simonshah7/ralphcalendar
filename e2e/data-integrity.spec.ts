@@ -30,19 +30,19 @@ test.describe('BR-3: Data Integrity', () => {
     // Load page
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table for easier verification
     await page.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
     await expect(page.getByText('Persistence Test')).toBeVisible();
 
     // Reload
     await page.reload();
     await waitForAppLoad(page);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Still there
     await expect(page.getByText('Persistence Test')).toBeVisible();

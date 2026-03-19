@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { events, statuses } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import type { Event, Status } from '@/db/schema';
+import { logger } from '@/lib/logger';
 
 // Public read-only endpoint for the internal portal (Google Sites embed)
 export async function GET(request: Request) {
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error generating portal feed:', error);
+    logger.error('Error generating portal feed', error);
     return NextResponse.json({ error: 'Failed to generate portal feed' }, { status: 500 });
   }
 }

@@ -9,16 +9,18 @@ import {
   campaigns,
   statuses,
 } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Event, EventAttendee, ChecklistItem, SubEvent, CampaignEvent } from '@/db/schema';
+import { isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const calendarId = searchParams.get('calendarId');
 
-    if (!calendarId) {
-      return NextResponse.json({ error: 'calendarId is required' }, { status: 400 });
+    if (!calendarId || !isValidUUID(calendarId)) {
+      return NextResponse.json({ error: 'Valid calendarId is required' }, { status: 400 });
     }
 
     const allEvents: Event[] = await db
@@ -26,47 +28,71 @@ export async function GET(request: Request) {
       .from(events)
       .where(eq(events.calendarId, calendarId));
 
-    // Enrich each event with counts
-    const enriched = await Promise.all(
-      allEvents.map(async (event) => {
-        const attendees = await db
-          .select()
-          .from(eventAttendees)
-          .where(eq(eventAttendees.eventId, event.id));
-        const checklist = await db
-          .select()
-          .from(checklistItems)
-          .where(eq(checklistItems.eventId, event.id));
-        const subs = await db
-          .select()
-          .from(subEvents)
-          .where(eq(subEvents.eventId, event.id));
-        const campEvents = await db
-          .select()
-          .from(campaignEvents)
-          .where(eq(campaignEvents.eventId, event.id));
+    if (allEvents.length === 0) {
+      return NextResponse.json([]);
+    }
 
-        const allocatedPasses = attendees.filter((a: EventAttendee) => a.hasPass).length;
-        const checklistTotal = checklist.length;
-        const checklistDone = checklist.filter((c: ChecklistItem) => c.isDone).length;
+    // Batch-fetch all related data in 4 queries instead of 4N
+    const eventIds = allEvents.map((e) => e.id);
 
-        return {
-          ...event,
-          attendeeCount: attendees.length,
-          internalCount: attendees.filter((a: EventAttendee) => a.attendeeType === 'internal').length,
-          customerCount: attendees.filter((a: EventAttendee) => a.attendeeType === 'customer').length,
-          allocatedPasses,
-          subEventCount: subs.length,
-          checklistTotal,
-          checklistDone,
-          campaignIds: campEvents.map((ce: CampaignEvent) => ce.campaignId),
-        };
-      })
-    );
+    const [allAttendees, allChecklist, allSubs, allCampEvents] = await Promise.all([
+      db.select().from(eventAttendees).where(inArray(eventAttendees.eventId, eventIds)),
+      db.select().from(checklistItems).where(inArray(checklistItems.eventId, eventIds)),
+      db.select().from(subEvents).where(inArray(subEvents.eventId, eventIds)),
+      db.select().from(campaignEvents).where(inArray(campaignEvents.eventId, eventIds)),
+    ]);
+
+    // Group by eventId for O(1) lookup
+    const attendeesByEvent = new Map<string, EventAttendee[]>();
+    for (const a of allAttendees) {
+      const list = attendeesByEvent.get(a.eventId) || [];
+      list.push(a);
+      attendeesByEvent.set(a.eventId, list);
+    }
+
+    const checklistByEvent = new Map<string, ChecklistItem[]>();
+    for (const c of allChecklist) {
+      const list = checklistByEvent.get(c.eventId) || [];
+      list.push(c);
+      checklistByEvent.set(c.eventId, list);
+    }
+
+    const subsByEvent = new Map<string, SubEvent[]>();
+    for (const s of allSubs) {
+      const list = subsByEvent.get(s.eventId) || [];
+      list.push(s);
+      subsByEvent.set(s.eventId, list);
+    }
+
+    const campEventsByEvent = new Map<string, CampaignEvent[]>();
+    for (const ce of allCampEvents) {
+      const list = campEventsByEvent.get(ce.eventId) || [];
+      list.push(ce);
+      campEventsByEvent.set(ce.eventId, list);
+    }
+
+    const enriched = allEvents.map((event) => {
+      const attendees = attendeesByEvent.get(event.id) || [];
+      const checklist = checklistByEvent.get(event.id) || [];
+      const subs = subsByEvent.get(event.id) || [];
+      const campEvents = campEventsByEvent.get(event.id) || [];
+
+      return {
+        ...event,
+        attendeeCount: attendees.length,
+        internalCount: attendees.filter((a) => a.attendeeType === 'internal').length,
+        customerCount: attendees.filter((a) => a.attendeeType === 'customer').length,
+        allocatedPasses: attendees.filter((a) => a.hasPass).length,
+        subEventCount: subs.length,
+        checklistTotal: checklist.length,
+        checklistDone: checklist.filter((c) => c.isDone).length,
+        campaignIds: campEvents.map((ce) => ce.campaignId),
+      };
+    });
 
     return NextResponse.json(enriched);
   } catch (error) {
-    console.error('Error fetching events:', error);
+    logger.error('Error fetching events', error);
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 }
@@ -96,8 +122,8 @@ export async function POST(request: Request) {
       revenueGenerated,
     } = body;
 
-    if (!calendarId) {
-      return NextResponse.json({ error: 'calendarId is required' }, { status: 400 });
+    if (!calendarId || !isValidUUID(calendarId)) {
+      return NextResponse.json({ error: 'Valid calendarId is required' }, { status: 400 });
     }
     if (!title || title.trim().length === 0) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -136,7 +162,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
-    console.error('Error creating event:', error);
+    logger.error('Error creating event', error);
     return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
   }
 }

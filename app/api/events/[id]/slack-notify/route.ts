@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { events, checklistItems, eventAttendees, adminSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import type { ChecklistItem, EventAttendee } from '@/db/schema';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: Request,
@@ -90,7 +91,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, message: 'Slack notification sent' });
   } catch (error) {
-    console.error('Error sending Slack notification:', error);
+    logger.error('Error sending Slack notification', error);
     return NextResponse.json({ error: 'Failed to send Slack notification' }, { status: 500 });
   }
 }

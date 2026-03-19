@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(request: Request) {
   try {
@@ -34,7 +35,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error reordering swimlanes:', error);
+    logger.error('Error reordering swimlanes', error);
     return NextResponse.json(
       { error: 'Failed to reorder swimlanes' },
       { status: 500 }

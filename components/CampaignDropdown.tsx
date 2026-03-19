@@ -169,9 +169,10 @@ export function CampaignDropdown({
                             </button>
 
                             {filteredCampaigns.map((campaign) => (
-                                <div
+                                <button
+                                    type="button"
                                     key={campaign.id}
-                                    className={`group flex items-center justify-between px-3.5 py-2 text-sm cursor-pointer transition-colors ${
+                                    className={`group w-full flex items-center justify-between px-3.5 py-2 text-sm cursor-pointer transition-colors ${
                                         selectedCampaignId === campaign.id ? 'bg-accent-soft text-accent font-medium' : 'text-foreground hover:bg-muted'
                                     }`}
                                     onClick={() => {
@@ -211,7 +212,7 @@ export function CampaignDropdown({
                                             </div>
                                         </>
                                     )}
-                                </div>
+                                </button>
                             ))}
 
                             {searchQuery && !filteredCampaigns.some(c => c.name.toLowerCase() === searchQuery.toLowerCase()) && (

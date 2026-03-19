@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db, activities, statuses, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
-import { CURRENCIES, REGIONS } from '@/lib/utils';
+import { isValidCurrency, isValidRegion, isValidUUID } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 type Activity = InferSelectModel<typeof activities>;
 type Status = InferSelectModel<typeof statuses>;
 type Swimlane = InferSelectModel<typeof swimlanes>;
-
-// Type-safe includes check for readonly arrays
-function isValidCurrency(value: string): boolean {
-  return (CURRENCIES as readonly string[]).includes(value);
-}
-
-function isValidRegion(value: string): boolean {
-  return (REGIONS as readonly string[]).includes(value);
-}
 
 // Helper to convert empty strings to null (important for UUID fields)
 function emptyToNull<T>(value: T): T | null {
@@ -148,9 +140,8 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating activity:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: `Failed to update activity: ${errorMessage}` }, { status: 500 });
+    logger.error('Error updating activity', error);
+    return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 });
   }
 }
 
@@ -169,7 +160,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting activity:', error);
+    logger.error('Error deleting activity', error);
     return NextResponse.json({ error: 'Failed to delete activity' }, { status: 500 });
   }
 }

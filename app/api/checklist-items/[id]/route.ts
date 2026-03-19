@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { checklistItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: Request,
@@ -24,7 +25,7 @@ export async function PUT(
     if (!updated) return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating checklist item:', error);
+    logger.error('Error updating checklist item', error);
     return NextResponse.json({ error: 'Failed to update checklist item' }, { status: 500 });
   }
 }
@@ -39,7 +40,7 @@ export async function DELETE(
     if (!deleted) return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting checklist item:', error);
+    logger.error('Error deleting checklist item', error);
     return NextResponse.json({ error: 'Failed to delete checklist item' }, { status: 500 });
   }
 }

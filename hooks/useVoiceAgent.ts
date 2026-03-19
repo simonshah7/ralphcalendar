@@ -147,10 +147,16 @@ export function useVoiceAgent(
     switch (tool) {
       case 'create_activity': {
         const resolved = resolveNames(params);
-        if (!resolved.swimlaneId && ctx?.swimlanes[0]) {
+        if (!resolved.swimlaneId) {
+          if (!ctx?.swimlanes[0]) {
+            throw new Error('No swimlanes available. Please create one first.');
+          }
           resolved.swimlaneId = ctx.swimlanes[0].id;
         }
-        if (!resolved.statusId && ctx?.statuses[0]) {
+        if (!resolved.statusId) {
+          if (!ctx?.statuses[0]) {
+            throw new Error('No statuses available. Please create one first.');
+          }
           resolved.statusId = ctx.statuses[0].id;
         }
         await cb.onCreateActivity({

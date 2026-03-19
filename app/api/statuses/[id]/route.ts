@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, statuses } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: Request,
@@ -44,7 +45,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating status:', error);
+    logger.error('Error updating status', error);
     return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
   }
 }
@@ -64,7 +65,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting status:', error);
+    logger.error('Error deleting status', error);
     return NextResponse.json({ error: 'Failed to delete status' }, { status: 500 });
   }
 }

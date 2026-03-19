@@ -18,7 +18,7 @@ test.describe('UJ-5: Workspace Management', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Open workspace switcher — click the calendar name button
     await page.locator('header').getByText('First Calendar').click();
@@ -31,7 +31,7 @@ test.describe('UJ-5: Workspace Management', () => {
     // Fill in name
     await page.getByPlaceholder('My Marketing Calendar').fill('Second Calendar');
     await page.getByRole('button', { name: 'Create' }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should now show the new calendar
     await expect(page.getByText('Second Calendar')).toBeVisible();
@@ -67,12 +67,12 @@ test.describe('UJ-5: Workspace Management', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table view for easier checking
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Should show Calendar A activities first
     await expect(page.getByText('Activity In Cal A')).toBeVisible();
@@ -81,7 +81,7 @@ test.describe('UJ-5: Workspace Management', () => {
     await header.getByText('Calendar A', { exact: true }).click();
     await page.waitForTimeout(300);
     await page.getByRole('button', { name: 'Calendar B' }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should now show Calendar B activities
     await expect(page.getByText('Activity In Cal B')).toBeVisible();
@@ -93,7 +93,7 @@ test.describe('UJ-5: Workspace Management', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Click the add swimlane button (+ icon) in the sidebar
     const addButton = page.locator('button[title="Add swimlane"]');
@@ -106,7 +106,7 @@ test.describe('UJ-5: Workspace Management', () => {
 
     // Click the Add button (exact match to avoid the "Add swimlane" title button)
     await page.getByRole('button', { name: 'Add', exact: true }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // New swimlane should appear
     await expect(page.getByText('Paid Media')).toBeVisible();
@@ -117,7 +117,7 @@ test.describe('UJ-5: Workspace Management', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Double-click the swimlane name to enter edit mode
     await page.getByText('Email Marketing').dblclick();
@@ -127,7 +127,7 @@ test.describe('UJ-5: Workspace Management', () => {
     const editInput = page.locator('[draggable] input[type="text"]');
     await editInput.fill('Renamed Swimlane');
     await editInput.press('Enter');
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should show updated name
     await expect(page.getByText('Renamed Swimlane')).toBeVisible();
@@ -140,23 +140,23 @@ test.describe('UJ-5: Workspace Management', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Hover over the "To Delete" swimlane to reveal delete button
     const swimlaneRow = page.locator('[draggable]').filter({ hasText: 'To Delete' });
     await swimlaneRow.hover();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     const deleteButton = swimlaneRow.locator('button[title="Delete swimlane"]');
     await deleteButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Confirmation dialog should appear
     await expect(page.getByText('Are you sure')).toBeVisible();
 
     // Confirm deletion via API approach if dialog buttons conflict
     await page.getByRole('button', { name: 'Delete', exact: true }).last().click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Swimlane should be gone
     await expect(page.locator('[draggable]').filter({ hasText: 'To Delete' })).not.toBeVisible();

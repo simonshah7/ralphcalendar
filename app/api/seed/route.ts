@@ -22,6 +22,7 @@ import {
   adminSettings,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 // Helper to generate a date string offset from today
 function dateOffset(days: number): string {
@@ -54,9 +55,7 @@ async function clearAllData() {
 }
 
 async function getOrCreateDefaultUser() {
-  const existingUsers = await db.select().from(users);
-  if (existingUsers.length > 0) return existingUsers[0];
-
+  // Use upsert to avoid race conditions from concurrent requests
   const [user] = await db
     .insert(users)
     .values({
@@ -65,8 +64,14 @@ async function getOrCreateDefaultUser() {
       passwordHash: 'no-auth',
       role: 'Admin',
     })
+    .onConflictDoNothing({ target: users.email })
     .returning();
-  return user;
+
+  if (user) return user;
+
+  // If onConflict fired, the row already exists — fetch it
+  const [existing] = await db.select().from(users).where(eq(users.email, 'default@campaignos.local'));
+  return existing;
 }
 
 async function seedData() {
@@ -883,9 +888,9 @@ export async function POST() {
     const calendarId = await seedData();
     return NextResponse.json({ success: true, action: 'seed', calendarId });
   } catch (error) {
-    console.error('Seed failed:', error);
+    logger.error('Seed failed', error);
     return NextResponse.json(
-      { error: 'Failed to seed data', details: String(error) },
+      { error: 'Failed to seed data' },
       { status: 500 }
     );
   }
@@ -897,9 +902,9 @@ export async function DELETE() {
     await clearAllData();
     return NextResponse.json({ success: true, action: 'clear' });
   } catch (error) {
-    console.error('Clear failed:', error);
+    logger.error('Clear failed', error);
     return NextResponse.json(
-      { error: 'Failed to clear data', details: String(error) },
+      { error: 'Failed to clear data' },
       { status: 500 }
     );
   }
@@ -912,9 +917,9 @@ export async function PUT() {
     const calendarId = await seedData();
     return NextResponse.json({ success: true, action: 'reset', calendarId });
   } catch (error) {
-    console.error('Reset failed:', error);
+    logger.error('Reset failed', error);
     return NextResponse.json(
-      { error: 'Failed to reset data', details: String(error) },
+      { error: 'Failed to reset data' },
       { status: 500 }
     );
   }

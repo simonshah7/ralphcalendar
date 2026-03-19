@@ -43,6 +43,8 @@ export function useActivityLayout(
         const start = new Date(activity.startDate).getTime();
         const end = new Date(activity.endDate).getTime();
 
+        if (isNaN(start) || isNaN(end) || start > end) return;
+
         let levelFound = -1;
         for (let i = 0; i < levels.length; i++) {
           const hasOverlap = levels[i].some((l) => start <= l.end);

@@ -249,6 +249,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
               <button
                 onClick={handleClearAll}
                 className="p-1.5 text-gray-400 hover:text-foreground transition-colors rounded-md hover:bg-muted"
+                aria-label="Clear conversation"
                 title="Clear conversation"
               >
                 <SolarTrashBinLinear className="w-4 h-4" />
@@ -256,6 +257,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
             )}
             <button
               onClick={onClose}
+              aria-label="Close copilot"
               className="p-1.5 text-gray-400 hover:text-foreground transition-colors rounded-md hover:bg-muted"
             >
               <SolarCloseLinear className="w-5 h-5" />
@@ -430,6 +432,7 @@ export function AICopilot({ calendarId, isOpen, onClose, voiceCallbacks, voiceCo
             <button
               onClick={() => sendTextMessage(input)}
               disabled={!input.trim() || isAnyLoading}
+              aria-label="Send message"
               className="px-3 py-2 bg-accent-purple text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
             >
               <SolarLetterLinear className="w-4 h-4" />

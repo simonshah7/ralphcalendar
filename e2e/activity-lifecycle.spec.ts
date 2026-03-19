@@ -8,7 +8,7 @@ test.describe('UJ-2: Activity Lifecycle', () => {
     workspace = await setupTestWorkspace(page);
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('UJ-2.1: Can create an activity via New Activity button', async ({ page }) => {
@@ -29,15 +29,12 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     // Submit
     await page.getByRole('button', { name: 'Save Activity' }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table view for visibility check
     const header = page.locator('header');
     await header.getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
-
-    // Activity should now be visible
-    await expect(page.getByText('Spring Campaign Launch')).toBeVisible();
+    await expect(page.getByText('Spring Campaign Launch')).toBeVisible({ timeout: 5000 });
   });
 
   test('UJ-2.2: Activity modal requires title, dates, status, swimlane', async ({ page }) => {
@@ -79,7 +76,7 @@ test.describe('UJ-2: Activity Lifecycle', () => {
     // Reload to see the activity
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Activity and swimlane should both be visible
     await expect(page.getByText('Swimlane Test Activity')).toBeVisible();
@@ -99,15 +96,15 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table view for easier clicking
     await page.locator('header').getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Click the title text in the table to open modal
     await page.locator('td span').filter({ hasText: 'Edit Me Activity' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Modal should show Edit Activity
     await expect(page.getByRole('heading', { name: 'Edit Activity' })).toBeVisible();
@@ -131,15 +128,15 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table view
     await page.locator('header').getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Click title text to open edit modal
     await page.locator('td span').filter({ hasText: 'Update Me' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Update the title
     const modal = page.locator('.fixed.inset-0');
@@ -148,7 +145,7 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     // Save
     await page.getByRole('button', { name: 'Save Activity' }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Verify the update
     await expect(page.getByText('Updated Activity Name')).toBeVisible();
@@ -167,15 +164,15 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     await page.goto('/');
     await waitForAppLoad(page);
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to table view
     await page.locator('header').getByRole('button', { name: 'Table' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Click title text to open edit modal
     await page.locator('td span').filter({ hasText: 'Delete Me Activity' }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // First click: "Delete Activity" button
     await page.getByRole('button', { name: 'Delete Activity' }).click();
@@ -185,7 +182,7 @@ test.describe('UJ-2: Activity Lifecycle', () => {
 
     // Confirm deletion
     await page.getByRole('button', { name: 'YES' }).click();
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Activity should be gone
     await expect(page.getByText('Delete Me Activity')).not.toBeVisible();

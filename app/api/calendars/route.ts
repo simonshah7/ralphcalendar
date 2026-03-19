@@ -5,22 +5,27 @@ import { eq, InferSelectModel } from 'drizzle-orm';
 type User = InferSelectModel<typeof users>;
 type Calendar = InferSelectModel<typeof calendars>;
 import { DEFAULT_STATUSES } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+
+const DEFAULT_USER_EMAIL = process.env.DEFAULT_USER_EMAIL || 'default@campaignos.local';
 
 // Get or create a default user (until auth is added)
 async function getDefaultUserId(): Promise<string> {
-  const existingUsers: User[] = await db.select().from(users).limit(1);
-  if (existingUsers.length > 0) {
-    return existingUsers[0].id;
-  }
+  // Use upsert to avoid race conditions from concurrent requests
   const [newUser] = await db
     .insert(users)
     .values({
-      email: 'default@campaignos.local',
+      email: DEFAULT_USER_EMAIL,
       name: 'Default User',
       passwordHash: 'no-auth',
     })
+    .onConflictDoNothing({ target: users.email })
     .returning();
-  return newUser.id;
+
+  if (newUser) return newUser.id;
+
+  const [existing] = await db.select().from(users).where(eq(users.email, DEFAULT_USER_EMAIL));
+  return existing.id;
 }
 
 export async function GET() {
@@ -28,7 +33,7 @@ export async function GET() {
     const allCalendars: Calendar[] = await db.select().from(calendars);
     return NextResponse.json(allCalendars);
   } catch (error) {
-    console.error('Error fetching calendars:', error);
+    logger.error('Error fetching calendars', error);
     return NextResponse.json({ error: 'Failed to fetch calendars' }, { status: 500 });
   }
 }
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ...newCalendar, statuses: newStatuses }, { status: 201 });
   } catch (error) {
-    console.error('Error creating calendar:', error);
+    logger.error('Error creating calendar', error);
     return NextResponse.json({ error: 'Failed to create calendar' }, { status: 500 });
   }
 }

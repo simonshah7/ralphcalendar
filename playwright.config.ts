@@ -11,9 +11,11 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     headless: true,
-    launchOptions: {
-      executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
-    },
+    ...(process.env.BROWSER_PATH ? {
+      launchOptions: {
+        executablePath: process.env.BROWSER_PATH,
+      },
+    } : {}),
   },
   projects: [
     {

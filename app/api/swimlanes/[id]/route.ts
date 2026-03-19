@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, swimlanes } from '@/db';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: Request,
@@ -38,7 +39,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating swimlane:', error);
+    logger.error('Error updating swimlane', error);
     return NextResponse.json({ error: 'Failed to update swimlane' }, { status: 500 });
   }
 }
@@ -58,7 +59,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting swimlane:', error);
+    logger.error('Error deleting swimlane', error);
     return NextResponse.json({ error: 'Failed to delete swimlane' }, { status: 500 });
   }
 }

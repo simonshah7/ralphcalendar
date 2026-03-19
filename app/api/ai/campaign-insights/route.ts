@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { campaignReportData } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 
 type ReportSource =
   | 'marketo_theme'
@@ -702,7 +703,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(insights);
   } catch (error) {
-    console.error('Error generating campaign insights:', error);
+    logger.error('Error generating campaign insights', error);
     return NextResponse.json({ error: 'Failed to generate campaign insights' }, { status: 500 });
   }
 }

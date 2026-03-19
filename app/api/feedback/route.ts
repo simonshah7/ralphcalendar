@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db, feedbackItems } from '@/db';
 import { eq, desc, and, SQL } from 'drizzle-orm';
 import { ensureFeedbackTable } from '@/db/ensure-feedback-table';
+import { isValidFeedbackCategory, isValidFeedbackStatus } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -16,10 +18,16 @@ export async function GET(request: Request) {
       conditions.push(eq(feedbackItems.screenName, screen));
     }
     if (category) {
-      conditions.push(eq(feedbackItems.category, category as 'bug' | 'suggestion' | 'question' | 'general'));
+      if (!isValidFeedbackCategory(category)) {
+        return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+      }
+      conditions.push(eq(feedbackItems.category, category));
     }
     if (status) {
-      conditions.push(eq(feedbackItems.status, status as 'new' | 'in_progress' | 'resolved' | 'dismissed'));
+      if (!isValidFeedbackStatus(status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      conditions.push(eq(feedbackItems.status, status));
     }
 
     const items = await db
@@ -30,7 +38,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching feedback:', error);
+    logger.error('Error fetching feedback', error);
     return NextResponse.json({ error: 'Failed to fetch feedback' }, { status: 500 });
   }
 }
@@ -62,8 +70,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
-    console.error('Error creating feedback:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: `Failed to create feedback: ${errorMessage}` }, { status: 500 });
+    logger.error('Error creating feedback', error);
+    return NextResponse.json({ error: 'Failed to create feedback' }, { status: 500 });
   }
 }

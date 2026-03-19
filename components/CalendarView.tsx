@@ -57,12 +57,12 @@ export function CalendarView({
 
   const toDateStr = (date: Date) => date.toISOString().split('T')[0];
 
-  const getActivitiesForDay = (date: Date) => {
+  const getActivitiesForDay = useCallback((date: Date) => {
     const dateStr = toDateStr(date);
     return activities.filter((activity) => {
       return dateStr >= activity.startDate && dateStr <= activity.endDate;
     });
-  };
+  }, [activities]);
 
   const getActivityStyle = (activity: Activity) => {
     const status = statuses.find((s) => s.id === activity.statusId);
@@ -161,13 +161,13 @@ export function CalendarView({
   }, [activities]);
 
   // Compute single-day activities for a given date (exclude multi-day ones)
-  const getSingleDayActivitiesForDay = (date: Date) => {
+  const getSingleDayActivitiesForDay = useCallback((date: Date) => {
     const dateStr = toDateStr(date);
     return activities.filter((activity) => {
       if (isMultiDay(activity)) return false;
       return dateStr >= activity.startDate && dateStr <= activity.endDate;
     });
-  };
+  }, [activities]);
 
   // Get number of spanning bar rows for a week to reserve space
   const getSpanningRowCount = (bars: SpanningBar[]) => {
@@ -209,8 +209,10 @@ export function CalendarView({
     return weeks.map((week) => getSpanningBarsForWeek(week));
   }, [weeks, getSpanningBarsForWeek]);
 
-  // Max single-day items visible before "+N more" (accounting for spanning bar space)
+  // Layout constants
   const MAX_SINGLE_DAY_VISIBLE = 2;
+  const SPANNING_ROW_HEIGHT = 20; // px per spanning bar row
+  const DATE_NUMBER_HEIGHT = 28; // px for the date number at top of cell
 
   return (
     <div className="flex-1 flex flex-col bg-card overflow-hidden">
@@ -267,7 +269,6 @@ export function CalendarView({
           {weeks.map((week, weekIndex) => {
             const bars = weekBars[weekIndex];
             const spanningRowCount = getSpanningRowCount(bars);
-            const SPANNING_ROW_HEIGHT = 20; // px per spanning bar row
             const spanningAreaHeight = spanningRowCount * SPANNING_ROW_HEIGHT;
 
             return (
@@ -278,7 +279,7 @@ export function CalendarView({
                   const leftPercent = (bar.startCol / 7) * 100;
                   const widthPercent = (bar.span / 7) * 100;
                   // Position: top of cell + date number height (~28px) + row offset
-                  const topOffset = 28 + bar.row * SPANNING_ROW_HEIGHT;
+                  const topOffset = DATE_NUMBER_HEIGHT + bar.row * SPANNING_ROW_HEIGHT;
 
                   return (
                     <div
@@ -381,6 +382,8 @@ export function CalendarView({
       {popover && (
         <div
           ref={popoverRef}
+          role="dialog"
+          aria-label={`Activities for ${popover.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
           className="fixed z-50 bg-card border border-card-border rounded-lg shadow-lg p-2 min-w-[180px] max-w-[260px] max-h-[300px] overflow-y-auto"
           style={{
             top: Math.min(popover.anchorRect.bottom + 4, window.innerHeight - 320),
