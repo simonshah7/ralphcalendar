@@ -7,6 +7,19 @@ import { SolarChatRoundLinear, SolarCloseLinear } from './SolarIcons';
 
 type ViewType = 'timeline' | 'calendar' | 'table' | 'dashboard' | 'events';
 
+interface FeedbackContextData {
+  calendarName?: string;
+  activityName?: string;
+  activityId?: string;
+  eventTitle?: string;
+  eventId?: string;
+  activeFilters?: {
+    campaigns?: string[];
+    statuses?: string[];
+    searchQuery?: string;
+  };
+}
+
 interface FeedbackWidgetProps {
   currentView: ViewType;
   selectedEventId: string | null;
@@ -17,6 +30,7 @@ interface FeedbackWidgetProps {
     copilot: boolean;
     briefGenerator: boolean;
   };
+  contextData?: FeedbackContextData;
 }
 
 const CATEGORIES = [
@@ -75,6 +89,20 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
   const screenName = getActiveScreen(props);
   const screenLabel = SCREEN_LABELS[screenName] || screenName;
 
+  // Build a human-readable context hint for the widget header
+  const contextHint = (() => {
+    if (props.contextData?.activityName && props.activeModals.activityModal) {
+      return `Editing: "${props.contextData.activityName}"`;
+    }
+    if (props.contextData?.eventTitle && screenName === 'EventDetailView') {
+      return `Viewing: "${props.contextData.eventTitle}"`;
+    }
+    if (props.contextData?.calendarName) {
+      return props.contextData.calendarName;
+    }
+    return null;
+  })();
+
   const handleSubmit = async () => {
     if (!content.trim()) return;
     setIsSubmitting(true);
@@ -86,6 +114,29 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
         timestamp: new Date().toISOString(),
       });
 
+      const metadata: Record<string, string> = {};
+      if (props.contextData?.calendarName) {
+        metadata.calendarName = props.contextData.calendarName;
+      }
+      if (props.contextData?.activityName) {
+        metadata.activityName = props.contextData.activityName;
+      }
+      if (props.contextData?.activityId) {
+        metadata.activityId = props.contextData.activityId;
+      }
+      if (props.contextData?.eventTitle) {
+        metadata.eventTitle = props.contextData.eventTitle;
+      }
+      if (props.contextData?.eventId) {
+        metadata.eventId = props.contextData.eventId;
+      }
+      if (props.contextData?.activeFilters) {
+        const f = props.contextData.activeFilters;
+        if (f.campaigns?.length) metadata.filterCampaigns = f.campaigns.join(', ');
+        if (f.statuses?.length) metadata.filterStatuses = f.statuses.join(', ');
+        if (f.searchQuery) metadata.filterSearch = f.searchQuery;
+      }
+
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,6 +147,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
           priority,
           browserInfo,
           url: window.location.href,
+          metadata: Object.keys(metadata).length > 0 ? metadata : null,
         }),
       });
 
@@ -126,13 +178,18 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 bg-accent/10 border-b border-card-border">
-              <div className="flex items-center gap-2">
-                <SolarChatRoundLinear className="w-4 h-4 text-accent" />
-                <span className="text-xs font-medium text-foreground">{screenLabel}</span>
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <SolarChatRoundLinear className="w-4 h-4 text-accent shrink-0" />
+                  <span className="text-xs font-medium text-foreground">{screenLabel}</span>
+                </div>
+                {contextHint && (
+                  <span className="text-[10px] text-muted truncate pl-6">{contextHint}</span>
+                )}
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-muted hover:text-foreground transition-colors"
+                className="text-muted hover:text-foreground transition-colors shrink-0"
               >
                 <SolarCloseLinear className="w-4 h-4" />
               </button>
