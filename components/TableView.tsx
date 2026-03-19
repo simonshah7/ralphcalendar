@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Activity, Status, Swimlane, Campaign } from '@/db/schema';
 import { CURRENCIES, REGIONS, CURRENCY_LABELS } from '@/lib/utils';
+import { SolarInfoCircle, SolarTuningLinear, SolarAltArrowUp, SolarAltArrowDown, SolarSortVertical, SolarBoxLinear, SolarDragHandle } from './SolarIcons';
 
 interface TableViewProps {
   activities: Activity[];
@@ -282,20 +283,12 @@ export function TableView({
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
-      return (
-        <svg className="w-3.5 h-3.5 text-muted-foreground/40" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-        </svg>
-      );
+      return <SolarSortVertical className="w-3.5 h-3.5 text-muted-foreground/40" />;
     }
     return sortDirection === 'asc' ? (
-      <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-      </svg>
+      <SolarAltArrowUp className="w-3.5 h-3.5 text-accent" />
     ) : (
-      <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-      </svg>
+      <SolarAltArrowDown className="w-3.5 h-3.5 text-accent" />
     );
   };
 
@@ -489,9 +482,7 @@ export function TableView({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-surface">
         <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <SolarInfoCircle className="w-3.5 h-3.5" />
           <span>Click a row to open details. Edit fields directly in the table. Double-click titles to rename. Drag column headers to reorder.</span>
         </div>
         {/* Column settings button */}
@@ -500,9 +491,7 @@ export function TableView({
             onClick={() => setShowColumnMenu(!showColumnMenu)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted rounded-md transition-colors"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
+            <SolarTuningLinear className="w-3.5 h-3.5" />
             Columns
           </button>
 
@@ -539,9 +528,7 @@ export function TableView({
                       } ${menuDragId === colId ? 'opacity-50' : ''}`}
                     >
                       {/* Drag handle */}
-                      <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
-                      </svg>
+                      <SolarDragHandle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 
                       {/* Toggle */}
                       <button
@@ -594,9 +581,7 @@ export function TableView({
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/20 hover:bg-white/30 rounded-md transition-colors"
             >
               Change Status
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-              </svg>
+              <SolarAltArrowDown className="w-3 h-3" />
             </button>
             {bulkStatusOpen && (
               <div className="absolute left-0 top-full mt-1 w-48 bg-card border border-card-border rounded-lg shadow-lg z-50 overflow-hidden">

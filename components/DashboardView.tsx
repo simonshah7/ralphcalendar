@@ -952,7 +952,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
                   showProgress: true,
                 },
                 {
-                  icon: <IconTarget />,
+                  icon: <SolarTargetLinear />,
                   label: 'SAOs',
                   value: fmtCompact(metrics.totalActualSaos),
                   sub: `${fmtCompact(metrics.totalExpectedSaos)} expected`,
@@ -967,7 +967,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
                   showProgress: metrics.totalExpectedSaos > 0,
                 },
                 {
-                  icon: <IconTrendUp />,
+                  icon: <SolarGraphUpLinear />,
                   label: 'Pipeline ROI',
                   value: `${metrics.pipelineRoi.toFixed(1)}x`,
                   sub: `${formatCurrency(metrics.totalPipeline)} pipeline`,
@@ -1354,7 +1354,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
                 transition={{ duration: 0.4, ease: 'easeOut' }}
               >
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <IconAlertTriangle className="w-4 h-4 text-amber-500" />
+                  <SolarDangerTriangle className="w-4 h-4 text-amber-500" />
                   Activities Needing Attention
                   <span className="text-xs font-normal text-muted-foreground">({alerts.length})</span>
                 </h3>
@@ -1372,7 +1372,7 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
                       }`}
                     >
                       <span className="flex-shrink-0 mt-0.5">
-                        {alert.type === 'error' ? <IconX className="w-3.5 h-3.5" /> : <IconAlertCircle className="w-3.5 h-3.5" />}
+                        {alert.type === 'error' ? <SolarCloseCircle className="w-3.5 h-3.5" /> : <SolarDangerCircle className="w-3.5 h-3.5" />}
                       </span>
                       <span>{alert.message}</span>
                     </motion.div>

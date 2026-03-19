@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Activity, Status } from '@/db/schema';
 import { startOfMonth, endOfMonth, addDays, isSameDay, getContrastTextColor } from '@/lib/utils';
+import { SolarAltArrowLeft, SolarAltArrowRight, SolarInfoCircle } from './SolarIcons';
 
 interface CalendarViewProps {
   activities: Activity[];
@@ -220,9 +221,7 @@ export function CalendarView({
             onClick={navigatePrev}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <SolarAltArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h2 className="text-sm sm:text-lg font-semibold text-foreground min-w-[120px] sm:min-w-[200px] text-center">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -231,16 +230,12 @@ export function CalendarView({
             onClick={navigateNext}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <SolarAltArrowRight className="w-5 h-5 text-foreground" />
           </button>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <SolarInfoCircle className="w-3.5 h-3.5" />
             <span>Click any day to add an activity</span>
           </div>
           <button
