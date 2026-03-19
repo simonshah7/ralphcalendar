@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { chatCompletion, type ContentBlock } from '@/lib/ai-provider';
 import { VOICE_AGENT_TOOLS } from '@/lib/voice-agent-tools';
 import { db, activities, campaigns, swimlanes } from '@/db';
 import { eq, InferSelectModel } from 'drizzle-orm';
@@ -143,13 +143,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'transcript and calendarId are required' }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured' }, { status: 500 });
-    }
-
-    const client = new Anthropic({ apiKey });
-
     const swimlaneNames = (context?.swimlanes || []).map((s: { name: string }) => s.name).join(', ');
     const statusNames = (context?.statuses || []).map((s: { name: string }) => s.name).join(', ');
     const campaignNames = (context?.campaigns || []).map((c: { name: string }) => c.name).join(', ');
@@ -171,13 +164,11 @@ For status, default to "Considering" if not specified.
 Be helpful, concise, and action-oriented. Always use tools when the user wants to perform an action.
 If the user asks something conversational, just respond naturally without tools.`;
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: systemPrompt,
-      tools: VOICE_AGENT_TOOLS,
-      messages: [{ role: 'user', content: transcript }],
-    });
+    const response = await chatCompletion(
+      systemPrompt,
+      [{ role: 'user', content: transcript }],
+      VOICE_AGENT_TOOLS,
+    );
 
     const actions: VoiceAgentAction[] = [];
     let speechParts: string[] = [];
