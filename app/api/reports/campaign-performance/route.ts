@@ -3,7 +3,9 @@ import { db } from '@/db';
 import { campaignReportData, activities, campaigns, swimlanes } from '@/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
-import { validate as isUuid } from 'uuid';
+function isUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
 
 function safeDiv(a: number, b: number): number {
   return b === 0 ? 0 : a / b;
