@@ -115,7 +115,10 @@ export function Header({
         <div className="flex items-center gap-2 sm:gap-5 min-w-0">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
-            <span className="text-xl font-bold text-foreground tracking-tight">LaunchGrid</span>
+            <span className="text-xl text-foreground tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <span style={{ fontWeight: 300 }}>Launch</span>
+              <span style={{ fontWeight: 700 }}>Grid</span>
+            </span>
           </div>
 
           {/* Divider - hidden on mobile */}
