@@ -152,12 +152,12 @@ export function SwimlaneSidebar({
         style={{ height: `${headerHeight}px` }}
       >
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Channels
+          Swimlanes
         </span>
         <button
           onClick={() => setIsAddingNew(true)}
           className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-accent transition-colors"
-          title="Add channel"
+          title="Add swimlane"
         >
           <SolarAddLinear className="w-3.5 h-3.5" />
         </button>
