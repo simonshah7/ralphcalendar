@@ -347,22 +347,28 @@ export function TableView({
 
       case 'status':
         return (
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <span
-              className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: status?.color || '#D6E4EA' }}
-            />
-            <select
-              value={activity.statusId || ''}
-              onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
-              className="text-sm bg-transparent text-foreground outline-none cursor-pointer hover:text-accent-purple transition-colors appearance-none pr-4"
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="inline-flex items-center gap-1.5 pl-1.5 pr-1 py-0.5 rounded-full text-xs"
+              style={{ backgroundColor: `${status?.color || '#D6E4EA'}15` }}
             >
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <span
+                className="inline-block w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: status?.color || '#D6E4EA' }}
+              />
+              <select
+                value={activity.statusId || ''}
+                onChange={(e) => handleInlineEdit(activity.id, 'statusId', e.target.value)}
+                className="text-xs font-medium bg-transparent outline-none cursor-pointer appearance-none pr-3"
+                style={{ color: status?.color || 'inherit' }}
+              >
+                {statuses.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         );
 
@@ -491,7 +497,7 @@ export function TableView({
     }
   };
 
-  const thClass = "text-left px-4 py-2.5";
+  const thClass = "text-left px-4 py-3";
   const thBtnClass = "flex items-center gap-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors";
   const inputClass = "text-sm px-2 py-1 border border-card-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40";
 
@@ -670,12 +676,12 @@ export function TableView({
       )}
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto mx-4 mb-4 mt-2 bg-card border border-card-border rounded-xl shadow-sm">
         <table className="w-full min-w-[800px]">
-          <thead className="sticky top-0 z-10">
-            <tr className="bg-muted/60 border-b border-card-border">
+          <thead className="sticky top-0 z-10 shadow-[0_1px_3px_0_rgba(0,0,0,0.06)]">
+            <tr className="bg-muted/80 border-b border-card-border">
               {/* Select-all checkbox */}
-              <th className="w-10 px-3 py-2.5">
+              <th className="w-10 px-3 py-3">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
@@ -686,7 +692,7 @@ export function TableView({
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
-                  className={`${col.id === 'cost' ? 'text-right' : 'text-left'} px-4 py-2.5 select-none transition-colors ${
+                  className={`${col.id === 'cost' ? 'text-right' : 'text-left'} px-4 py-3 select-none transition-colors ${
                     dragOverColId === col.id ? 'bg-accent-purple/10' : ''
                   } ${draggedColId === col.id ? 'opacity-40' : ''}`}
                   style={{ minWidth: col.minWidth }}
@@ -713,17 +719,19 @@ export function TableView({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-card-border/40">
+          <tbody className="divide-y divide-card-border/20">
             {sortedActivities.map((activity, index) => (
               <tr
                 key={activity.id}
-                className={`border-b border-card-border/30 hover:bg-muted/50 cursor-pointer transition-colors ${
-                  index % 2 === 0 ? '' : 'bg-surface/20'
-                } ${selectedIds.has(activity.id) ? 'bg-accent-purple/5' : ''}`}
+                className={`border-l-2 border-l-transparent hover:border-l-accent-purple hover:bg-muted/50 cursor-pointer transition-all ${
+                  index % 2 === 0
+                    ? 'bg-card'
+                    : 'bg-surface/60 shadow-[inset_0_1px_0_0_rgba(0,0,0,0.03),inset_0_-1px_0_0_rgba(0,0,0,0.03)]'
+                } ${selectedIds.has(activity.id) ? '!bg-accent-purple/8 !border-l-accent-purple' : ''}`}
                 onClick={() => onActivityClick(activity)}
               >
                 {/* Row checkbox */}
-                <td className="w-10 px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={selectedIds.has(activity.id)}
@@ -734,7 +742,7 @@ export function TableView({
                 {visibleColumns.map((col) => (
                   <td
                     key={col.id}
-                    className={`px-4 py-2.5 ${col.id === 'cost' ? 'text-right' : ''}`}
+                    className={`px-4 py-3 ${col.id === 'cost' ? 'text-right' : ''}`}
                     onClick={col.id !== 'title' ? (e) => e.stopPropagation() : undefined}
                   >
                     {renderCell(col, activity)}
