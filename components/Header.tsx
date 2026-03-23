@@ -133,7 +133,7 @@ export function Header({
         <div className="flex items-center gap-2 sm:gap-5 min-w-0">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
-            <span className="text-xl sm:text-2xl tracking-tight text-foreground">Tim<span className="font-bold">b</span>e<span className="font-bold">r</span>line</span>
+            <span className="text-xl sm:text-2xl tracking-tight text-foreground" style={{ fontFamily: 'Archivo, sans-serif', fontWeight: 300 }}>Tim<span style={{ fontWeight: 800 }}>b</span>e<span style={{ fontWeight: 800 }}>r</span>line</span>
           </div>
 
           {/* Divider - hidden on mobile */}
