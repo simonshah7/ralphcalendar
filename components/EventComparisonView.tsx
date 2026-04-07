@@ -112,6 +112,175 @@ const REC_BAR_COLORS: Record<string, string> = {
   new: '#7A00C1', cut: '#FF715A', retired: '#D6E4EA',
 };
 
+// ─── AI Insights for YoY Comparison ────────────────────
+
+interface YoYInsight {
+  type: 'success' | 'warning' | 'opportunity';
+  title: string;
+  detail: string;
+  metric?: string;
+}
+
+const INSIGHT_STYLES: Record<string, { dot: string; text: string }> = {
+  success: { dot: 'bg-green-500', text: 'text-green-500' },
+  warning: { dot: 'bg-amber-500', text: 'text-amber-500' },
+  opportunity: { dot: 'bg-blue-500', text: 'text-blue-500' },
+};
+
+function EventYoYInsights({ data }: { data: ComparisonSummary }) {
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  const insights = useMemo(() => {
+    const items: YoYInsight[] = [];
+    const investEvents = data.comparisons.filter(c => c.recommendation === 'invest');
+    const cutEvents = data.comparisons.filter(c => c.recommendation === 'cut');
+    const reduceEvents = data.comparisons.filter(c => c.recommendation === 'reduce');
+    const newEvents = data.comparisons.filter(c => c.recommendation === 'new');
+    const retiredEvents = data.comparisons.filter(c => c.recommendation === 'retired');
+    const matched = data.comparisons.filter(c => c.priorYear && c.currentYear);
+
+    // Overall spend direction
+    if (data.totalCostChangePct !== null) {
+      const dir = data.totalCostChangePct > 0 ? 'increased' : 'decreased';
+      const roiImproved = data.avgCurrentRoi >= data.avgPriorRoi;
+      items.push({
+        type: roiImproved && data.totalCostChangePct <= 15 ? 'success' : data.totalCostChangePct > 20 ? 'warning' : 'opportunity',
+        title: `Event spend ${dir} ${Math.abs(data.totalCostChangePct).toFixed(1)}% YoY`,
+        detail: `Total spend moved from ${formatCurrency(data.totalPriorCost)} to ${formatCurrency(data.totalCurrentCost)}.${roiImproved ? ' ROI improved alongside this change, indicating efficient allocation.' : ' However, ROI declined — review whether increased spend is translating to results.'}`,
+        metric: fmtPct(data.totalCostChangePct),
+      });
+    }
+
+    // SAO efficiency shift
+    if (data.totalPriorSaos > 0 && data.totalCurrentSaos > 0) {
+      const priorCostPerSao = data.totalPriorCost / data.totalPriorSaos;
+      const currentCostPerSao = data.totalCurrentCost / data.totalCurrentSaos;
+      const efficiency = ((priorCostPerSao - currentCostPerSao) / priorCostPerSao) * 100;
+      if (Math.abs(efficiency) > 10) {
+        items.push({
+          type: efficiency > 0 ? 'success' : 'warning',
+          title: efficiency > 0 ? 'Cost per SAO improved' : 'Cost per SAO worsened',
+          detail: `Cost per SAO moved from ${formatCurrency(priorCostPerSao)} to ${formatCurrency(currentCostPerSao)} (${efficiency > 0 ? 'a' : 'an'} ${Math.abs(efficiency).toFixed(0)}% ${efficiency > 0 ? 'improvement' : 'increase'}). ${efficiency > 0 ? 'Events are becoming more efficient at generating qualified opportunities.' : 'Consider whether lower-performing events are diluting overall SAO efficiency.'}`,
+          metric: formatCurrency(currentCostPerSao) + '/SAO',
+        });
+      }
+    }
+
+    // Top performers to double down on
+    if (investEvents.length > 0) {
+      const topByRoi = [...investEvents]
+        .filter(c => c.currentYear)
+        .sort((a, b) => (b.currentYear?.roi ?? 0) - (a.currentYear?.roi ?? 0));
+      const top = topByRoi[0];
+      items.push({
+        type: 'success',
+        title: `${investEvents.length} event${investEvents.length > 1 ? 's' : ''} warrant${investEvents.length === 1 ? 's' : ''} increased investment`,
+        detail: `${investEvents.map(c => `"${c.title}"`).join(', ')} show strong ROI (>3x) and SAO generation.${top?.currentYear ? ` "${top.title}" leads with ${top.currentYear.roi.toFixed(1)}x ROI and ${top.currentYear.actualSaos} SAOs.` : ''} Consider allocating additional budget from underperformers.`,
+        metric: `${investEvents.length} events`,
+      });
+    }
+
+    // Underperformers to cut
+    if (cutEvents.length > 0) {
+      const totalCutSpend = cutEvents.reduce((s, c) => s + (c.currentYear?.actualCost ?? c.priorYear?.actualCost ?? 0), 0);
+      items.push({
+        type: 'warning',
+        title: `${cutEvents.length} event${cutEvents.length > 1 ? 's' : ''} delivered no measurable pipeline`,
+        detail: `${cutEvents.map(c => `"${c.title}"`).join(', ')} generated zero SAOs or pipeline, consuming ${formatCurrency(totalCutSpend)} in spend. Discontinuing these frees budget for proven performers.`,
+        metric: formatCurrency(totalCutSpend) + ' at risk',
+      });
+    }
+
+    // Events losing momentum
+    const declining = matched.filter(c =>
+      c.priorYear && c.currentYear &&
+      c.priorYear.roi > 1 && c.currentYear.roi < c.priorYear.roi * 0.5 &&
+      c.recommendation !== 'cut'
+    );
+    if (declining.length > 0) {
+      items.push({
+        type: 'warning',
+        title: `${declining.length} event${declining.length > 1 ? 's' : ''} losing momentum`,
+        detail: `${declining.map(c => `"${c.title}" (${c.priorYear!.roi.toFixed(1)}x → ${c.currentYear!.roi.toFixed(1)}x)`).join(', ')} saw ROI drop by more than 50%. Investigate format changes, audience shifts, or market conditions before the next cycle.`,
+      });
+    }
+
+    // Reduce candidates — reallocation opportunity
+    if (reduceEvents.length > 0) {
+      const savingsPotential = reduceEvents.reduce((s, c) => s + (c.currentYear?.actualCost ?? 0) * 0.3, 0);
+      items.push({
+        type: 'opportunity',
+        title: `Reallocate from ${reduceEvents.length} underperforming event${reduceEvents.length > 1 ? 's' : ''}`,
+        detail: `${reduceEvents.map(c => `"${c.title}"`).join(', ')} are delivering below-average returns. Reducing spend by ~30% could free up ~${formatCurrency(savingsPotential)} to reinvest in top performers.`,
+        metric: `~${formatCurrency(savingsPotential)} potential`,
+      });
+    }
+
+    // New events need monitoring
+    if (newEvents.length > 0) {
+      const newWithResults = newEvents.filter(c => c.currentYear && c.currentYear.actualSaos > 0);
+      items.push({
+        type: 'opportunity',
+        title: `${newEvents.length} new event${newEvents.length > 1 ? 's' : ''} in portfolio`,
+        detail: `${newEvents.map(c => `"${c.title}"`).join(', ')} are running for the first time.${newWithResults.length > 0 ? ` ${newWithResults.length} already show SAO generation — promising early signals.` : ' None have generated SAOs yet — set clear benchmarks and review after completion.'}`,
+        metric: `${newWithResults.length}/${newEvents.length} producing`,
+      });
+    }
+
+    // Portfolio composition shift
+    if (retiredEvents.length > 0 && newEvents.length > 0) {
+      items.push({
+        type: 'opportunity',
+        title: 'Portfolio is evolving',
+        detail: `${retiredEvents.length} event${retiredEvents.length > 1 ? 's were' : ' was'} retired and ${newEvents.length} new event${newEvents.length > 1 ? 's were' : ' was'} added. This ${retiredEvents.length >= newEvents.length ? 'consolidation' : 'expansion'} signals an active optimization strategy. Track new event ROI closely in the first quarter to validate the shift.`,
+      });
+    }
+
+    return items;
+  }, [data]);
+
+  if (insights.length === 0) return null;
+
+  return (
+    <div className="bg-card border border-card-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-card-border">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-purple flex-shrink-0" />
+          <h3 className="text-xs font-semibold text-foreground">AI Insights & Investment Justification</h3>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{insights.length}</span>
+        </div>
+      </div>
+      <div className="divide-y divide-card-border">
+        {insights.map((insight, i) => {
+          const s = INSIGHT_STYLES[insight.type] || INSIGHT_STYLES.opportunity;
+          const isOpen = expandedIdx === i;
+          return (
+            <div
+              key={i}
+              className="px-4 py-2.5 cursor-pointer hover:bg-muted/20 transition-colors"
+              onClick={() => setExpandedIdx(isOpen ? null : i)}
+            >
+              <div className="flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
+                <span className="text-xs font-medium text-foreground flex-1">{insight.title}</span>
+                {insight.metric && (
+                  <span className="text-[10px] font-semibold text-foreground tabular-nums flex-shrink-0">{insight.metric}</span>
+                )}
+                <svg className={`w-3 h-3 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none">
+                  <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              {isOpen && (
+                <p className="text-[11px] text-muted-foreground pl-3.5 pt-1.5 pb-0.5 leading-relaxed">{insight.detail}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
   const [data, setData] = useState<ComparisonSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -763,59 +932,8 @@ export function EventComparisonView({ calendarId }: EventComparisonViewProps) {
             </div>
           </div>
 
-          {/* Justification Summary */}
-          <div className="bg-card border border-card-border rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-foreground mb-3">Investment Justification Summary</h3>
-            <div className="space-y-2 text-xs">
-              {data.totalCostChangePct !== null && (
-                <p className="text-muted-foreground">
-                  Total event spend is {data.totalCostChangePct > 0 ? 'up' : 'down'}{' '}
-                  <span className={`font-medium ${changeColor(data.totalCostChangePct, true)}`}>
-                    {fmtPct(data.totalCostChangePct)}
-                  </span>{' '}
-                  YoY ({formatCurrency(data.totalPriorCost)} &rarr; {formatCurrency(data.totalCurrentCost)}).
-                </p>
-              )}
-              {data.totalPriorSaos > 0 && (
-                <p className="text-muted-foreground">
-                  SAO generation changed from <span className="font-medium text-foreground">{data.totalPriorSaos}</span> to{' '}
-                  <span className="font-medium text-foreground">{data.totalCurrentSaos}</span>{' '}
-                  ({fmtPct(((data.totalCurrentSaos - data.totalPriorSaos) / data.totalPriorSaos) * 100)} change).
-                </p>
-              )}
-              {data.totalPriorPipeline > 0 && (
-                <p className="text-muted-foreground">
-                  Pipeline generated moved from <span className="font-medium text-foreground">{formatCurrency(data.totalPriorPipeline)}</span> to{' '}
-                  <span className="font-medium text-foreground">{formatCurrency(data.totalCurrentPipeline)}</span>.
-                  {data.avgCurrentRoi >= data.avgPriorRoi
-                    ? ' ROI has improved, supporting continued investment.'
-                    : ' ROI has declined \u2014 review underperforming events for optimization.'}
-                </p>
-              )}
-              {data.comparisons.filter(c => c.recommendation === 'invest').length > 0 && (
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-green-500">
-                    {data.comparisons.filter(c => c.recommendation === 'invest').length} events
-                  </span>{' '}
-                  show strong ROI ({'>'} 3x) and SAO generation, warranting increased investment:{' '}
-                  <span className="text-foreground">
-                    {data.comparisons.filter(c => c.recommendation === 'invest').map(c => c.title).join(', ')}.
-                  </span>
-                </p>
-              )}
-              {data.comparisons.filter(c => c.recommendation === 'cut').length > 0 && (
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-red-500">
-                    {data.comparisons.filter(c => c.recommendation === 'cut').length} events
-                  </span>{' '}
-                  delivered no measurable SAOs or pipeline and should be reconsidered:{' '}
-                  <span className="text-foreground">
-                    {data.comparisons.filter(c => c.recommendation === 'cut').map(c => c.title).join(', ')}.
-                  </span>
-                </p>
-              )}
-            </div>
-          </div>
+          {/* AI Insights & Justification */}
+          <EventYoYInsights data={data} />
         </>
       )}
     </div>

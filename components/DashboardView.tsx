@@ -420,7 +420,7 @@ function ColumnToggle({
 
 // ─── Main Component ─────────────────────────────────────
 
-// ─── AI Insight Types & Carousel ────────────────────────
+// ─── AI Insights Panel (shared across tabs) ────────────
 
 interface Insight {
   type: 'warning' | 'opportunity' | 'success';
@@ -429,212 +429,169 @@ interface Insight {
   metric?: string;
 }
 
-const insightStyles = {
-  warning: {
-    bg: 'bg-amber-500/10', border: 'border-amber-500/30', icon: 'text-amber-500',
-    badge: 'bg-amber-500/20 text-amber-400', accent: '#F59E0B', label: 'Warning',
-  },
-  opportunity: {
-    bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: 'text-blue-500',
-    badge: 'bg-blue-500/20 text-blue-400', accent: '#3B82F6', label: 'Opportunity',
-  },
-  success: {
-    bg: 'bg-green-500/10', border: 'border-green-500/30', icon: 'text-green-500',
-    badge: 'bg-green-500/20 text-green-400', accent: '#22C55E', label: 'Success',
-  },
+const INSIGHT_TYPE_CONFIG: Record<string, { label: string; color: string; icon: (props: { className?: string }) => React.ReactNode }> = {
+  warning: { label: 'Warnings', color: '#F59E0B', icon: SolarDangerTriangle },
+  opportunity: { label: 'Opportunities', color: '#3B82F6', icon: SolarClockCircle },
+  success: { label: 'Wins', color: '#22C55E', icon: SolarCheckCircle },
 };
 
-function InsightTile({ insight, isExpanded, onToggle, onDismiss }: {
-  insight: Insight; isExpanded: boolean; onToggle: () => void; onDismiss: () => void;
+function InsightsPanel({ insights, loading, onDismiss, title = 'AI Insights' }: {
+  insights: Insight[]; loading: boolean; onDismiss: (title: string) => void; title?: string;
 }) {
-  const s = insightStyles[insight.type];
-  return (
-    <motion.div
-      layout
-      className={`${s.bg} border ${s.border} rounded-lg flex-shrink-0 cursor-pointer group relative overflow-hidden transition-all duration-200 ${
-        isExpanded ? 'w-[340px]' : 'w-[260px]'
-      }`}
-      onClick={onToggle}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-    >
-      {/* Accent stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg" style={{ backgroundColor: s.accent }} />
-      <div className="p-3 pl-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={`flex-shrink-0 ${s.icon}`}>
-              {insight.type === 'warning' ? <SolarDangerTriangle className="w-3.5 h-3.5" /> : insight.type === 'success' ? (
-                <SolarCheckCircle className="w-3.5 h-3.5" />
-              ) : (
-                <SolarClockCircle className="w-3.5 h-3.5" />
-              )}
-            </span>
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${s.badge}`}>{s.label}</span>
-            {insight.metric && (
-              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.badge}`}>{insight.metric}</span>
-            )}
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-            className="flex-shrink-0 text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <SolarCloseLinear className="w-3 h-3" />
-          </button>
-        </div>
-        <p className="text-[11px] font-semibold text-foreground mt-1.5 leading-snug line-clamp-2">{insight.title}</p>
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.p
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-[10px] text-muted-foreground leading-relaxed mt-1.5"
-            >
-              {insight.description}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
-  );
-}
-
-function InsightsCarousel({ insights, loading, onDismiss }: {
-  insights: Insight[]; loading: boolean; onDismiss: (title: string) => void;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
+  const filtered = filterType ? insights.filter((i) => i.type === filterType) : insights;
+  const visible = showAll ? filtered : filtered.slice(0, 3);
+  const hasMore = filtered.length > 3;
 
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    const ro = new ResizeObserver(checkScroll);
-    ro.observe(el);
-    return () => { el.removeEventListener('scroll', checkScroll); ro.disconnect(); };
-  }, [checkScroll, insights.length]);
-
-  function scroll(dir: 'left' | 'right') {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' });
-  }
-
-  const warningCount = insights.filter((i) => i.type === 'warning').length;
-  const opportunityCount = insights.filter((i) => i.type === 'opportunity').length;
-  const successCount = insights.filter((i) => i.type === 'success').length;
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const i of insights) counts[i.type] = (counts[i.type] || 0) + 1;
+    return counts;
+  }, [insights]);
 
   if (!loading && insights.length === 0) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      transition={{ duration: 0.3 }}
+      className="bg-card border border-card-border rounded-lg overflow-hidden"
     >
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Collapsible header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors"
+      >
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-accent-purple/10 text-accent-purple">
-              <SolarGraphUpLinear className="w-3 h-3" />
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-accent-purple/10 text-accent-purple">
+            <SolarGraphUpLinear className="w-3 h-3" />
+          </span>
+          <span className="text-sm font-semibold text-foreground">{title}</span>
+          {insights.length > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+              {insights.length}
             </span>
-            AI Insights
-          </div>
-          {!loading && (
-            <div className="flex items-center gap-1.5">
-              {warningCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
-                  <SolarDangerTriangle className="w-2.5 h-2.5" />{warningCount}
-                </span>
+          )}
+          {loading && <span className="text-[10px] text-muted-foreground animate-pulse">Analyzing...</span>}
+        </div>
+        <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <SolarAltArrowDown className="w-4 h-4 text-muted-foreground" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 space-y-2">
+              {/* Type filter chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => { setFilterType(null); setShowAll(false); setExpandedIdx(null); }}
+                  className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${
+                    !filterType ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All
+                </button>
+                {Object.entries(INSIGHT_TYPE_CONFIG).map(([type, cfg]) => (
+                  typeCounts[type] ? (
+                    <button
+                      key={type}
+                      onClick={() => { setFilterType(filterType === type ? null : type); setShowAll(false); setExpandedIdx(null); }}
+                      className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+                        filterType === type ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                      {cfg.label} ({typeCounts[type]})
+                    </button>
+                  ) : null
+                ))}
+              </div>
+
+              {/* Loading state */}
+              {loading && (
+                <div className="flex items-center gap-2 py-4 justify-center text-xs text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                  Analyzing your data...
+                </div>
               )}
-              {opportunityCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-500">
-                  <SolarClockCircle className="w-2.5 h-2.5" />{opportunityCount}
-                </span>
+
+              {!loading && filtered.length === 0 && (
+                <div className="text-center py-3 text-xs text-muted-foreground">No insights for this filter.</div>
               )}
-              {successCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-500">
-                  <SolarCheckCircle className="w-2.5 h-2.5" />{successCount}
-                </span>
+
+              {/* Insight rows */}
+              {!loading && (
+                <div className="divide-y divide-card-border">
+                  {visible.map((insight, i) => {
+                    const cfg = INSIGHT_TYPE_CONFIG[insight.type] || INSIGHT_TYPE_CONFIG.warning;
+                    const isOpen = expandedIdx === i;
+                    return (
+                      <motion.div
+                        key={`${insight.title}-${i}`}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03, duration: 0.2 }}
+                        className="py-2.5 cursor-pointer hover:bg-muted/20 -mx-1 px-1 rounded transition-colors group"
+                        onClick={() => setExpandedIdx(isOpen ? null : i)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                          <span className="text-xs font-medium text-foreground flex-1 truncate">{insight.title}</span>
+                          {insight.metric && (
+                            <span className="text-[10px] font-semibold text-foreground tabular-nums flex-shrink-0">{insight.metric}</span>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDismiss(insight.title); }}
+                            className="flex-shrink-0 text-muted-foreground/30 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <SolarCloseLinear className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <AnimatePresence>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2, ease: 'easeInOut' }}
+                              className="overflow-hidden"
+                            >
+                              <p className="text-[11px] text-muted-foreground pl-3.5 pt-1.5 leading-relaxed">{insight.description}</p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Show more toggle */}
+              {hasMore && !loading && (
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showAll ? 'Show less' : `Show all ${filtered.length} insights`}
+                </button>
               )}
             </div>
-          )}
-          {loading && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">Analyzing...</span>}
-        </div>
-        {/* Scroll arrows */}
-        {!loading && insights.length > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => scroll('left')}
-              disabled={!canScrollLeft}
-              className="w-6 h-6 flex items-center justify-center rounded-md border border-card-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-25 disabled:cursor-default transition-all"
-            >
-              <SolarAltArrowDown className="w-3 h-3 rotate-90" />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              disabled={!canScrollRight}
-              className="w-6 h-6 flex items-center justify-center rounded-md border border-card-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-25 disabled:cursor-default transition-all"
-            >
-              <SolarAltArrowDown className="w-3 h-3 -rotate-90" />
-            </button>
-          </div>
+          </motion.div>
         )}
-      </div>
-
-      {/* Carousel track */}
-      {loading ? (
-        <div className="flex gap-2.5">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="w-[260px] h-[72px] bg-muted/40 rounded-lg animate-pulse flex-shrink-0" />
-          ))}
-        </div>
-      ) : (
-        <div className="relative">
-          {/* Left fade */}
-          {canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-          )}
-          <div
-            ref={scrollRef}
-            className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {insights.map((insight, i) => (
-              <motion.div
-                key={insight.title}
-                initial={{ opacity: 0, scale: 0.95, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.25 }}
-              >
-                <InsightTile
-                  insight={insight}
-                  isExpanded={expandedIdx === i}
-                  onToggle={() => setExpandedIdx(expandedIdx === i ? null : i)}
-                  onDismiss={() => onDismiss(insight.title)}
-                />
-              </motion.div>
-            ))}
-          </div>
-          {/* Right fade */}
-          {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-          )}
-        </div>
-      )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -1253,8 +1210,8 @@ export function DashboardView({ activities, campaigns, swimlanes, statuses, cale
               ))}
             </div>
 
-            {/* AI Insights Carousel */}
-            <InsightsCarousel
+            {/* AI Insights */}
+            <InsightsPanel
               insights={visibleInsights}
               loading={insightsLoading}
               onDismiss={dismissInsight}
