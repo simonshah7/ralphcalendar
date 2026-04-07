@@ -257,6 +257,13 @@ function HomeInner() {
     toast.info('Activity deleted');
   };
 
+  const handleEventDelete = async (id: string) => {
+    const response = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Failed to delete event');
+    if (currentCalendar) fetchEvents(currentCalendar.id);
+    toast.info('Event deleted');
+  };
+
   const handleActivityUpdate = async (id: string, updates: Partial<Activity>) => {
     const response = await fetch(`/api/activities/${id}`, {
       method: 'PUT',
@@ -662,6 +669,7 @@ function HomeInner() {
                 onReorderSwimlanes={handleReorderSwimlanes}
                 onEventClick={(id) => { setCurrentView('events'); setSelectedEventId(id); }}
                 onEventCreate={(startDate, endDate) => handleCreateEvent(startDate, endDate)}
+                onEventDelete={handleEventDelete}
               />
             )}
 

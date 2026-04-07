@@ -5,7 +5,8 @@ import { Activity, Swimlane, Status, Campaign } from '@/db/schema';
 import { addDays, getDaysBetween, getContrastTextColor, formatCurrency } from '@/lib/utils';
 import { SwimlaneSidebar } from './SwimlaneSidebar';
 import { useActivityLayout, useTimelineDrag, TimelineHeader, ActivityBar } from './timeline';
-import { SolarAltArrowLeft, SolarAltArrowRight, SolarInfoCircle, SolarTuningLinear, SolarListLinear, SolarCheckLinear, SolarCalendarLinear } from './SolarIcons';
+import { SolarAltArrowLeft, SolarAltArrowRight, SolarInfoCircle, SolarTuningLinear, SolarListLinear, SolarCheckLinear, SolarCalendarLinear, SolarTrashBinLinear } from './SolarIcons';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export interface TimelineEvent {
   id: string;
@@ -31,6 +32,7 @@ interface TimelineViewProps {
   onReorderSwimlanes: (swimlaneId: string, newIndex: number) => void;
   onEventClick?: (eventId: string) => void;
   onEventCreate?: (startDate: string, endDate: string) => void;
+  onEventDelete?: (eventId: string) => void;
 }
 
 type ZoomLevel = 'year' | 'half' | 'quarter' | 'month';
@@ -78,6 +80,7 @@ export function TimelineView({
   onReorderSwimlanes,
   onEventClick,
   onEventCreate,
+  onEventDelete,
 }: TimelineViewProps) {
   // --- View state ---
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('quarter');
@@ -89,6 +92,7 @@ export function TimelineView({
   const [cardStyle, setCardStyle] = useState<CardStyle>('medium');
   const [visibleFields, setVisibleFields] = useState<string[]>(['status', 'campaign']);
   const [showSettings, setShowSettings] = useState(false);
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
 
   // --- Refs ---
   const containerRef = useRef<HTMLDivElement>(null);
@@ -610,7 +614,7 @@ export function TimelineView({
                 return (
                   <div
                     key={evt.id}
-                    className="event-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-white/20"
+                    className="group event-bar absolute rounded-lg cursor-pointer hover:shadow-lg transition-shadow border border-white/20"
                     style={{
                       left: `${startX}px`,
                       width: `${Math.max(width, config.dayWidth)}px`,
@@ -628,6 +632,18 @@ export function TimelineView({
                         {evt.title}
                       </span>
                     </div>
+                    {onEventDelete && (
+                      <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-20">
+                        <button
+                          className="p-0.5 rounded bg-foreground/30 hover:bg-red-500 text-white transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setDeleteEventId(evt.id); }}
+                          aria-label="Delete event"
+                          title="Delete"
+                        >
+                          <SolarTrashBinLinear className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -692,6 +708,16 @@ export function TimelineView({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteEventId !== null}
+        title="Delete Event"
+        message={`Are you sure you want to delete "${timelineEvents.find((e: TimelineEvent) => e.id === deleteEventId)?.title}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (deleteEventId) { onEventDelete?.(deleteEventId); setDeleteEventId(null); } }}
+        onCancel={() => setDeleteEventId(null)}
+      />
     </div>
   );
 }
